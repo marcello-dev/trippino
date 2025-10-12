@@ -1,0 +1,556 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Trippino</title>
+    <style>
+        :root {
+            --bg: #f6f8fa;
+            --card: #fff;
+            --muted: #666
+        }
+
+        body {
+            font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+            background: var(--bg);
+            margin: 0;
+            padding: 24px;
+            color: #111
+        }
+
+        .app {
+            max-width: 980px;
+            margin: 0 auto
+        }
+
+        header {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 18px
+        }
+
+        h1 {
+            font-size: 20px;
+            margin: 0
+        }
+
+        input[type="text"],
+        input[type="number"] {
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px
+        }
+
+        .card {
+            background: var(--card);
+            padding: 14px;
+            border-radius: 12px;
+            box-shadow: 0 6px 18px rgba(12, 18, 32, 0.06);
+            margin-bottom: 12px
+        }
+
+        .controls {
+            display: flex;
+            gap: 8px;
+            align-items: center
+        }
+
+        .cities {
+            margin-top: 12px
+        }
+
+        .city {
+            display: grid;
+            grid-template-columns: 1fr 160px 170px 80px;
+            gap: 10px;
+            align-items: center;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px dashed #eee;
+            margin-bottom: 8px
+        }
+
+        .city .name {
+            font-weight: 600
+        }
+
+        /* calendar styles */
+        .calendar-wrapper {
+            margin-top: 12px
+        }
+
+        .months {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap
+        }
+
+        .month-card {
+            width: 350px;
+            border-radius: 8px;
+            border: 1px solid #eee;
+            padding: 10px;
+            background: var(--card)
+        }
+
+        .month-header {
+            font-weight: 700;
+            margin-bottom: 6px
+        }
+
+        .weekday-row {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            font-size: 12px;
+            color: var(--muted);
+            text-align: center
+        }
+
+        .days-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0
+        }
+
+        /* each day cell is identical size so bars are visually contiguous */
+        .day {
+            height: 56px; /* fixed height */
+            border-radius: 0;
+            background: #fff;
+            text-align: right;
+            padding: 6px;
+            font-size: 13px;
+            position: relative;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        .day.blank {
+            background: transparent
+        }
+
+        /* blue bar styles for in-range days */
+        .day.in-range {
+            background: #2563eb;
+            color: #fff
+        }
+
+        /* round only the ends so consecutive .in-range cells form one contiguous bar */
+        .day.range-start {
+            border-top-left-radius: 20px;
+            border-bottom-left-radius: 20px
+        }
+
+        .day.range-end {
+            border-top-right-radius: 20px;
+            border-bottom-right-radius: 20px
+        }
+
+        /* label is absolutely positioned so it won't change cell height */
+        .bar-label {
+            position: absolute;
+            left: 1px;
+            right: 1px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 12px;
+            line-height: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: #fff;
+        }
+
+        .day .date-num {
+            position: absolute;
+            right: 6px;
+            top: 6px;
+            font-size: 12px;
+            color: inherit
+        }
+
+        .small {
+            font-size: 13px;
+            color: var(--muted)
+        }
+
+        .days-control {
+            display: flex;
+            gap: 6px;
+            align-items: center
+        }
+
+        .days-control button {
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            background: #fff;
+            cursor: pointer
+        }
+
+        .days-control input {
+            width: 60px;
+            text-align: center
+        }
+
+        .meta {
+            font-size: 13px;
+            color: var(--muted)
+        }
+
+        .topline {
+            display: flex;
+            justify-content: space-between;
+            align-items: center
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px
+        }
+
+        .btn {
+            padding: 8px 10px;
+            border-radius: 8px;
+            border: 0;
+            cursor: pointer
+        }
+
+        .btn.primary {
+            background: #2563eb;
+            color: white
+        }
+
+        .btn.ghost {
+            background: transparent;
+            border: 1px solid #ddd
+        }
+
+        .total {
+            font-weight: 700
+        }
+
+        footer.small {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 8px
+        }
+
+        @media (max-width:720px) {
+            .city {
+                grid-template-columns: 1fr 120px 120px 72px
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app">
+        <header>
+            <h1>Trippino</h1>
+            <div class="small">(data saved locally in your browser)</div>
+        </header>
+
+        <div class="card">
+            <div class="topline">
+                <div style="display:flex;gap:8px;align-items:center">
+                    <label class="small">Trip name</label>
+                    <input id="tripName" type="text" placeholder="e.g. Thailand" />
+                    <div class="small" style="margin-left:6px;color:var(--muted)">Start date (optional)</div>
+                    <input id="tripStart" type="date" />
+                </div>
+                <div class="actions">
+                    <button id="addCity" class="btn ghost">+ Add city</button>
+                    <button id="clearAll" class="btn" title="Clear local data">Clear</button>
+                </div>
+            </div>
+
+            <div class="cities" id="cities"></div>
+
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+                <div class="meta">Total days: <span id="totalDays" class="total">0</span></div>
+            </div>
+        </div>
+
+        <!-- calendar card -->
+        <div id="calendarCard" class="card calendar-wrapper">
+            <h3 style="margin:0 0 8px 0">Calendar view</h3>
+            <div id="calendarHint" class="small">Set a trip start date to see the calendar.</div>
+            <div id="months" class="months" aria-live="polite"></div>
+        </div>
+
+        <div id="timelineCard" class="card">
+            <h3 style="margin:0 0 8px 0">Day-by-day timeline</h3>
+            <div id="timeline" class="small">No days yet — add cities.</div>
+        </div>
+        
+    </div>
+
+    <script>
+        // Simple trip planner stored wholly in localStorage
+        // Data model: { tripName, tripStart (yyyy-mm-dd or ''), cities: [{id, name, days}] }
+        const STORAGE_KEY = 'simpleTripPlanner_v1'
+
+        // DOM
+        const tripNameInput = document.getElementById('tripName')
+        const tripStartInput = document.getElementById('tripStart')
+        const citiesEl = document.getElementById('cities')
+        const addCityBtn = document.getElementById('addCity')
+        const totalDaysEl = document.getElementById('totalDays')
+        const timelineEl = document.getElementById('timeline')
+        const clearAllBtn = document.getElementById('clearAll')
+
+        // helpers
+        const uid = () => Math.random().toString(36).slice(2, 9)
+
+        function load() {
+            const raw = localStorage.getItem(STORAGE_KEY)
+            if (!raw) return { tripName: '', tripStart: '', cities: [] }
+            try { return JSON.parse(raw) } catch (e) { console.warn('load failed', e); return { tripName: '', tripStart: '', cities: [] } }
+        }
+        function save(state) { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)) }
+
+        // state
+        let state = load()
+
+        // render functions
+        function render() {
+            tripNameInput.value = state.tripName || ''
+            tripStartInput.value = state.tripStart || ''
+
+            citiesEl.innerHTML = ''
+            let dayCursor = 1
+            for (let i = 0; i < state.cities.length; i++) {
+                const c = state.cities[i]
+                const start = dayCursor
+                const end = dayCursor + Number(c.days) - 1
+                const cityRow = document.createElement('div')
+                cityRow.className = 'city'
+                cityRow.dataset.id = c.id
+
+                cityRow.innerHTML = `
+          <div>
+            <div class="name">${escapeHtml(c.name || 'Unnamed city')}</div>
+            <div class="small">#${i + 1}</div>
+          </div>
+          <div class="days-control">
+            <button data-action="dec">−</button>
+            <input type="number" min="1" value="${c.days}" data-days />
+            <button data-action="inc">+</button>
+          </div>
+          <div class="meta">Start: <strong>${start}</strong><br>End: <strong>${end}</strong></div>
+          <div style="text-align:right">
+            <button data-action="rename" class="btn ghost" title="Rename">✎</button>
+            <button data-action="remove" class="btn" style="margin-top:6px">Remove</button>
+          </div>
+        `
+
+                // attach listeners
+                cityRow.querySelector('[data-action="dec"]').addEventListener('click', () => changeDays(c.id, -1))
+                cityRow.querySelector('[data-action="inc"]').addEventListener('click', () => changeDays(c.id, +1))
+                cityRow.querySelector('[data-days]').addEventListener('change', (e) => setDays(c.id, Number(e.target.value)))
+                cityRow.querySelector('[data-action="remove"]').addEventListener('click', () => removeCity(c.id))
+                cityRow.querySelector('[data-action="rename"]').addEventListener('click', () => renameCity(c.id))
+                // allow double-clicking the visible city name to rename inline via prompt
+                const nameEl = cityRow.querySelector('.name')
+                if (nameEl) { nameEl.addEventListener('dblclick', () => renameCity(c.id)) }
+
+                citiesEl.appendChild(cityRow)
+
+                dayCursor = end + 1
+            }
+
+            // totals and timeline
+            const total = state.cities.reduce((s, c) => s + Number(c.days), 0)
+            totalDaysEl.textContent = total
+            renderTimeline()
+            renderCalendar()
+
+            // save after rendering
+            save(state)
+        }
+
+        function renderTimeline() {
+            if (state.cities.length === 0) {
+                timelineEl.textContent = 'No days yet — add cities.';
+                return
+            }
+            const lines = []
+            let cur = 1
+            const startDate = tripStartInput.value ? new Date(tripStartInput.value) : null
+            for (const c of state.cities) {
+                const start = cur
+                const end = cur + Number(c.days) - 1
+                if (startDate) {
+                    const sd = addDays(startDate, start - 1)
+                    const ed = addDays(startDate, end - 1)
+                    lines.push(`${c.name || 'Unnamed'} — days ${c.days} (${formatDate(sd)} → ${formatDate(ed)})`)
+                } else {
+                    lines.push(`${c.name || 'Unnamed'} — days ${start}–${end}`)
+                }
+                cur = end + 1
+            }
+            timelineEl.innerHTML = lines.map(l => `<div>${escapeHtml(l)}</div>`).join('')
+        }
+
+        // render calendar view with blue bar ranges and city labels on the start cell
+        function renderCalendar() {
+            const monthsEl = document.getElementById('months')
+            const hintEl = document.getElementById('calendarHint')
+            if (!monthsEl || !hintEl) return
+            monthsEl.innerHTML = ''
+            if (!tripStartInput.value || state.cities.length === 0) { hintEl.style.display = 'block'; return }
+            hintEl.style.display = 'none'
+
+            // compute city ranges (absolute day numbers)
+            let cur = 1
+            const cityRanges = state.cities.map(c => { const start = cur; const end = cur + Number(c.days) - 1; cur = end + 1; return { id: c.id, name: c.name || 'Unnamed', start, end } })
+            const tripStart = new Date(tripStartInput.value)
+            const totalDays = cityRanges.length ? cityRanges[cityRanges.length - 1].end : 0
+            if (totalDays <= 0) return
+
+            const tripFirstDate = addDays(tripStart, 0)
+            const tripLastDate = addDays(tripStart, totalDays - 1)
+
+            // collect months and limit to two
+            const shownMonths = []
+            const m = new Date(tripFirstDate.getFullYear(), tripFirstDate.getMonth(), 1)
+            while (m <= tripLastDate) { 
+                shownMonths.push(new Date(m)); 
+                m.setMonth(m.getMonth() + 1) 
+            }
+            //const shownMonths = months.slice(0, 2)
+
+            const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+            for (const monthStart of shownMonths) {
+                const monthCard = document.createElement('div')
+                monthCard.className = 'month-card'
+                const monthLabel = monthStart.toLocaleString(undefined, { month: 'long', year: 'numeric' })
+                const header = document.createElement('div')
+                header.className = 'month-header'
+                header.textContent = monthLabel
+                monthCard.appendChild(header)
+
+                const wk = document.createElement('div')
+                wk.className = 'weekday-row'
+                wk.innerHTML = weekdays.map(w => `<div>${w}</div>`).join('')
+                monthCard.appendChild(wk)
+
+                const daysGrid = document.createElement('div')
+                daysGrid.className = 'days-grid'
+
+                const firstOfMonth = new Date(monthStart.getFullYear(), monthStart.getMonth(), 1)
+                let weekday = firstOfMonth.getDay()
+                let blanks = (weekday === 0) ? 6 : (weekday - 1)
+                for (let i = 0; i < blanks; i++) { const b = document.createElement('div'); b.className = 'day blank'; daysGrid.appendChild(b) }
+
+                const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate()
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const date = new Date(monthStart.getFullYear(), monthStart.getMonth(), d)
+                    const absDay = Math.floor((date - tripStart) / (24 * 60 * 60 * 1000)) + 1
+                    const dayEl = document.createElement('div')
+                    dayEl.className = 'day'
+                    // default content: date number
+                    dayEl.innerHTML = `<div class="date-num">${d}</div>`
+
+                    if (absDay >= 1 && absDay <= totalDays) {
+                        // find which city this day belongs to (sequential ranges)
+                        const cr = cityRanges.find(r => absDay >= r.start && absDay <= r.end)
+                        if (cr) {
+                            dayEl.classList.add('in-range')
+                            if (absDay === cr.start) {
+                                dayEl.classList.add('range-start')
+                                const label = document.createElement('div')
+                                label.className = 'bar-label'
+                                label.title = cr.name
+                                label.textContent = cr.name
+                                dayEl.appendChild(label)
+                            }
+                            if (absDay === cr.end) dayEl.classList.add('range-end')
+                        }
+                    } else {
+                        dayEl.classList.add('blank')
+                    }
+
+                    daysGrid.appendChild(dayEl)
+                }
+
+                monthCard.appendChild(daysGrid)
+                monthsEl.appendChild(monthCard)
+            }
+        }
+
+        // modify state
+        function addCity(name = 'New city', days = 1) {
+            state.cities.push({ id: uid(), name, days: Math.max(1, Number(days)) })
+            render()
+        }
+        function removeCity(id) {
+            state.cities = state.cities.filter(c => c.id !== id)
+            render()
+        }
+        function renameCity(id) {
+            // keep for UI-driven rename (prompt) but delegate actual update to updateCityName
+            const c = state.cities.find(x => x.id === id)
+            if (!c) return
+            const n = prompt('City name', c.name)
+            if (n !== null) updateCityName(id, n)
+        }
+
+        // Programmatic updater for a city's name. Validates input and re-renders.
+        function updateCityName(id, newName) {
+            const c = state.cities.find(x => x.id === id)
+            if (!c) return
+            if (newName === null || newName === undefined) return
+            c.name = String(newName)
+            render()
+        }
+        function changeDays(id, delta) {
+            const c = state.cities.find(x => x.id === id)
+            if (!c) return
+            const newDays = Math.max(1, Number(c.days) + delta)
+            c.days = newDays
+            render()
+        }
+        function setDays(id, value) {
+            const c = state.cities.find(x => x.id === id)
+            if (!c) return
+            c.days = Math.max(1, Number(value) || 1)
+            render()
+        }
+
+        // utility date functions
+        function addDays(d, n) { const t = new Date(d); t.setDate(t.getDate() + n); return t }
+        function formatDate(d) { return d.toISOString().slice(0, 10) }
+
+        // escape for safety (we control the HTML but keep it safe)
+        function escapeHtml(s) { return String(s).replace(/[&<>"']/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": "&#39;" }[ch] }) }
+
+        // wire top-level inputs
+        tripNameInput.addEventListener('input', () => { state.tripName = tripNameInput.value; save(state) })
+        tripStartInput.addEventListener('change', () => { state.tripStart = tripStartInput.value; render() })
+
+        addCityBtn.addEventListener('click', () => {
+            const name = prompt('City name (optional)')
+            addCity(name || 'New city', 1)
+        })
+
+        clearAllBtn.addEventListener('click', () => {
+            if (confirm('Clear saved trip? This will remove local data.')) {
+                state = { tripName: '', tripStart: '', cities: [] }
+                save(state)
+                render()
+            }
+        })
+
+        // initial render
+        render()
+
+    </script>
+</body>
+
+</html>
