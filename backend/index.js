@@ -136,6 +136,7 @@ app.post('/api/state', async (req, res) => {
     if (typeof state === 'undefined') return res.status(400).json({ error: 'state missing in body' })
     const blob = JSON.stringify(state)
     await run(`INSERT OR REPLACE INTO states(user_id, state) VALUES(?,?)`, [userId, blob])
+    console.log(`Saved state for user ${s.user.email} (id ${userId}), ${blob.length} bytes`)
     return res.json({ ok: true })
   }catch(e){ console.error(e); return res.status(500).json({ error: 'server error' }) }
 })
