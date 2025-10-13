@@ -278,13 +278,90 @@
         async function checkAuth() {
             try {
                 const res = await fetch(`${API_BASE}/api/me`, { credentials: 'include' })
-                if (!res.ok) return setAnonymous()
+                if (!res.ok) { setAnonymous(); return null }
                 const data = await res.json()
                 setAuthenticated(data.user)
+                return data.user
             } catch (e) {
                 console.warn('auth check failed', e)
                 setAnonymous()
+                return null
             }
+        }
+
+        // fetch saved state from backend for the current user (if any)
+        async function fetchBackendState() {
+            try {
+                const res = await fetch(`${API_BASE}/api/state`, { credentials: 'include' })
+                if (!res.ok) return null
+                const json = await res.json()
+                return json && json.state ? json.state : null
+            } catch (e) {
+                console.warn('fetch backend state failed', e)
+                return null
+            }
+        }
+
+        // load local state and, if logged in, fetch backend state and pick the most recent
+        async function loadAndSyncState() {
+            const user = await checkAuth()
+
+            let backendState = null
+            if (user) backendState = await fetchBackendState()
+
+            const localState = load()
+
+            function tsOf(s) {
+                if (!s) return 0
+                const t = s.updatedAt || s.updated_at || null
+                return t ? Date.parse(t) : 0
+            }
+
+            // Decide which state to use
+            if (!backendState && !localState) {
+                appState = { trips: [], activeTripId: null }
+            } else if (!user) {
+                // not logged in -> use local only
+                appState = localState || { trips: [], activeTripId: null }
+            } else if (!backendState) {
+                // logged in, only local exists -> use local and push to backend
+                appState = localState || { trips: [], activeTripId: null }
+                try {
+                    await fetch(`${API_BASE}/api/state`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ state: appState }) })
+                } catch (e) { console.warn('push local to backend failed', e) }
+            } else if (!localState) {
+                // backend exists only -> use backend and save locally
+                appState = backendState
+                save(appState)
+            } else {
+                // both exist -> pick the most recent updatedAt
+                const lts = tsOf(localState)
+                const bts = tsOf(backendState)
+                if (bts >= lts) {
+                    appState = backendState
+                    save(appState)
+                } else {
+                    appState = localState
+                    // push newer local to backend
+                    try {
+                        await fetch(`${API_BASE}/api/state`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ state: appState }) })
+                    } catch (e) { console.warn('push local to backend failed', e) }
+                }
+            }
+
+            // normalize
+            if (!appState.trips) appState.trips = []
+            if (!appState.activeTripId && appState.trips.length) appState.activeTripId = appState.trips[0].id
+
+            // ensure updatedAt exists
+            if (!appState.updatedAt) appState.updatedAt = new Date().toISOString()
+
+            // sync local store
+            save(appState)
+
+            // refresh UI
+            refreshAll()
+            render()
         }
 
         function setAnonymous() {
@@ -335,7 +412,8 @@
                     const err = await res.json().catch(() => ({}))
                     return alert(err.error || 'register failed')
                 }
-                await checkAuth()
+                // re-load and sync state after registering
+                await loadAndSyncState()
             } catch (e) { console.error(e); alert('register failed') }
         }
 
@@ -354,7 +432,8 @@
                     const err = await res.json().catch(() => ({}))
                     return alert(err.error || 'login failed')
                 }
-                await checkAuth()
+                // re-load and sync state after login
+                await loadAndSyncState()
             } catch (e) { console.error(e); alert('login failed') }
         }
 
@@ -365,8 +444,8 @@
             checkAuth()
         }
 
-        // check auth on load
-        checkAuth()
+    // check auth and sync state on load
+    loadAndSyncState()
 
         // App model: { trips: [{id,name,start,cities}], activeTripId, updatedAt }
         const STORAGE_KEY = 'simpleTripPlanner_v1'
