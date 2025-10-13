@@ -14,19 +14,19 @@ const DB_FILE = path.join(__dirname, 'data.sqlite')
 // open DB
 const db = new sqlite3.Database(DB_FILE)
 
-function run(sql, params = []){
+function run(sql, params = []) {
   return new Promise((resolve, reject) => {
-    db.run(sql, params, function(err){ if(err) return reject(err); resolve(this) })
+    db.run(sql, params, function (err) { if (err) return reject(err); resolve(this) })
   })
 }
-function get(sql, params = []){
+function get(sql, params = []) {
   return new Promise((resolve, reject) => {
-    db.get(sql, params, (err, row) => { if(err) return reject(err); resolve(row) })
+    db.get(sql, params, (err, row) => { if (err) return reject(err); resolve(row) })
   })
 }
-function all(sql, params = []){
+function all(sql, params = []) {
   return new Promise((resolve, reject) => {
-    db.all(sql, params, (err, rows) => { if(err) return reject(err); resolve(rows) })
+    db.all(sql, params, (err, rows) => { if (err) return reject(err); resolve(rows) })
   })
 }
 
@@ -36,8 +36,8 @@ db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS sessions (sid TEXT PRIMARY KEY, user_id INTEGER, createdAt INTEGER)`)
   db.run(`CREATE TABLE IF NOT EXISTS states (user_id INTEGER PRIMARY KEY, state TEXT)`)
   // seed demo users
-  db.run(`INSERT OR IGNORE INTO users(email,password) VALUES(?,?)`, ['marc@demo.com','marc'])
-  db.run(`INSERT OR IGNORE INTO users(email,password) VALUES(?,?)`, ['alice@demo.com','alice'])
+  db.run(`INSERT OR IGNORE INTO users(email,password) VALUES(?,?)`, ['marc@demo.com', 'marc'])
+  db.run(`INSERT OR IGNORE INTO users(email,password) VALUES(?,?)`, ['alice@demo.com', 'alice'])
 })
 
 // cookie name
@@ -75,7 +75,7 @@ async function getSession(req) {
 
 // login route
 app.post('/api/login', async (req, res) => {
-  try{
+  try {
     const { email, password } = req.body || {}
     if (!email || !password) return res.status(400).json({ error: 'email and password required' })
     const user = await get(`SELECT id,email,password FROM users WHERE email = ?`, [email])
@@ -83,52 +83,52 @@ app.post('/api/login', async (req, res) => {
     const sid = await createSessionForUserId(user.id)
     res.cookie(COOKIE_NAME, sid, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 7 * 24 * 60 * 60 * 1000 })
     return res.json({ ok: true, email: user.email })
-  }catch(e){ console.error(e); return res.status(500).json({ error: 'server error' }) }
+  } catch (e) { console.error(e); return res.status(500).json({ error: 'server error' }) }
 })
 
 // register route: simple demo-only implementation that stores email/password in memory
 app.post('/api/register', async (req, res) => {
-  try{
+  try {
     const { email, password } = req.body || {}
     if (!email || !password) return res.status(400).json({ error: 'email and password required' })
     // insert user
-    try{
+    try {
       const info = await run(`INSERT INTO users(email,password) VALUES(?,?)`, [email, password])
       // get id of created user
       const row = await get(`SELECT id FROM users WHERE email = ?`, [email])
       const sid = await createSessionForUserId(row.id)
       res.cookie(COOKIE_NAME, sid, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 7 * 24 * 60 * 60 * 1000 })
       return res.json({ ok: true, email })
-    }catch(e){
+    } catch (e) {
       // likely UNIQUE constraint
       if (e && e.message && e.message.indexOf('UNIQUE') !== -1) return res.status(409).json({ error: 'email already exists' })
       throw e
     }
-  }catch(e){ console.error(e); return res.status(500).json({ error: 'server error' }) }
+  } catch (e) { console.error(e); return res.status(500).json({ error: 'server error' }) }
 })
 
 // get current user
 app.get('/api/me', async (req, res) => {
-  try{
+  try {
     const s = await getSession(req)
     if (!s) return res.status(401).json({ error: 'not authenticated' })
     return res.json({ user: s.user })
-  }catch(e){ console.error(e); return res.status(500).json({ error: 'server error' }) }
+  } catch (e) { console.error(e); return res.status(500).json({ error: 'server error' }) }
 })
 
 // logout
 app.post('/api/logout', async (req, res) => {
-  try{
+  try {
     const sid = req.cookies[COOKIE_NAME]
     if (sid) await run(`DELETE FROM sessions WHERE sid = ?`, [sid])
     res.clearCookie(COOKIE_NAME, { httpOnly: true, sameSite: 'lax' })
     res.json({ ok: true })
-  }catch(e){ console.error(e); return res.status(500).json({ error: 'server error' }) }
+  } catch (e) { console.error(e); return res.status(500).json({ error: 'server error' }) }
 })
 
 // save state for authenticated user
 app.post('/api/state', async (req, res) => {
-  try{
+  try {
     const s = await getSession(req)
     if (!s) return res.status(401).json({ error: 'not authenticated' })
     const userId = s.user.id
@@ -138,19 +138,19 @@ app.post('/api/state', async (req, res) => {
     await run(`INSERT OR REPLACE INTO states(user_id, state) VALUES(?,?)`, [userId, blob])
     console.log(`Saved state for user ${s.user.email} (id ${userId}), ${blob.length} bytes`)
     return res.json({ ok: true })
-  }catch(e){ console.error(e); return res.status(500).json({ error: 'server error' }) }
+  } catch (e) { console.error(e); return res.status(500).json({ error: 'server error' }) }
 })
 
 // get saved state for authenticated user
 app.get('/api/state', async (req, res) => {
-  try{
+  try {
     const s = await getSession(req)
     if (!s) return res.status(401).json({ error: 'not authenticated' })
     const userId = s.user.id
     const row = await get(`SELECT state FROM states WHERE user_id = ?`, [userId])
     if (!row) return res.json({ state: null })
-    try{ return res.json({ state: JSON.parse(row.state) }) }catch(e){ return res.json({ state: null }) }
-  }catch(e){ console.error(e); return res.status(500).json({ error: 'server error' }) }
+    try { return res.json({ state: JSON.parse(row.state) }) } catch (e) { return res.json({ state: null }) }
+  } catch (e) { console.error(e); return res.status(500).json({ error: 'server error' }) }
 })
 
 // simple health
