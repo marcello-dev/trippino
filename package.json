@@ -2,10 +2,10 @@
   "name": "trippino-backend",
   "version": "0.1.0",
   "private": true,
-  "main": "server/index.js",
+  "main": "backend/index.js",
   "scripts": {
-    "start": "node server/index.js",
-    "dev": "NODE_ENV=development node server/index.js"
+    "start": "node backend/index.js",
+    "dev": "NODE_ENV=development node backend/index.js"
   },
   "dependencies": {
     "cookie-parser": "^1.4.6",
