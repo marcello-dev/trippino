@@ -14,6 +14,23 @@ const users = {
   'alice': 'password123'
 }
 
+// persisted user state storage (username -> state object)
+const fs = require('fs')
+const path = require('path')
+const DATA_FILE = path.join(__dirname, 'data.json')
+let savedStates = {}
+
+// load persisted data if present
+try {
+  if (fs.existsSync(DATA_FILE)) {
+    const raw = fs.readFileSync(DATA_FILE, 'utf8')
+    savedStates = JSON.parse(raw || '{}')
+  }
+} catch (err) {
+  console.error('failed to read data file', err)
+  savedStates = {}
+}
+
 // cookie name
 const COOKIE_NAME = 'trippino_sid'
 
@@ -66,6 +83,26 @@ app.post('/api/login', (req, res) => {
   return res.json({ ok: true, username })
 })
 
+// register route: simple demo-only implementation that stores username/password in memory
+app.post('/api/register', (req, res) => {
+  const { username, password } = req.body || {}
+  if (!username || !password) return res.status(400).json({ error: 'username and password required' })
+  if (users[username]) return res.status(409).json({ error: 'username already exists' })
+  users[username] = password
+  // create empty saved state for user
+  savedStates[username] = savedStates[username] || null
+  // persist
+  try { fs.writeFileSync(DATA_FILE, JSON.stringify(savedStates, null, 2)) } catch (e) { console.error('persist failed', e) }
+  const sid = createSessionForUser(username)
+  res.cookie(COOKIE_NAME, sid, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 7 * 24 * 60 * 60 * 1000
+  })
+  return res.json({ ok: true, username })
+})
+
 // get current user
 app.get('/api/me', (req, res) => {
   const s = getSession(req)
@@ -79,6 +116,26 @@ app.post('/api/logout', (req, res) => {
   if (sid) sessions.delete(sid)
   res.clearCookie(COOKIE_NAME, { httpOnly: true, sameSite: 'lax' })
   res.json({ ok: true })
+})
+
+// save state for authenticated user
+app.post('/api/state', (req, res) => {
+  const s = getSession(req)
+  if (!s) return res.status(401).json({ error: 'not authenticated' })
+  const username = s.user.username
+  const state = req.body && req.body.state
+  if (typeof state === 'undefined') return res.status(400).json({ error: 'state missing in body' })
+  savedStates[username] = state
+  try { fs.writeFileSync(DATA_FILE, JSON.stringify(savedStates, null, 2)) } catch (e) { console.error('persist failed', e) }
+  return res.json({ ok: true })
+})
+
+// get saved state for authenticated user
+app.get('/api/state', (req, res) => {
+  const s = getSession(req)
+  if (!s) return res.status(401).json({ error: 'not authenticated' })
+  const username = s.user.username
+  return res.json({ state: savedStates[username] || null })
 })
 
 // simple health
