@@ -279,7 +279,7 @@
                 const res = await fetch(`${API_BASE}/api/me`, { credentials: 'include' })
                 if (!res.ok) return setAnonymous()
                 const data = await res.json()
-                setAuthenticated(data.user.username)
+                setAuthenticated(data.user)
             } catch (e) {
                 console.warn('auth check failed', e)
                 setAnonymous()
@@ -293,10 +293,10 @@
             document.getElementById('showAuthBtn').addEventListener('click', showAuthForm)
         }
 
-        function setAuthenticated(username) {
+        function setAuthenticated(user) {
             authArea.innerHTML = `
                 <div style="display:flex;gap:8px;align-items:center">
-                    <div class="small">Signed in as <strong>${escapeHtml(username)}</strong></div>
+                    <div class="small">Signed in as <strong>${escapeHtml(user.email)}</strong></div>
                     <button id="logoutBtn" class="btn ghost">Logout</button>
                 </div>
             `
@@ -307,7 +307,7 @@
             // simple inline form (register or login)
             authArea.innerHTML = `
                 <div style="display:flex;gap:8px;align-items:center">
-                    <input id="authUser" placeholder="username" />
+                    <input id="authEmail" placeholder="email" />
                     <input id="authPass" type="password" placeholder="password" />
                     <button id="btnLogin" class="btn primary">Login</button>
                     <button id="btnRegister" class="btn ghost">Register</button>
@@ -320,15 +320,15 @@
         }
 
         async function doRegister() {
-            const u = document.getElementById('authUser').value.trim()
+            const e = document.getElementById('authEmail').value.trim()
             const p = document.getElementById('authPass').value
-            if (!u || !p) return alert('username and password required')
+            if (!e || !p) return alert('email and password required')
             try {
                 const res = await fetch(`${API_BASE}/api/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
-                    body: JSON.stringify({ username: u, password: p })
+                    body: JSON.stringify({ email: e, password: p })
                 })
                 if (!res.ok) {
                     const err = await res.json().catch(() => ({}))
@@ -339,15 +339,15 @@
         }
 
         async function doLogin() {
-            const u = document.getElementById('authUser').value.trim()
+            const e = document.getElementById('authEmail').value.trim()
             const p = document.getElementById('authPass').value
-            if (!u || !p) return alert('username and password required')
+            if (!e || !p) return alert('email and password required')
             try {
                 const res = await fetch(`${API_BASE}/api/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
-                    body: JSON.stringify({ username: u, password: p })
+                    body: JSON.stringify({ email: e, password: p })
                 })
                 if (!res.ok) {
                     const err = await res.json().catch(() => ({}))

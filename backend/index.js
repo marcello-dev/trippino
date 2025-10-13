@@ -8,13 +8,13 @@ const PORT = process.env.PORT || 4000
 // Simple in-memory session store: { sessionId: { user } }
 const sessions = new Map()
 
-// For demo/demo-only: simple user store (username -> password)
+// For demo/demo-only: simple user store (email -> password)
 const users = {
-  'demo': 'demo',
-  'alice': 'password123'
+  'bob@demo.com': 'bob',
+  'alice@demo.com': 'alice'
 }
 
-// persisted user state storage (username -> state object)
+// persisted user state storage (email -> state object)
 const fs = require('fs')
 const path = require('path')
 const DATA_FILE = path.join(__dirname, 'data.json')
@@ -49,9 +49,9 @@ app.use((req, res, next) => {
   next()
 })
 
-function createSessionForUser(username) {
+function createSessionForUser(email) {
   const sid = uuidv4()
-  const session = { user: { username }, createdAt: Date.now() }
+  const session = { user: { email }, createdAt: Date.now() }
   sessions.set(sid, session)
   return sid
 }
@@ -65,12 +65,12 @@ function getSession(req) {
 
 // login route
 app.post('/api/login', (req, res) => {
-  const { username, password } = req.body || {}
-  if (!username || !password) return res.status(400).json({ error: 'username and password required' })
-  const expected = users[username]
+  const { email, password } = req.body || {}
+  if (!email || !password) return res.status(400).json({ error: 'email and password required' })
+  const expected = users[email]
   if (!expected || expected !== password) return res.status(401).json({ error: 'invalid credentials' })
 
-  const sid = createSessionForUser(username)
+  const sid = createSessionForUser(email)
 
   // set cookie
   res.cookie(COOKIE_NAME, sid, {
@@ -80,27 +80,27 @@ app.post('/api/login', (req, res) => {
     maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
   })
 
-  return res.json({ ok: true, username })
+  return res.json({ ok: true, email })
 })
 
-// register route: simple demo-only implementation that stores username/password in memory
+// register route: simple demo-only implementation that stores email/password in memory
 app.post('/api/register', (req, res) => {
-  const { username, password } = req.body || {}
-  if (!username || !password) return res.status(400).json({ error: 'username and password required' })
-  if (users[username]) return res.status(409).json({ error: 'username already exists' })
-  users[username] = password
+  const { email, password } = req.body || {}
+  if (!email || !password) return res.status(400).json({ error: 'email and password required' })
+  if (users[email]) return res.status(409).json({ error: 'email already exists' })
+  users[email] = password
   // create empty saved state for user
-  savedStates[username] = savedStates[username] || null
+  savedStates[email] = savedStates[email] || null
   // persist
   try { fs.writeFileSync(DATA_FILE, JSON.stringify(savedStates, null, 2)) } catch (e) { console.error('persist failed', e) }
-  const sid = createSessionForUser(username)
+  const sid = createSessionForUser(email)
   res.cookie(COOKIE_NAME, sid, {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
     maxAge: 7 * 24 * 60 * 60 * 1000
   })
-  return res.json({ ok: true, username })
+  return res.json({ ok: true, email })
 })
 
 // get current user
@@ -122,10 +122,10 @@ app.post('/api/logout', (req, res) => {
 app.post('/api/state', (req, res) => {
   const s = getSession(req)
   if (!s) return res.status(401).json({ error: 'not authenticated' })
-  const username = s.user.username
+  const email = s.user.email
   const state = req.body && req.body.state
   if (typeof state === 'undefined') return res.status(400).json({ error: 'state missing in body' })
-  savedStates[username] = state
+  savedStates[email] = state
   try { fs.writeFileSync(DATA_FILE, JSON.stringify(savedStates, null, 2)) } catch (e) { console.error('persist failed', e) }
   return res.json({ ok: true })
 })
@@ -134,8 +134,8 @@ app.post('/api/state', (req, res) => {
 app.get('/api/state', (req, res) => {
   const s = getSession(req)
   if (!s) return res.status(401).json({ error: 'not authenticated' })
-  const username = s.user.username
-  return res.json({ state: savedStates[username] || null })
+  const email = s.user.email
+  return res.json({ state: savedStates[email] || null })
 })
 
 // simple health
