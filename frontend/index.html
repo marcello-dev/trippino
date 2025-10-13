@@ -689,7 +689,9 @@
                 const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth()+1,0).getDate()
                 for (let d=1; d<=daysInMonth; d++) {
                     const date = new Date(monthStart.getFullYear(), monthStart.getMonth(), d)
-                    const absDay = Math.floor((date - tripStart) / (24*60*60*1000)) + 1
+                    // compute day difference using UTC midnight to avoid timezone shifts
+                    const msPerDay = 24 * 60 * 60 * 1000
+                    const absDay = Math.floor((Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) - Date.UTC(tripStart.getFullYear(), tripStart.getMonth(), tripStart.getDate())) / msPerDay) + 1
                     const dayEl = document.createElement('div')
                     dayEl.className = 'day'
                     dayEl.innerHTML = `<div class="date-num">${d}</div>`
