@@ -287,18 +287,7 @@
             <h3 style="margin:0 0 8px 0">Day-by-day timeline</h3>
             <div id="timeline" class="small">No days yet — add cities.</div>
         </div>
-        <!-- share card -->
-        <div id="shareCard" class="card">
-            <h3 style="margin:0 0 8px 0">Share this trip</h3>
-            <div class="small" style="margin-bottom:8px">Generate a link that encodes your trip state. Share it or paste one here to import.</div>
-            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-                <input id="shareLink" type="text" placeholder="Generated link will appear here" style="flex:1;min-width:220px" />
-                <button id="generateLink" class="btn ghost">Generate</button>
-                <button id="copyLink" class="btn">Copy</button>
-                <button id="pasteImport" class="btn ghost">Import from clipboard</button>
-            </div>
-            <div class="small" style="margin-top:8px;color:var(--muted)">Tip: the link contains only your trip data encoded client-side. No server involved.</div>
-        </div>
+
     </div>
 
     <script>
@@ -560,115 +549,6 @@
 
         // initial render
         render()
-
-        // --- Share link utilities ---
-        const shareLinkInput = document.getElementById('shareLink')
-        const generateLinkBtn = document.getElementById('generateLink')
-        const copyLinkBtn = document.getElementById('copyLink')
-        const pasteImportBtn = document.getElementById('pasteImport')
-
-        // URL-safe base64 helpers
-        function toBase64Url(str) {
-            try {
-                const b = btoa(unescape(encodeURIComponent(str)))
-                return b.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-            } catch (e) { console.warn('base64 encode failed', e); return null }
-        }
-        function fromBase64Url(b64) {
-            try {
-                // pad base64
-                let s = b64.replace(/-/g, '+').replace(/_/g, '/')
-                while (s.length % 4) s += '='
-                return decodeURIComponent(escape(atob(s)))
-            } catch (e) { console.warn('base64 decode failed', e); return null }
-        }
-
-        function buildShareLink(forState) {
-            const json = JSON.stringify(forState || state)
-            const payload = toBase64Url(json)
-            if (!payload) return ''
-            const u = new URL(window.location.href)
-            u.searchParams.set('trip', payload)
-            // strip hash if present
-            u.hash = ''
-            return u.toString()
-        }
-
-        generateLinkBtn.addEventListener('click', () => {
-            const link = buildShareLink()
-            shareLinkInput.value = link
-            // show the link in the UI and select it
-            shareLinkInput.select()
-        })
-
-        copyLinkBtn.addEventListener('click', async () => {
-            const val = shareLinkInput.value || buildShareLink()
-            if (!val) return alert('No link to copy — generate one first.')
-            try {
-                await navigator.clipboard.writeText(val)
-                copyLinkBtn.textContent = 'Copied'
-                setTimeout(() => (copyLinkBtn.textContent = 'Copy'), 1500)
-            } catch (e) {
-                console.warn('copy failed', e)
-                alert('Copy failed. You can manually select and copy the link.')
-            }
-        })
-
-        pasteImportBtn.addEventListener('click', async () => {
-            try {
-                const text = await navigator.clipboard.readText()
-                if (!text) return alert('Clipboard is empty')
-                // try to parse as URL with '?trip=' param or raw payload
-                let payload = null
-                try { const u = new URL(text); payload = u.searchParams.get('trip') }
-                catch (e) { /* not a URL */ }
-                if (!payload) {
-                    // if it looks like a full URL, try to extract trip param with regex
-                    const m = text.match(/[?&]trip=([A-Za-z0-9-_]+)/)
-                    if (m) payload = m[1]
-                }
-                if (!payload) {
-                    // maybe user copied the raw payload
-                    const raw = text.trim()
-                    if (/^[A-Za-z0-9-_]+=*$/.test(raw)) payload = raw
-                }
-                if (!payload) return alert('No trip data found in the pasted text')
-                const decoded = fromBase64Url(payload)
-                if (!decoded) return alert('Failed to decode trip data')
-                const parsed = JSON.parse(decoded)
-                if (!confirm('Import trip from link? This will replace your current trip.')) return
-                state = parsed
-                save(state)
-                render()
-            } catch (e) {
-                console.warn('paste/import failed', e)
-                alert('Import failed — see console for details')
-            }
-        })
-
-        // On load: check for ?trip= payload and import it if present
-        (function importFromUrlParam() {
-            try {
-                const params = new URLSearchParams(window.location.search)
-                const tripPayload = params.get('trip')
-                if (!tripPayload) return
-                const decoded = fromBase64Url(tripPayload)
-                if (!decoded) return
-                const parsed = JSON.parse(decoded)
-                // ask user before overwriting local state (but if local is empty, import silently)
-                const hasLocal = (state && (state.cities && state.cities.length > 0 || (state.tripName && state.tripName.trim())))
-                if (hasLocal) {
-                    if (!confirm('A trip link is present in the URL. Importing will replace your current trip. Proceed?')) return
-                }
-                state = parsed
-                save(state)
-                render()
-                // update share input so user can copy the canonical link
-                shareLinkInput.value = buildShareLink()
-            } catch (e) {
-                console.warn('importFromUrlParam failed', e)
-            }
-        })()
 
     </script>
 </body>
