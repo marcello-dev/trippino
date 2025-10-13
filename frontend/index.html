@@ -255,37 +255,16 @@
             <div id="authArea" style="margin-left:auto"></div>
         </header>
 
-        <div class="card">
-            <div class="topline">
-                <div style="display:flex;gap:8px;align-items:center">
-                    <label class="small">Trip name</label>
-                    <input id="tripName" type="text" placeholder="e.g. Thailand" />
-                    <div class="small" style="margin-left:6px;color:var(--muted)">Start date (optional)</div>
-                    <input id="tripStart" type="date" />
-                </div>
-                <div class="actions">
-                    <button id="addCity" class="btn ghost">+ Add city</button>
-                    <button id="clearAll" class="btn" title="Clear local data">Clear</button>
-                </div>
+        <div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+                <input id="newTripName" placeholder="trip name" style="flex:1;max-width:420px" />
+                <input id="newTripStart" type="date" />
+                <button id="createTripBtn" class="btn primary">Create trip</button>
             </div>
 
-            <div class="cities" id="cities"></div>
-
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
-                <div class="meta">Total days: <span id="totalDays" class="total">0</span></div>
-            </div>
+            <div id="tripsContainer"></div>
         </div>
 
-        <!-- calendar card -->
-        <div id="calendarCard" class="card calendar-wrapper">
-            <h3 style="margin:0 0 8px 0">Calendar view</h3>
-            <div id="calendarHint" class="small">Set a trip start date to see the calendar.</div>
-            <div id="months" class="months" aria-live="polite"></div>
-        </div>
-
-        <div id="timelineCard" class="card">
-            <h3 style="margin:0 0 8px 0">Day-by-day timeline</h3>
-            <div id="timeline" class="small">No days yet — add cities.</div>
         </div>
 
     </div>
@@ -388,198 +367,140 @@
         // check auth on load
         checkAuth()
 
-        // Simple trip planner stored wholly in localStorage
-        // Data model: { tripName, tripStart (yyyy-mm-dd or ''), cities: [{id, name, days}] }
+        // App model: { trips: [{id,name,start,cities}], activeTripId }
         const STORAGE_KEY = 'simpleTripPlanner_v1'
 
-        // DOM
-        const tripNameInput = document.getElementById('tripName')
-        const tripStartInput = document.getElementById('tripStart')
-        const citiesEl = document.getElementById('cities')
-        const addCityBtn = document.getElementById('addCity')
-        const totalDaysEl = document.getElementById('totalDays')
-        const timelineEl = document.getElementById('timeline')
-        const clearAllBtn = document.getElementById('clearAll')
+    // DOM - note: global editor elements removed; per-trip editor creates its own DOM
+    // central container
+    const tripsContainer = document.getElementById('tripsContainer')
+        const createTripBtn = document.getElementById('createTripBtn')
+        const newTripName = document.getElementById('newTripName')
+        const newTripStart = document.getElementById('newTripStart')
 
         // helpers
         const uid = () => Math.random().toString(36).slice(2, 9)
+        const tid = () => 't_' + Math.random().toString(36).slice(2, 9)
 
         function load() {
             const raw = localStorage.getItem(STORAGE_KEY)
-            if (!raw) return { tripName: '', tripStart: '', cities: [] }
-            try { return JSON.parse(raw) } catch (e) { console.warn('load failed', e); return { tripName: '', tripStart: '', cities: [] } }
+            if (!raw) return { trips: [], activeTripId: null }
+            try { return JSON.parse(raw) } catch (e) { console.warn('load failed', e); return { trips: [], activeTripId: null } }
         }
-        function save(state) { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)) }
+        function save(appState) { localStorage.setItem(STORAGE_KEY, JSON.stringify(appState)) }
 
-        // state
-        let state = load()
+        // app state
+        let appState = load()
+        if (!appState.trips) appState.trips = []
+        if (!appState.activeTripId && appState.trips.length) appState.activeTripId = appState.trips[0].id
 
-        // render functions
-        function render() {
-            tripNameInput.value = state.tripName || ''
-            tripStartInput.value = state.tripStart || ''
-
-            citiesEl.innerHTML = ''
-            let dayCursor = 1
-            for (let i = 0; i < state.cities.length; i++) {
-                const c = state.cities[i]
-                const start = dayCursor
-                const end = dayCursor + Number(c.days) - 1
-                const cityRow = document.createElement('div')
-                cityRow.className = 'city'
-                cityRow.dataset.id = c.id
-
-                cityRow.innerHTML = `
-          <div>
-            <div class="name">${escapeHtml(c.name || 'Unnamed city')}</div>
-            <div class="small">#${i + 1}</div>
-          </div>
-          <div class="days-control">
-            <button data-action="dec">−</button>
-            <input type="number" min="1" value="${c.days}" data-days />
-            <button data-action="inc">+</button>
-          </div>
-          <div class="meta">Start: <strong>${start}</strong><br>End: <strong>${end}</strong></div>
-          <div style="text-align:right">
-            <button data-action="rename" class="btn ghost" title="Rename">✎</button>
-            <button data-action="remove" class="btn" style="margin-top:6px">Remove</button>
-          </div>
-        `
-
-                // attach listeners
-                cityRow.querySelector('[data-action="dec"]').addEventListener('click', () => changeDays(c.id, -1))
-                cityRow.querySelector('[data-action="inc"]').addEventListener('click', () => changeDays(c.id, +1))
-                cityRow.querySelector('[data-days]').addEventListener('change', (e) => setDays(c.id, Number(e.target.value)))
-                cityRow.querySelector('[data-action="remove"]').addEventListener('click', () => removeCity(c.id))
-                cityRow.querySelector('[data-action="rename"]').addEventListener('click', () => renameCity(c.id))
-                // allow double-clicking the visible city name to rename inline via prompt
-                const nameEl = cityRow.querySelector('.name')
-                if (nameEl) { nameEl.addEventListener('dblclick', () => renameCity(c.id)) }
-
-                citiesEl.appendChild(cityRow)
-
-                dayCursor = end + 1
-            }
-
-            // totals and timeline
-            const total = state.cities.reduce((s, c) => s + Number(c.days), 0)
-            totalDaysEl.textContent = total
-            renderTimeline()
-            renderCalendar()
-
-            // save after rendering
-            save(state)
+        function getActiveTrip() {
+            if (!appState.activeTripId) return null
+            return appState.trips.find(t => t.id === appState.activeTripId) || null
         }
 
-        function renderTimeline() {
-            if (state.cities.length === 0) {
-                timelineEl.textContent = 'No days yet — add cities.';
-                return
-            }
-            const lines = []
-            let cur = 1
-            const startDate = tripStartInput.value ? new Date(tripStartInput.value) : null
-            for (const c of state.cities) {
-                const start = cur
-                const end = cur + Number(c.days) - 1
-                if (startDate) {
-                    const sd = addDays(startDate, start - 1)
-                    const ed = addDays(startDate, end - 1)
-                    lines.push(`${c.name || 'Unnamed'} — days ${c.days} (${formatDate(sd)} → ${formatDate(ed)})`)
-                } else {
-                    lines.push(`${c.name || 'Unnamed'} — days ${start}–${end}`)
-                }
-                cur = end + 1
-            }
-            timelineEl.innerHTML = lines.map(l => `<div>${escapeHtml(l)}</div>`).join('')
+        function setActiveTrip(id) {
+            appState.activeTripId = id
+            save(appState)
+            state = getActiveTrip() || { tripName: '', tripStart: '', cities: [] }
+            refreshAll()
+            render()
         }
 
-        // render calendar view with blue bar ranges and city labels on the start cell
-        function renderCalendar() {
-            const monthsEl = document.getElementById('months')
-            const hintEl = document.getElementById('calendarHint')
-            if (!monthsEl || !hintEl) return
-            monthsEl.innerHTML = ''
-            if (!tripStartInput.value || state.cities.length === 0) { hintEl.style.display = 'block'; return }
-            hintEl.style.display = 'none'
+        function createTrip(name, start) {
+            const t = { id: tid(), name: name || 'New trip', start: start || '', cities: [] }
+            appState.trips.push(t)
+            appState.activeTripId = t.id
+            save(appState)
+            refreshAll()
+            render()
+        }
 
-            // compute city ranges (absolute day numbers)
-            let cur = 1
-            const cityRanges = state.cities.map(c => { const start = cur; const end = cur + Number(c.days) - 1; cur = end + 1; return { id: c.id, name: c.name || 'Unnamed', start, end } })
-            const tripStart = new Date(tripStartInput.value)
-            const totalDays = cityRanges.length ? cityRanges[cityRanges.length - 1].end : 0
-            if (totalDays <= 0) return
+        function deleteTrip(id) {
+            const idx = appState.trips.findIndex(t => t.id === id)
+            if (idx === -1) return
+            appState.trips.splice(idx, 1)
+            if (appState.activeTripId === id) appState.activeTripId = appState.trips.length ? appState.trips[0].id : null
+            save(appState)
+            refreshAll()
+            render()
+        }
 
-            const tripFirstDate = addDays(tripStart, 0)
-            const tripLastDate = addDays(tripStart, totalDays - 1)
+        function updateTripInStore(t) {
+            const idx = appState.trips.findIndex(x => x.id === t.id)
+            if (idx === -1) return
+            appState.trips[idx] = t
+            save(appState)
+            refreshAll()
+        }
 
-            // collect months and limit to two
-            const shownMonths = []
-            const m = new Date(tripFirstDate.getFullYear(), tripFirstDate.getMonth(), 1)
-            while (m <= tripLastDate) { 
-                shownMonths.push(new Date(m)); 
-                m.setMonth(m.getMonth() + 1) 
-            }
-            //const shownMonths = months.slice(0, 2)
+        // transient UI set for expanded trip ids (not persisted)
+        const expandedTripIds = new Set()
 
-            const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-            for (const monthStart of shownMonths) {
-                const monthCard = document.createElement('div')
-                monthCard.className = 'month-card'
-                const monthLabel = monthStart.toLocaleString(undefined, { month: 'long', year: 'numeric' })
+        function renderTripsContainer() {
+            // sort by start date desc (most recent first). Empty start goes last.
+            const sorted = [...appState.trips].sort((a, b) => {
+                if (!a.start && !b.start) return 0
+                if (!a.start) return 1
+                if (!b.start) return -1
+                return b.start.localeCompare(a.start)
+            })
+            tripsContainer.innerHTML = ''
+            for (const t of sorted) {
+                const card = document.createElement('div')
+                card.className = 'card'
+                card.style.marginBottom = '12px'
+
                 const header = document.createElement('div')
-                header.className = 'month-header'
-                header.textContent = monthLabel
-                monthCard.appendChild(header)
+                header.style.display = 'flex'
+                header.style.justifyContent = 'space-between'
+                header.style.alignItems = 'center'
+                header.style.cursor = 'pointer'
+                header.innerHTML = `<div><strong>${escapeHtml(t.name || 'Untitled')}</strong><div class="small" style="color:var(--muted)">${t.start || ''}</div></div><div style="display:flex;gap:8px"><button class="btn ghost" data-action="del">Del</button><button class="btn" data-action="toggle">${expandedTripIds.has(t.id) ? 'Collapse' : 'Expand'}</button></div>`
+                header.querySelector('[data-action="del"]').addEventListener('click', (e) => { e.stopPropagation(); if (confirm('Delete trip?')) { deleteTrip(t.id); renderTripsContainer() } })
+                header.querySelector('[data-action="toggle"]').addEventListener('click', (e) => { e.stopPropagation(); if (expandedTripIds.has(t.id)) { expandedTripIds.delete(t.id) } else { expandedTripIds.add(t.id); /* make this trip active for editing */ appState.activeTripId = t.id; state = getActiveTrip() || { tripName:'',tripStart:'',cities:[] }; save(appState) } renderTripsContainer() })
+                header.addEventListener('click', () => { if (expandedTripIds.has(t.id)) { expandedTripIds.delete(t.id) } else { expandedTripIds.add(t.id); appState.activeTripId = t.id; state = getActiveTrip() || { tripName:'',tripStart:'',cities:[] }; save(appState) } renderTripsContainer() })
 
-                const wk = document.createElement('div')
-                wk.className = 'weekday-row'
-                wk.innerHTML = weekdays.map(w => `<div>${w}</div>`).join('')
-                monthCard.appendChild(wk)
+                card.appendChild(header)
 
-                const daysGrid = document.createElement('div')
-                daysGrid.className = 'days-grid'
+                if (expandedTripIds.has(t.id)) {
+                    const body = document.createElement('div')
+                    body.style.marginTop = '10px'
+                    // editor area
+                    const editorWrap = document.createElement('div')
+                    editorWrap.className = 'card'
+                    renderTripEditor(t, editorWrap)
+                    body.appendChild(editorWrap)
+                    // calendar
+                    const calWrap = document.createElement('div')
+                    calWrap.className = 'card calendar-wrapper'
+                    renderTripCalendar(t, calWrap)
+                    body.appendChild(calWrap)
+                    // timeline
+                    const tlWrap = document.createElement('div')
+                    tlWrap.className = 'card'
+                    renderTripTimeline(t, tlWrap)
+                    body.appendChild(tlWrap)
 
-                const firstOfMonth = new Date(monthStart.getFullYear(), monthStart.getMonth(), 1)
-                let weekday = firstOfMonth.getDay()
-                let blanks = (weekday === 0) ? 6 : (weekday - 1)
-                for (let i = 0; i < blanks; i++) { const b = document.createElement('div'); b.className = 'day blank'; daysGrid.appendChild(b) }
-
-                const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate()
-                for (let d = 1; d <= daysInMonth; d++) {
-                    const date = new Date(monthStart.getFullYear(), monthStart.getMonth(), d)
-                    const absDay = Math.floor((date - tripStart) / (24 * 60 * 60 * 1000)) + 1
-                    const dayEl = document.createElement('div')
-                    dayEl.className = 'day'
-                    // default content: date number
-                    dayEl.innerHTML = `<div class="date-num">${d}</div>`
-
-                    if (absDay >= 1 && absDay <= totalDays) {
-                        // find which city this day belongs to (sequential ranges)
-                        const cr = cityRanges.find(r => absDay >= r.start && absDay <= r.end)
-                        if (cr) {
-                            dayEl.classList.add('in-range')
-                            if (absDay === cr.start) {
-                                dayEl.classList.add('range-start')
-                                const label = document.createElement('div')
-                                label.className = 'bar-label'
-                                label.title = cr.name
-                                label.textContent = cr.name
-                                dayEl.appendChild(label)
-                            }
-                            if (absDay === cr.end) dayEl.classList.add('range-end')
-                        }
-                    } else {
-                        dayEl.classList.add('blank')
-                    }
-
-                    daysGrid.appendChild(dayEl)
+                    card.appendChild(body)
                 }
 
-                monthCard.appendChild(daysGrid)
-                monthsEl.appendChild(monthCard)
+                tripsContainer.appendChild(card)
             }
         }
+
+        // render once helper
+        function refreshAll() {
+            renderTripsContainer()
+        }
+
+        // global render shim: sync `state` to active trip and refresh UI
+        function render() {
+            state = getActiveTrip() || { tripName: '', tripStart: '', cities: [] }
+            refreshAll()
+        }
+
+        // state (active trip editor state)
+        let state = getActiveTrip() || { tripName: '', tripStart: '', cities: [] }
 
         // modify state
         function addCity(name = 'New city', days = 1) {
@@ -620,31 +541,224 @@
             render()
         }
 
-        // utility date functions
+        // --- per-trip render helpers for stacked UI ---
+        function renderTripEditor(trip, container) {
+            container.innerHTML = ''
+            // header inputs
+            const topline = document.createElement('div')
+            topline.className = 'topline'
+            topline.innerHTML = `
+                <div style="display:flex;gap:8px;align-items:center">
+                    <label class="small">Trip name</label>
+                    <input class="trip-name" value="${escapeHtml(trip.name || '')}" />
+                    <div class="small" style="margin-left:6px;color:var(--muted)">Start date</div>
+                    <input class="trip-start" type="date" value="${escapeHtml(trip.start || '')}" />
+                </div>
+                <div class="actions">
+                    <button class="add-city btn ghost">+ Add city</button>
+                    <button class="clear-trip btn">Clear</button>
+                </div>
+            `
+            container.appendChild(topline)
+
+            const citiesContainer = document.createElement('div')
+            citiesContainer.className = 'cities'
+            container.appendChild(citiesContainer)
+
+            const metaRow = document.createElement('div')
+            metaRow.style.display = 'flex'
+            metaRow.style.justifyContent = 'space-between'
+            metaRow.style.alignItems = 'center'
+            metaRow.style.marginTop = '12px'
+            metaRow.innerHTML = `<div class="meta">Total days: <span class="total-days">0</span></div>`
+            container.appendChild(metaRow)
+
+            // wire interactions: name/start
+            const nameInput = topline.querySelector('.trip-name')
+            const startInput = topline.querySelector('.trip-start')
+            nameInput.addEventListener('input', () => { trip.name = nameInput.value; updateTripInStore(trip) })
+            startInput.addEventListener('change', () => { trip.start = startInput.value; updateTripInStore(trip) })
+
+            // add city
+            const addBtn = topline.querySelector('.add-city')
+            addBtn.addEventListener('click', () => {
+                trip.cities.push({ id: uid(), name: 'New city', days: 1 })
+                updateTripInStore(trip)
+                renderTripEditor(trip, container)
+            })
+
+            // clear trip
+            topline.querySelector('.clear-trip').addEventListener('click', () => {
+                if (confirm('Clear this trip?')) {
+                    trip.cities = []
+                    trip.name = ''
+                    trip.start = ''
+                    updateTripInStore(trip)
+                    renderTripEditor(trip, container)
+                }
+            })
+
+            // render cities list
+            function renderCitiesList() {
+                citiesContainer.innerHTML = ''
+                let dayCursor = 1
+                for (let i = 0; i < trip.cities.length; i++) {
+                    const c = trip.cities[i]
+                    const start = dayCursor
+                    const end = dayCursor + Number(c.days) - 1
+                    const cityRow = document.createElement('div')
+                    cityRow.className = 'city'
+                    cityRow.dataset.id = c.id
+                    cityRow.innerHTML = `
+                        <div>
+                            <div class="name">${escapeHtml(c.name || 'Unnamed city')}</div>
+                            <div class="small">#${i+1}</div>
+                        </div>
+                        <div class="days-control">
+                            <button data-action="dec">−</button>
+                            <input type="number" min="1" value="${c.days}" data-days />
+                            <button data-action="inc">+</button>
+                        </div>
+                        <div class="meta">Start: <strong>${start}</strong><br>End: <strong>${end}</strong></div>
+                        <div style="text-align:right">
+                            <button data-action="rename" class="btn ghost" title="Rename">✎</button>
+                            <button data-action="remove" class="btn" style="margin-top:6px">Remove</button>
+                        </div>
+                    `
+                    cityRow.querySelector('[data-action="dec"]').addEventListener('click', () => { c.days = Math.max(1, Number(c.days) - 1); updateTripInStore(trip); renderTripEditor(trip, container) })
+                    cityRow.querySelector('[data-action="inc"]').addEventListener('click', () => { c.days = Math.max(1, Number(c.days) + 1); updateTripInStore(trip); renderTripEditor(trip, container) })
+                    cityRow.querySelector('[data-days]').addEventListener('change', (e) => { c.days = Math.max(1, Number(e.target.value) || 1); updateTripInStore(trip); renderTripEditor(trip, container) })
+                    cityRow.querySelector('[data-action="remove"]').addEventListener('click', () => { trip.cities = trip.cities.filter(x => x.id !== c.id); updateTripInStore(trip); renderTripEditor(trip, container) })
+                    cityRow.querySelector('[data-action="rename"]').addEventListener('click', () => { const n = prompt('City name', c.name); if (n !== null) { c.name = n; updateTripInStore(trip); renderTripEditor(trip, container) } })
+                    citiesContainer.appendChild(cityRow)
+                    dayCursor = end + 1
+                }
+                // update total days
+                const total = trip.cities.reduce((s, c) => s + Number(c.days), 0)
+                const totalDaysEl = container.querySelector('.total-days')
+                if (totalDaysEl) totalDaysEl.textContent = total
+            }
+
+            renderCitiesList()
+        }
+
+        function renderTripCalendar(trip, container) {
+            container.innerHTML = '<h3 style="margin:0 0 8px 0">Calendar view</h3>'
+            const hint = document.createElement('div')
+            hint.className = 'small'
+            hint.textContent = 'Set a trip start date to see the calendar.'
+            container.appendChild(hint)
+            const months = document.createElement('div')
+            months.className = 'months'
+            container.appendChild(months)
+
+            if (!trip.start || trip.cities.length === 0) { hint.style.display = 'block'; return }
+            hint.style.display = 'none'
+
+            let cur = 1
+            const cityRanges = trip.cities.map(c => { const s = cur; const e = cur + Number(c.days) - 1; cur = e + 1; return { id: c.id, name: c.name || 'Unnamed', start: s, end: e } })
+            const tripStart = new Date(trip.start)
+            const totalDays = cityRanges.length ? cityRanges[cityRanges.length - 1].end : 0
+            if (totalDays <= 0) return
+
+            const tripFirstDate = addDays(tripStart, 0)
+            const tripLastDate = addDays(tripStart, totalDays - 1)
+            const shownMonths = []
+            const m = new Date(tripFirstDate.getFullYear(), tripFirstDate.getMonth(), 1)
+            while (m <= tripLastDate) { shownMonths.push(new Date(m)); m.setMonth(m.getMonth() + 1) }
+
+            const weekdays = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
+            for (const monthStart of shownMonths) {
+                const monthCard = document.createElement('div')
+                monthCard.className = 'month-card'
+                const monthLabel = monthStart.toLocaleString(undefined, { month: 'long', year: 'numeric' })
+                const header = document.createElement('div')
+                header.className = 'month-header'
+                header.textContent = monthLabel
+                monthCard.appendChild(header)
+                const wk = document.createElement('div')
+                wk.className = 'weekday-row'
+                wk.innerHTML = weekdays.map(w => `<div>${w}</div>`).join('')
+                monthCard.appendChild(wk)
+                const daysGrid = document.createElement('div')
+                daysGrid.className = 'days-grid'
+                const firstOfMonth = new Date(monthStart.getFullYear(), monthStart.getMonth(), 1)
+                let weekday = firstOfMonth.getDay()
+                let blanks = (weekday === 0) ? 6 : (weekday - 1)
+                for (let i=0;i<blanks;i++) { const b = document.createElement('div'); b.className='day blank'; daysGrid.appendChild(b) }
+                const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth()+1,0).getDate()
+                for (let d=1; d<=daysInMonth; d++) {
+                    const date = new Date(monthStart.getFullYear(), monthStart.getMonth(), d)
+                    const absDay = Math.floor((date - tripStart) / (24*60*60*1000)) + 1
+                    const dayEl = document.createElement('div')
+                    dayEl.className = 'day'
+                    dayEl.innerHTML = `<div class="date-num">${d}</div>`
+                    if (absDay >= 1 && absDay <= totalDays) {
+                        const cr = cityRanges.find(r => absDay >= r.start && absDay <= r.end)
+                        if (cr) {
+                            dayEl.classList.add('in-range')
+                            if (absDay === cr.start) {
+                                dayEl.classList.add('range-start')
+                                const label = document.createElement('div')
+                                label.className = 'bar-label'
+                                label.title = cr.name
+                                label.textContent = cr.name
+                                dayEl.appendChild(label)
+                            }
+                            if (absDay === cr.end) dayEl.classList.add('range-end')
+                        }
+                    } else {
+                        dayEl.classList.add('blank')
+                    }
+                    daysGrid.appendChild(dayEl)
+                }
+                monthCard.appendChild(daysGrid)
+                months.appendChild(monthCard)
+            }
+        }
+
+        function renderTripTimeline(trip, container) {
+            container.innerHTML = '<h3 style="margin:0 0 8px 0">Day-by-day timeline</h3>'
+            const inner = document.createElement('div')
+            inner.className = 'small'
+            if (!trip.cities.length) inner.textContent = 'No days yet — add cities.'
+            else {
+                const lines = []
+                let cur = 1
+                for (const c of trip.cities) {
+                    const start = cur
+                    const end = cur + Number(c.days) - 1
+                    if (trip.start) {
+                        const sd = addDays(new Date(trip.start), start - 1)
+                        const ed = addDays(new Date(trip.start), end - 1)
+                        lines.push(`${c.name || 'Unnamed'} — days ${c.days} (${formatDate(sd)} → ${formatDate(ed)})`)
+                    } else {
+                        lines.push(`${c.name || 'Unnamed'} — days ${start}–${end}`)
+                    }
+                    cur = end + 1
+                }
+                inner.innerHTML = lines.map(l => `<div>${escapeHtml(l)}</div>`).join('')
+            }
+            container.appendChild(inner)
+        }
+
+    // utility date functions
         function addDays(d, n) { const t = new Date(d); t.setDate(t.getDate() + n); return t }
         function formatDate(d) { return d.toISOString().slice(0, 10) }
 
         // escape for safety (we control the HTML but keep it safe)
         function escapeHtml(s) { return String(s).replace(/[&<>"']/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": "&#39;" }[ch] }) }
 
-        // wire top-level inputs
-        tripNameInput.addEventListener('input', () => { state.tripName = tripNameInput.value; save(state) })
-        tripStartInput.addEventListener('change', () => { state.tripStart = tripStartInput.value; render() })
+        // top-level interactions are handled per-trip now
 
-        addCityBtn.addEventListener('click', () => {
-            const name = prompt('City name (optional)')
-            addCity(name || 'New city', 1)
-        })
-
-        clearAllBtn.addEventListener('click', () => {
-            if (confirm('Clear saved trip? This will remove local data.')) {
-                state = { tripName: '', tripStart: '', cities: [] }
-                save(state)
-                render()
-            }
+        createTripBtn.addEventListener('click', () => {
+            createTrip(newTripName.value || 'New trip', newTripStart.value || '')
+            newTripName.value = ''
+            newTripStart.value = ''
         })
 
         // initial render
+        refreshAll()
         render()
 
     </script>
