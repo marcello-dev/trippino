@@ -252,6 +252,7 @@
     <div class="app">
         <header>
             <h1>Trippino</h1>
+            <div id="authArea" style="margin-left:auto"></div>
         </header>
 
         <div class="card">
@@ -290,6 +291,103 @@
     </div>
 
     <script>
+        // --- Auth config & helpers ---
+        const API_BASE = 'http://localhost:4000'
+        const authArea = document.getElementById('authArea')
+
+        async function checkAuth() {
+            try {
+                const res = await fetch(`${API_BASE}/api/me`, { credentials: 'include' })
+                if (!res.ok) return setAnonymous()
+                const data = await res.json()
+                setAuthenticated(data.user.username)
+            } catch (e) {
+                console.warn('auth check failed', e)
+                setAnonymous()
+            }
+        }
+
+        function setAnonymous() {
+            authArea.innerHTML = `
+                <button id="showAuthBtn" class="btn primary">Sign in / Register</button>
+            `
+            document.getElementById('showAuthBtn').addEventListener('click', showAuthForm)
+        }
+
+        function setAuthenticated(username) {
+            authArea.innerHTML = `
+                <div style="display:flex;gap:8px;align-items:center">
+                    <div class="small">Signed in as <strong>${escapeHtml(username)}</strong></div>
+                    <button id="logoutBtn" class="btn ghost">Logout</button>
+                </div>
+            `
+            document.getElementById('logoutBtn').addEventListener('click', doLogout)
+        }
+
+        function showAuthForm() {
+            // simple inline form (register or login)
+            authArea.innerHTML = `
+                <div style="display:flex;gap:8px;align-items:center">
+                    <input id="authUser" placeholder="username" />
+                    <input id="authPass" type="password" placeholder="password" />
+                    <button id="btnLogin" class="btn primary">Login</button>
+                    <button id="btnRegister" class="btn ghost">Register</button>
+                    <button id="btnCancel" class="btn">Cancel</button>
+                </div>
+            `
+            document.getElementById('btnLogin').addEventListener('click', doLogin)
+            document.getElementById('btnRegister').addEventListener('click', doRegister)
+            document.getElementById('btnCancel').addEventListener('click', checkAuth)
+        }
+
+        async function doRegister() {
+            const u = document.getElementById('authUser').value.trim()
+            const p = document.getElementById('authPass').value
+            if (!u || !p) return alert('username and password required')
+            try {
+                const res = await fetch(`${API_BASE}/api/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ username: u, password: p })
+                })
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}))
+                    return alert(err.error || 'register failed')
+                }
+                await checkAuth()
+            } catch (e) { console.error(e); alert('register failed') }
+        }
+
+        async function doLogin() {
+            const u = document.getElementById('authUser').value.trim()
+            const p = document.getElementById('authPass').value
+            if (!u || !p) return alert('username and password required')
+            try {
+                const res = await fetch(`${API_BASE}/api/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ username: u, password: p })
+                })
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}))
+                    return alert(err.error || 'login failed')
+                }
+                await checkAuth()
+            } catch (e) { console.error(e); alert('login failed') }
+        }
+
+        async function doLogout() {
+            try {
+                await fetch(`${API_BASE}/api/logout`, { method: 'POST', credentials: 'include' })
+            } catch (e) { console.warn('logout failed', e) }
+            checkAuth()
+        }
+
+        // check auth on load
+        checkAuth()
+
         // Simple trip planner stored wholly in localStorage
         // Data model: { tripName, tripStart (yyyy-mm-dd or ''), cities: [{id, name, days}] }
         const STORAGE_KEY = 'simpleTripPlanner_v1'
