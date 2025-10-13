@@ -117,7 +117,8 @@
 
         /* each day cell is identical size so bars are visually contiguous */
         .day {
-            height: 56px; /* fixed height */
+            height: 56px;
+            /* fixed height */
             border-radius: 0;
             background: #fff;
             text-align: right;
@@ -265,7 +266,7 @@
             <div id="tripsContainer"></div>
         </div>
 
-        </div>
+    </div>
 
     </div>
 
@@ -370,9 +371,9 @@
         // App model: { trips: [{id,name,start,cities}], activeTripId }
         const STORAGE_KEY = 'simpleTripPlanner_v1'
 
-    // DOM - note: global editor elements removed; per-trip editor creates its own DOM
-    // central container
-    const tripsContainer = document.getElementById('tripsContainer')
+        // DOM - note: global editor elements removed; per-trip editor creates its own DOM
+        // central container
+        const tripsContainer = document.getElementById('tripsContainer')
         const createTripBtn = document.getElementById('createTripBtn')
         const newTripName = document.getElementById('newTripName')
         const newTripStart = document.getElementById('newTripStart')
@@ -457,8 +458,8 @@
                 header.style.cursor = 'pointer'
                 header.innerHTML = `<div><strong>${escapeHtml(t.name || 'Untitled')}</strong><div class="small" style="color:var(--muted)">${t.start || ''}</div></div><div style="display:flex;gap:8px"><button class="btn ghost" data-action="del">Del</button><button class="btn" data-action="toggle">${expandedTripIds.has(t.id) ? 'Collapse' : 'Expand'}</button></div>`
                 header.querySelector('[data-action="del"]').addEventListener('click', (e) => { e.stopPropagation(); if (confirm('Delete trip?')) { deleteTrip(t.id); renderTripsContainer() } })
-                header.querySelector('[data-action="toggle"]').addEventListener('click', (e) => { e.stopPropagation(); if (expandedTripIds.has(t.id)) { expandedTripIds.delete(t.id) } else { expandedTripIds.add(t.id); /* make this trip active for editing */ appState.activeTripId = t.id; state = getActiveTrip() || { tripName:'',tripStart:'',cities:[] }; save(appState) } renderTripsContainer() })
-                header.addEventListener('click', () => { if (expandedTripIds.has(t.id)) { expandedTripIds.delete(t.id) } else { expandedTripIds.add(t.id); appState.activeTripId = t.id; state = getActiveTrip() || { tripName:'',tripStart:'',cities:[] }; save(appState) } renderTripsContainer() })
+                header.querySelector('[data-action="toggle"]').addEventListener('click', (e) => { e.stopPropagation(); if (expandedTripIds.has(t.id)) { expandedTripIds.delete(t.id) } else { expandedTripIds.add(t.id); /* make this trip active for editing */ appState.activeTripId = t.id; state = getActiveTrip() || { tripName: '', tripStart: '', cities: [] }; save(appState) } renderTripsContainer() })
+                header.addEventListener('click', () => { if (expandedTripIds.has(t.id)) { expandedTripIds.delete(t.id) } else { expandedTripIds.add(t.id); appState.activeTripId = t.id; state = getActiveTrip() || { tripName: '', tripStart: '', cities: [] }; save(appState) } renderTripsContainer() })
 
                 card.appendChild(header)
 
@@ -612,7 +613,7 @@
                     cityRow.innerHTML = `
                         <div>
                             <div class="name">${escapeHtml(c.name || 'Unnamed city')}</div>
-                            <div class="small">#${i+1}</div>
+                            <div class="small">#${i + 1}</div>
                         </div>
                         <div class="days-control">
                             <button data-action="dec">−</button>
@@ -667,7 +668,7 @@
             const m = new Date(tripFirstDate.getFullYear(), tripFirstDate.getMonth(), 1)
             while (m <= tripLastDate) { shownMonths.push(new Date(m)); m.setMonth(m.getMonth() + 1) }
 
-            const weekdays = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
+            const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
             for (const monthStart of shownMonths) {
                 const monthCard = document.createElement('div')
                 monthCard.className = 'month-card'
@@ -685,9 +686,9 @@
                 const firstOfMonth = new Date(monthStart.getFullYear(), monthStart.getMonth(), 1)
                 let weekday = firstOfMonth.getDay()
                 let blanks = (weekday === 0) ? 6 : (weekday - 1)
-                for (let i=0;i<blanks;i++) { const b = document.createElement('div'); b.className='day blank'; daysGrid.appendChild(b) }
-                const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth()+1,0).getDate()
-                for (let d=1; d<=daysInMonth; d++) {
+                for (let i = 0; i < blanks; i++) { const b = document.createElement('div'); b.className = 'day blank'; daysGrid.appendChild(b) }
+                const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate()
+                for (let d = 1; d <= daysInMonth; d++) {
                     const date = new Date(monthStart.getFullYear(), monthStart.getMonth(), d)
                     // compute day difference using UTC midnight to avoid timezone shifts
                     const msPerDay = 24 * 60 * 60 * 1000
@@ -744,7 +745,7 @@
             container.appendChild(inner)
         }
 
-    // utility date functions
+        // utility date functions
         function addDays(d, n) { const t = new Date(d); t.setDate(t.getDate() + n); return t }
         function formatDate(d) { return d.toISOString().slice(0, 10) }
 
