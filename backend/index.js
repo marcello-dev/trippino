@@ -46,7 +46,7 @@ const COOKIE_NAME = 'trippino_sid'
 app.use(express.json())
 app.use(cookieParser())
 
-// CORS-lite middleware to allow the static frontend (e.g., s3) to talk to this API
+// CORS-lite middleware to allow the static frontend to talk to this API
 app.use((req, res, next) => {
   // allow any origin for now; in production lock this down
   const origin = req.get('Origin') || '*'

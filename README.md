@@ -1,7 +1,6 @@
 # Trippino
 
 ## TODO
-- authentication
 - setup trippino.apivenue.com
 
 # data model
