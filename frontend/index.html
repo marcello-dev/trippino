@@ -465,6 +465,10 @@
                 await fetch(`${API_BASE}/api/logout`, { method: 'POST', credentials: 'include' })
             } catch (e) { console.warn('logout failed', e) }
             checkAuth()
+            localStorage.clear()
+            appState = {}
+            activeTripId = null
+            render()
         }
 
     // check auth and sync state on load
