@@ -1,7 +1,7 @@
 # Trippino
 
 ## TODO
-- setup trippino.apivenue.com
+- setup trippino.apivenue.com: in aws vm. serve frontend with ngnix? or just use npx. serve backend on another port. config nginx to point to the new services.
 
 # data model
 users
