@@ -6,3 +6,4 @@ scp -i /tmp/trippino.tar.gz  trippino@api-as.apivenue.com:/opt/trippino
 sudo rm -r /opt/trippino
 sudo tar -xzf /tmp/trippino.tar.gz -C /opt
 chown -R trippino:trippino /opt/trippino
+sed -i 's|API_BASE\s*=.*|API_BASE="https://trippino-api.apivenue.com"' /opt/trippino/frontend/index.html
