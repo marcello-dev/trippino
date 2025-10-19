@@ -256,11 +256,61 @@
             margin-top: 8px
         }
 
-        @media (max-width:720px) {
+        /* @media (max-width:720px) {
             .city {
                 grid-template-columns: 1fr 120px 120px 72px
             }
-        }
+        } */
+         @media (max-width: 720px) {
+
+     /* Make trip header wrap properly */
+    .topline {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .topline > div {
+        flex-wrap: wrap;
+        width: 100%;
+    }
+
+    .topline input[type="text"],
+    .topline input[type="date"] {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .topline .actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    /* Make each city row stack vertically */
+    .city {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .city > div {
+        width: 100%;
+    }
+
+    .days-control {
+        justify-content: space-between;
+    }
+
+    .city button {
+        width: 100%;
+    }
+
+    /* Allow scroll if needed */
+    body {
+        overflow-x: hidden;
+    }
+    }
     </style>
 </head>
 
