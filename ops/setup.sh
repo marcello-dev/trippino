@@ -14,11 +14,6 @@ chown -R trippino:trippino /opt/trippino
 dnf install nodejs
 npm install -g http-server
 
-# As trippino
-cd /opt/trippino
-npm install --production
-
-# As root
 cat << EOL > /etc/systemd/system/trippino-api.service
 [Unit]
 Description=trippino-api
@@ -32,8 +27,6 @@ q
 [Install]
 WantedBy=multi-user.target
 EOL
-systemctl daemon-reload
-systemctl enable trippino-api
 
 
 cat << EOL > /etc/systemd/system/trippino-frontend.service
@@ -50,4 +43,9 @@ SuccessExitStatus=143
 WantedBy=multi-user.target
 EOL
 systemctl daemon-reload
+systemctl enable trippino-api
 systemctl enable trippino-frontend
+
+# Now deploy app and start the services
+
+
