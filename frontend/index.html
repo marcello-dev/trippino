@@ -541,6 +541,13 @@
         }
         function save(appState) {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+            saveApi(appState);
+        }
+        
+        async function saveApi(appState) {
+            try {
+                await fetch(`${API_BASE}/api/state`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ state: appState }) })
+            } catch (e) { console.warn('push local to backend failed', e) }
         }
 
         // app state (trips and other data) — activeTripId is stored separately
@@ -611,6 +618,8 @@
             if (!c) return
             c.days = Math.max(1, Number(newDays))
             c.updatedAt = new Date().toISOString()
+            // Update store in backend
+
             save(appState)
             refreshAll()
         }
