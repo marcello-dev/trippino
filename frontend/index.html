@@ -849,7 +849,11 @@
                             <input type="number" min="1" value="${c.days}" data-days />
                             <button data-action="inc">+</button>
                         </div>
-                        <div class="meta">Start: <strong>${start}</strong><br>End: <strong>${end}</strong></div>
+                        <div class="meta">
+                            Start: <strong>${start}</strong>
+                            <br>
+                            End: <strong>${end}</strong>
+                        </div>
                         <div style="text-align:right">
                             <button data-action="rename" class="btn ghost" title="Rename">✎</button>
                             <button data-action="remove" class="btn" style="margin-top:6px">Remove</button>
@@ -877,6 +881,14 @@
                     })
                     cityRow.querySelector('[data-action="rename"]').addEventListener('click', () => { const n = prompt('City name', c.name); if (n !== null) { c.name = n; updateTripInStore(trip); renderTripEditor(trip, container) } })
                     citiesContainer.appendChild(cityRow)
+                    // add a separate row under the city for the human-readable date range
+                    if (trip.start) {
+                        const dateRow = document.createElement('div')
+                        dateRow.className = 'city-date-row small'
+                        dateRow.style.margin = '6px 0 12px 8px'
+                        dateRow.textContent = `${formatDate(addDays(new Date(trip.start), start - 1))} (${weekdayName(addDays(new Date(trip.start), start - 1))}) → ${formatDate(addDays(new Date(trip.start), end - 1))} (${weekdayName(addDays(new Date(trip.start), end - 1))})`
+                        citiesContainer.appendChild(dateRow)
+                    }
                     dayCursor = end + 1
                 }
                 // update total days
@@ -991,8 +1003,9 @@
         }
 
         // utility date functions
-        function addDays(d, n) { const t = new Date(d); t.setDate(t.getDate() + n); return t }
-        function formatDate(d) { return d.toISOString().slice(0, 10) }
+    function addDays(d, n) { const t = new Date(d); t.setDate(t.getDate() + n); return t }
+    function formatDate(d) { return d.toISOString().slice(0, 10) }
+    function weekdayName(d) { return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()] }
 
         // escape for safety (we control the HTML but keep it safe)
         function escapeHtml(s) { return String(s).replace(/[&<>"']/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": "&#39;" }[ch] }) }
