@@ -126,7 +126,7 @@
             font-size: 13px;
             position: relative;
             box-sizing: border-box;
-            overflow: hidden;
+            overflow: visible;
         }
 
         .day.blank {
@@ -134,10 +134,8 @@
         }
 
         /* blue bar styles for in-range days */
-        .day.in-range {
-            background: #2563eb;
-            color: #fff
-        }
+        /* in-range days no longer color the whole cell; we render thin bars instead */
+        .day.in-range { color: inherit }
 
         /* round only the ends so consecutive .in-range cells form one contiguous bar */
         .day.range-start {
@@ -151,19 +149,31 @@
         }
 
         /* label is absolutely positioned so it won't change cell height */
-        .bar-label {
+        /* thin horizontal bar that represents the city range on a day cell */
+        .range-seg {
             position: absolute;
-            left: 1px;
-            right: 1px;
-            top: 50%;
-            transform: translateY(-50%);
+            left: 0px;
+            right: -2px; /* slightly extend to connect with next cell */
+            height: 14px;
+            background: #2563eb;
+            color: #fff;
             font-size: 12px;
-            line-height: 1;
+            line-height: 14px;
+            padding: 0 6px;
+            box-sizing: border-box;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border-radius: 0; /* no rounding in middle segments */
+            z-index: 1;
         }
+        .range-seg .seg-label { font-size: 11px; color: #fff; }
+        .day .date-num { z-index: 2 }
+    .range-seg.range-start { border-top-left-radius: 10px; border-bottom-left-radius: 10px }
+    .range-seg.range-end { border-top-right-radius: 10px; border-bottom-right-radius: 10px }
 
         .day .date-num {
             position: absolute;
@@ -884,7 +894,7 @@
                         dateRow.textContent = `${formatDate(addDays(new Date(trip.start), start - 1))} (${weekdayName(addDays(new Date(trip.start), start - 1))}) → ${formatDate(addDays(new Date(trip.start), end - 1))} (${weekdayName(addDays(new Date(trip.start), end - 1))})`
                         citiesContainer.appendChild(dateRow)
                     }
-                    dayCursor = end + 1
+                    dayCursor = end
                 }
                 // update total days
                 const total = trip.cities.reduce((s, c) => s + Number(c.days), 0)
@@ -909,7 +919,7 @@
             hint.style.display = 'none'
 
             let cur = 1
-            const cityRanges = trip.cities.map(c => { const s = cur; const e = cur + Number(c.days) - 1; cur = e + 1; return { id: c.id, name: c.name || 'Unnamed', start: s, end: e } })
+            const cityRanges = trip.cities.map(c => { const s = cur; const e = cur + Number(c.days) - 1; cur = e; return { id: c.id, name: c.name || 'Unnamed', start: s, end: e } })
             const tripStart = new Date(trip.start)
             const totalDays = cityRanges.length ? cityRanges[cityRanges.length - 1].end : 0
             if (totalDays <= 0) return
@@ -949,18 +959,31 @@
                     dayEl.className = 'day'
                     dayEl.innerHTML = `<div class="date-num">${d}</div>`
                     if (absDay >= 1 && absDay <= totalDays) {
-                        const cr = cityRanges.find(r => absDay >= r.start && absDay <= r.end)
-                        if (cr) {
+                        const matches = cityRanges.filter(r => absDay >= r.start && absDay <= r.end)
+                        if (matches.length) {
                             dayEl.classList.add('in-range')
-                            if (absDay === cr.start) {
-                                dayEl.classList.add('range-start')
-                                const label = document.createElement('div')
-                                label.className = 'bar-label'
-                                label.title = cr.name
-                                label.textContent = cr.name
-                                dayEl.appendChild(label)
+                            // render contiguous thin segments per city across their range.
+                            // position (vertical layer) alternates by city index so adjacent cities don't overlap.
+                            const topBase = 26 // px, below date number
+                            const step = 16 // px between two alternating layers
+                            for (const cr of matches) {
+                                const seg = document.createElement('div')
+                                seg.className = 'range-seg'
+                                // determine layer by the city's index in cityRanges (alternating 0/1)
+                                const idxAll = cityRanges.findIndex(r => r.id === cr.id)
+                                const layer = idxAll % 2
+                                seg.style.top = `${topBase + layer * step}px`
+                                if (absDay === cr.start) seg.classList.add('range-start')
+                                if (absDay === cr.end) seg.classList.add('range-end')
+                                // only show the name label at the beginning of the city's bar
+                                if (absDay === cr.start) {
+                                    const segLabel = document.createElement('div')
+                                    segLabel.className = 'seg-label'
+                                    segLabel.textContent = cr.name
+                                    seg.appendChild(segLabel)
+                                }
+                                dayEl.appendChild(seg)
                             }
-                            if (absDay === cr.end) dayEl.classList.add('range-end')
                         }
                     } else {
                         dayEl.classList.add('blank')
@@ -990,7 +1013,7 @@
                     } else {
                         lines.push(`${c.name || 'Unnamed'} — days ${start}–${end}`)
                     }
-                    cur = end + 1
+                    cur = end
                 }
                 inner.innerHTML = lines.map(l => `<div>${escapeHtml(l)}</div>`).join('')
             }
