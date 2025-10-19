@@ -540,7 +540,6 @@
             }
         }
         function save(appState) {
-            appState.updatedAt = new Date().toISOString();
             localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
         }
 
@@ -580,8 +579,14 @@
         }
 
         function createTrip(name, start) {
-            const t = { id: tid(), name: name || 'New trip', start: start || '', cities: [] }
+            const t = { 
+                id: tid(), 
+                name: name || 'New trip', start: start || '', 
+                cities: [] , 
+                updatedAt: new Date().toISOString() 
+            }
             appState.trips.push(t)
+            appState.updatedAt = new Date().toISOString();
             setActiveTrip(t.id)
             save(appState)
             refreshAll()
@@ -592,6 +597,7 @@
             const idx = appState.trips.findIndex(t => t.id === id)
             if (idx === -1) return
             appState.trips.splice(idx, 1)
+            appState.updatedAt = new Date().toISOString();
             if (activeTripId === id) setActiveTrip(appState.trips.length ? appState.trips[0].id : null)
             save(appState)
             refreshAll()
@@ -692,9 +698,14 @@
         // state (active trip editor state)
         let state = getActiveTrip() || { tripName: '', tripStart: '', cities: [] }
 
-        // modify state
+        
         function addCity(name = 'New city', days = 1) {
-            state.cities.push({ id: uid(), name, days: Math.max(1, Number(days)) })
+            state.cities.push({ 
+                id: uid(), 
+                name, 
+                days: Math.max(1, Number(days)), 
+                updatedAt: new Date().toISOString() 
+            })
             render()
         }
         function removeCity(id) {
