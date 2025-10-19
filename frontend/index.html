@@ -845,7 +845,7 @@
                 for (let i = 0; i < trip.cities.length; i++) {
                     const c = trip.cities[i]
                     const start = dayCursor
-                    const end = dayCursor + Number(c.days) - 1
+                    const end = dayCursor + Number(c.days)
                     const cityRow = document.createElement('div')
                     cityRow.className = 'city'
                     cityRow.dataset.id = c.id
@@ -919,7 +919,7 @@
             hint.style.display = 'none'
 
             let cur = 1
-            const cityRanges = trip.cities.map(c => { const s = cur; const e = cur + Number(c.days) - 1; cur = e; return { id: c.id, name: c.name || 'Unnamed', start: s, end: e } })
+            const cityRanges = trip.cities.map(c => { const s = cur; const e = cur + Number(c.days); cur = e; return { id: c.id, name: c.name || 'Unnamed', start: s, end: e } })
             const tripStart = new Date(trip.start)
             const totalDays = cityRanges.length ? cityRanges[cityRanges.length - 1].end : 0
             if (totalDays <= 0) return
@@ -1005,7 +1005,7 @@
                 let cur = 1
                 for (const c of trip.cities) {
                     const start = cur
-                    const end = cur + Number(c.days) - 1
+                    const end = cur + Number(c.days)
                     if (trip.start) {
                         const sd = addDays(new Date(trip.start), start - 1)
                         const ed = addDays(new Date(trip.start), end - 1)
