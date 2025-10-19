@@ -673,7 +673,7 @@
                 header.style.justifyContent = 'space-between'
                 header.style.alignItems = 'center'
                 header.style.cursor = 'pointer'
-                header.innerHTML = `<div><strong>${escapeHtml(t.name || 'Untitled')}</strong><div class="small" style="color:var(--muted)">${t.start || ''}</div></div><div style="display:flex;gap:8px"><button class="btn ghost" data-action="del">Del</button><button class="btn" data-action="toggle">${expandedTripIds.has(t.id) ? 'Collapse' : 'Expand'}</button></div>`
+                header.innerHTML = `<div><strong>${escapeHtml(t.name || 'Untitled')}</strong><div class="small" style="color:var(--muted)">${t.start || ''}</div></div><div style="display:flex;gap:8px"><button class="btn ghost" data-action="del" title="Delete trip" aria-label="Delete trip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button class="btn" data-action="toggle">${expandedTripIds.has(t.id) ? 'Collapse' : 'Expand'}</button></div>`
                 header.querySelector('[data-action="del"]').addEventListener('click', (e) => { e.stopPropagation(); if (confirm('Delete trip?')) { deleteTrip(t.id); renderTripsContainer() } })
                 header.querySelector('[data-action="toggle"]').addEventListener('click', (e) => { 
                     e.stopPropagation(); 
@@ -857,7 +857,7 @@
                         </div>
                         <div style="text-align:right">
                             <button data-action="rename" class="btn ghost" title="Rename">✎</button>
-                            <button data-action="remove" class="btn" style="margin-top:6px">Remove</button>
+                            <button data-action="remove" class="btn" style="margin-top:6px" title="Remove city" aria-label="Remove city"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                         </div>
                     `
                     cityRow.querySelector('[data-action="dec"]').addEventListener('click', () => { 
