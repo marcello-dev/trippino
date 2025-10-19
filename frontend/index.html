@@ -83,18 +83,22 @@
         }
 
         .months {
-            display: flex;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
             gap: 12px;
-            flex-wrap: wrap
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .month-card {
-            width: 350px;
             border-radius: 8px;
             border: 1px solid #eee;
             padding: 10px;
-            background: var(--card)
+            background: var(--card);
+            box-sizing: border-box;
+            width: 100%; /* remove fixed 350px width */
         }
+
 
         .month-header {
             font-weight: 700;
