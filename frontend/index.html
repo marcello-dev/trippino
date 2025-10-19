@@ -512,7 +512,7 @@
             }
         })
 
-    // App model: { trips: [{id,name,start,cities}], updatedAt } (activeTripId stored separately)
+        // App model: { trips: [{id,name,start,cities}], updatedAt } (activeTripId stored separately)
         const STORAGE_KEY = 'simpleTripPlanner_v1'
 
         // DOM - note: global editor elements removed; per-trip editor creates its own DOM
@@ -602,6 +602,26 @@
             save(appState)
             refreshAll()
             render()
+        }
+
+        function updateDays(tripId, cityId, newDays) {
+            const t = appState.trips.find(x => x.id === tripId)
+            if (!t) return
+            const c = t.cities.find(x => x.id === cityId)
+            if (!c) return
+            c.days = Math.max(1, Number(newDays))
+            c.updatedAt = new Date().toISOString()
+            save(appState)
+            refreshAll()
+        }
+
+        function removeCityFromTrip(tripId, cityId) {
+            const t = appState.trips.find(x => x.id === tripId)
+            if (!t) return
+            t.cities = t.cities.filter(c => c.id !== cityId)
+            t.updatedAt = new Date().toISOString()
+            save(appState)
+            refreshAll()
         }
 
         function updateTripInStore(t) {
@@ -826,10 +846,26 @@
                             <button data-action="remove" class="btn" style="margin-top:6px">Remove</button>
                         </div>
                     `
-                    cityRow.querySelector('[data-action="dec"]').addEventListener('click', () => { c.days = Math.max(1, Number(c.days) - 1); updateTripInStore(trip); renderTripEditor(trip, container) })
-                    cityRow.querySelector('[data-action="inc"]').addEventListener('click', () => { c.days = Math.max(1, Number(c.days) + 1); updateTripInStore(trip); renderTripEditor(trip, container) })
-                    cityRow.querySelector('[data-days]').addEventListener('change', (e) => { c.days = Math.max(1, Number(e.target.value) || 1); updateTripInStore(trip); renderTripEditor(trip, container) })
-                    cityRow.querySelector('[data-action="remove"]').addEventListener('click', () => { trip.cities = trip.cities.filter(x => x.id !== c.id); updateTripInStore(trip); renderTripEditor(trip, container) })
+                    cityRow.querySelector('[data-action="dec"]').addEventListener('click', () => { 
+                        c.days = Math.max(1, Number(c.days) - 1); 
+                        updateDays(trip.id,c.id,c.days); 
+                        renderTripEditor(trip, container) 
+                    })
+                    cityRow.querySelector('[data-action="inc"]').addEventListener('click', () => { 
+                        c.days = Math.max(1, Number(c.days) + 1); 
+                        updateDays(trip.id,c.id,c.days); 
+                        renderTripEditor(trip, container) 
+                    })
+                    cityRow.querySelector('[data-days]').addEventListener('change', (e) => { 
+                        c.days = Math.max(1, Number(e.target.value) || 1); 
+                        updateDays(trip.id,c.id,c.days); 
+                        renderTripEditor(trip, container) 
+                    })
+                    cityRow.querySelector('[data-action="remove"]').addEventListener('click', () => { 
+                        trip.cities = trip.cities.filter(x => x.id !== c.id); 
+                        removeCityFromTrip(trip.id,c.id);
+                        renderTripEditor(trip, container) 
+                    })
                     cityRow.querySelector('[data-action="rename"]').addEventListener('click', () => { const n = prompt('City name', c.name); if (n !== null) { c.name = n; updateTripInStore(trip); renderTripEditor(trip, container) } })
                     citiesContainer.appendChild(cityRow)
                     dayCursor = end + 1
