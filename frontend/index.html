@@ -710,11 +710,7 @@
                     calWrap.className = 'card calendar-wrapper'
                     renderTripCalendar(t, calWrap)
                     body.appendChild(calWrap)
-                    // timeline
-                    const tlWrap = document.createElement('div')
-                    tlWrap.className = 'card'
-                    renderTripTimeline(t, tlWrap)
-                    body.appendChild(tlWrap)
+                    
 
                     card.appendChild(body)
                 }
@@ -993,31 +989,6 @@
                 monthCard.appendChild(daysGrid)
                 months.appendChild(monthCard)
             }
-        }
-
-        function renderTripTimeline(trip, container) {
-            container.innerHTML = '<h3 style="margin:0 0 8px 0">Day-by-day timeline</h3>'
-            const inner = document.createElement('div')
-            inner.className = 'small'
-            if (!trip.cities.length) inner.textContent = 'No days yet — add cities.'
-            else {
-                const lines = []
-                let cur = 1
-                for (const c of trip.cities) {
-                    const start = cur
-                    const end = cur + Number(c.days)
-                    if (trip.start) {
-                        const sd = addDays(new Date(trip.start), start - 1)
-                        const ed = addDays(new Date(trip.start), end - 1)
-                        lines.push(`${c.name || 'Unnamed'} — days ${c.days} (${formatDate(sd)} → ${formatDate(ed)})`)
-                    } else {
-                        lines.push(`${c.name || 'Unnamed'} — days ${start}–${end}`)
-                    }
-                    cur = end
-                }
-                inner.innerHTML = lines.map(l => `<div>${escapeHtml(l)}</div>`).join('')
-            }
-            container.appendChild(inner)
         }
 
         // utility date functions
