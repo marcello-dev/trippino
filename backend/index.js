@@ -1,6 +1,7 @@
 const express = require('express')
 const cookieParser = require('cookie-parser')
 const { v4: uuidv4 } = require('uuid')
+const bcrypt = require('bcryptjs')
 
 const app = express()
 const PORT = process.env.PORT || 4000
@@ -35,9 +36,13 @@ db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT UNIQUE, password TEXT)`)
   db.run(`CREATE TABLE IF NOT EXISTS sessions (sid TEXT PRIMARY KEY, user_id INTEGER, createdAt INTEGER)`)
   db.run(`CREATE TABLE IF NOT EXISTS states (user_id INTEGER PRIMARY KEY, state TEXT)`)
-  // seed demo users
-  db.run(`INSERT OR IGNORE INTO users(email,password) VALUES(?,?)`, ['marc@demo.com', 'marc'])
-  db.run(`INSERT OR IGNORE INTO users(email,password) VALUES(?,?)`, ['alice@demo.com', 'alice'])
+  // seed demo users with hashed passwords
+  try {
+    const marcHash = bcrypt.hashSync('marc', 10)
+    db.run(`INSERT OR IGNORE INTO users(email,password) VALUES(?,?)`, ['marc@demo.com', marcHash])
+  } catch (e) {
+    console.error('failed seeding users', e)
+  }
 })
 
 // cookie name
@@ -79,7 +84,9 @@ app.post('/api/login', async (req, res) => {
     const { email, password } = req.body || {}
     if (!email || !password) return res.status(400).json({ error: 'email and password required' })
     const user = await get(`SELECT id,email,password FROM users WHERE email = ?`, [email])
-    if (!user || user.password !== password) return res.status(401).json({ error: 'invalid credentials' })
+    if (!user) return res.status(401).json({ error: 'invalid credentials' })
+    const match = await bcrypt.compare(password, user.password)
+    if (!match) return res.status(401).json({ error: 'invalid credentials' })
     const sid = await createSessionForUserId(user.id)
     res.cookie(COOKIE_NAME, sid, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 7 * 24 * 60 * 60 * 1000 })
     return res.json({ ok: true, email: user.email })
@@ -91,9 +98,10 @@ app.post('/api/register', async (req, res) => {
   try {
     const { email, password } = req.body || {}
     if (!email || !password) return res.status(400).json({ error: 'email and password required' })
-    // insert user
+    // hash password before storing
     try {
-      const info = await run(`INSERT INTO users(email,password) VALUES(?,?)`, [email, password])
+      const hash = await bcrypt.hash(password, 10)
+      const info = await run(`INSERT INTO users(email,password) VALUES(?,?)`, [email, hash])
       // get id of created user
       const row = await get(`SELECT id FROM users WHERE email = ?`, [email])
       const sid = await createSessionForUserId(row.id)

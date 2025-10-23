@@ -474,21 +474,10 @@
                 appState = backendState
                 save(appState)
             } else {
-                // both exist -> pick the most recent updatedAt
-                const lts = tsOf(localState)
-                const bts = tsOf(backendState)
-                if (bts >= lts) {
-                    appState = backendState
-                    save(appState)
-                    console.log('using backend state')
-                } else {
-                    appState = localState
-                    // push newer local to backend
-                    try {
-                        await fetch(`${API_BASE}/api/state`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ state: appState }) })
-                    } catch (e) { console.warn('push local to backend failed', e) }
-                    console.log('using local state and pushed to backend')
-                }
+                // both not empty, take backend
+                appState = backendState
+                save(appState)
+                console.log('using backend state')
             }
 
             // normalize
