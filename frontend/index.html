@@ -986,10 +986,6 @@
                     <div class="small" style="margin-left:6px;color:var(--muted)">Start date</div>
                     <input class="trip-start" type="date" value="${escapeHtml(trip.start || '')}" />
                 </div>
-                <div class="actions">
-                    <button class="add-city btn ghost">+ Add city</button>
-                    <button class="clear-trip btn">Clear</button>
-                </div>
             `
             container.appendChild(topline)
 
@@ -1009,32 +1005,6 @@
             const nameDisplay = topline.querySelector('.trip-name-display')
             const startInput = topline.querySelector('.trip-start')
             startInput.addEventListener('change', () => { trip.start = startInput.value; updateTripInStore(trip) })
-
-            // add city - open typeahead popup to select city via TomTom
-            const addBtn = topline.querySelector('.add-city')
-            addBtn.addEventListener('click', (e) => {
-                e.stopPropagation()
-                // open popup anchored to button
-                const popup = createCitySearchPopup(addBtn, async (sel) => {
-                    if (!sel) return
-                    // sel: {name, position: {lat,lng}}
-                    const newCity = { id: uid(), name: sel.name, days: 1, lat: sel.position && sel.position.lat, lon: sel.position && sel.position.lon, updatedAt: new Date().toISOString() }
-                    trip.cities.push(newCity)
-                    updateTripInStore(trip)
-                    renderTripEditor(trip, container)
-                })
-            })
-
-            // clear trip
-            topline.querySelector('.clear-trip').addEventListener('click', () => {
-                if (confirm('Clear this trip?')) {
-                    trip.cities = []
-                    trip.name = ''
-                    trip.start = ''
-                    updateTripInStore(trip)
-                    renderTripEditor(trip, container)
-                }
-            })
 
             // render cities list
             function renderCitiesList() {
@@ -1110,6 +1080,28 @@
                     // }
                     dayCursor = end
                 }
+                // Add the bottom "Add city" button
+                const bottomAddBtn = document.createElement('div')
+                bottomAddBtn.style.textAlign = 'center'
+                bottomAddBtn.style.marginTop = '12px'
+                bottomAddBtn.innerHTML = '<button class="btn ghost" style="width:100%">+ Add city</button>'
+                bottomAddBtn.querySelector('button').addEventListener('click', (e) => {
+                    e.stopPropagation()
+                    const popup = createCitySearchPopup(e.target, async (sel) => {
+                        if (!sel) return
+                        const newCity = { 
+                            id: uid(), 
+                            name: sel.name, 
+                            days: 1,
+                            updatedAt: new Date().toISOString()
+                        }
+                        trip.cities.push(newCity)
+                        updateTripInStore(trip)
+                        renderTripEditor(trip, container)
+                    })
+                })
+                citiesContainer.appendChild(bottomAddBtn)
+
                 // update total days
                 const total = trip.cities.reduce((s, c) => s + Number(c.days), 0)
                 const totalDaysEl = container.querySelector('.total-days')
