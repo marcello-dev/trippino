@@ -64,7 +64,7 @@
 
         .city {
             display: grid;
-            grid-template-columns: 1fr 160px 170px 80px;
+            grid-template-columns: 1fr 160px 250px 80px;
             gap: 10px;
             align-items: center;
             padding: 10px;
@@ -208,7 +208,7 @@
         }
 
         .small {
-            font-size: 13px;
+            font-size: 12px;
             color: var(--muted)
         }
 
@@ -1049,12 +1049,17 @@
                     cityRow.dataset.id = c.id
                     cityRow.innerHTML = `
                         <div>
-                            <div class="name">${escapeHtml(c.name || 'Unnamed city')}</div>
+                            <div class="name">
+                                ${escapeHtml(c.name || 'Unnamed city')}
+                            </div>
                         </div>
                         <div class="days-control">
                             <button data-action="dec">−</button>
                             <input type="number" min="1" value="${c.days}" data-days />
                             <button data-action="inc">+</button>
+                        </div>
+                        <div class="small">
+                                ${formatDate(addDays(new Date(trip.start), start - 1))} (${weekdayName(addDays(new Date(trip.start), start - 1))}) → ${formatDate(addDays(new Date(trip.start), end - 1))} (${weekdayName(addDays(new Date(trip.start), end - 1))})
                         </div>
                         <div class="actions" style="text-align:right">
                             <button data-action="rename" class="btn ghost" title="Rename">✎</button>
@@ -1096,13 +1101,13 @@
                     })
                     citiesContainer.appendChild(cityRow)
                     // add a separate row under the city for the human-readable date range
-                    if (trip.start) {
-                        const dateRow = document.createElement('div')
-                        dateRow.className = 'city-date-row small'
-                        dateRow.style.margin = '6px 0 12px 8px'
-                        dateRow.textContent = `${formatDate(addDays(new Date(trip.start), start - 1))} (${weekdayName(addDays(new Date(trip.start), start - 1))}) → ${formatDate(addDays(new Date(trip.start), end - 1))} (${weekdayName(addDays(new Date(trip.start), end - 1))})`
-                        citiesContainer.appendChild(dateRow)
-                    }
+                    // if (trip.start) {
+                    //     const dateRow = document.createElement('div')
+                    //     dateRow.className = 'city-date-row small'
+                    //     dateRow.style.margin = '6px 0 12px 8px'
+                    //     dateRow.textContent = `${formatDate(addDays(new Date(trip.start), start - 1))} (${weekdayName(addDays(new Date(trip.start), start - 1))}) → ${formatDate(addDays(new Date(trip.start), end - 1))} (${weekdayName(addDays(new Date(trip.start), end - 1))})`
+                    //     citiesContainer.appendChild(dateRow)
+                    // }
                     dayCursor = end
                 }
                 // update total days
