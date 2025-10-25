@@ -24,8 +24,6 @@
   <div class="app">
     <div class="card">
       <h1>Sign in / Register</h1>
-      <div class="small">Use the demo account or register a new one. After signing in you'll be returned to the home page.</div>
-
       <label class="small">Email</label>
       <input id="email" type="email" placeholder="you@example.com" autocomplete="email" />
       <label class="small">Password</label>
@@ -66,8 +64,13 @@
       msg.textContent = 'Signing in...'
       try {
         const res = await fetch(`${API_BASE}/api/login`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          credentials: 'include', body: JSON.stringify({ email: emailEl.value.trim(), password: passEl.value })
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include', 
+          body: JSON.stringify({ 
+            email: emailEl.value.trim(), 
+            password: passEl.value 
+          })
         })
         const json = await res.json().catch(() => ({}))
         if (!res.ok) {
