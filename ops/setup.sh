@@ -14,6 +14,13 @@ chown -R trippino:trippino /opt/trippino
 dnf install nodejs
 npm install -g http-server
 
+mkdir /var/lib/trippino
+chown -R trippino:trippino /var/lib/trippino
+
+mkdir /etc/trippino
+chown -R trippino:trippino /etc/trippino
+
+
 cat << EOL > /etc/systemd/system/trippino-api.service
 [Unit]
 Description=trippino-api
@@ -22,8 +29,8 @@ After=syslog.target
 [Service]
 User=trippino
 ExecStart=node /opt/trippino/backend/index.js
-SuccessExitStatus=143
-q
+EnvironmentFile=/etc/trippino/trippino.conf
+
 [Install]
 WantedBy=multi-user.target
 EOL

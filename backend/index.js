@@ -6,14 +6,14 @@ const bcrypt = require('bcryptjs')
 const app = express()
 const PORT = process.env.PORT || 4000
 
-// Replace in-memory stores with SQLite-backed persistence
 const fs = require('fs')
 const path = require('path')
 const sqlite3 = require('sqlite3')
-const DB_FILE = path.join(__dirname, 'data.sqlite')
+const DATABASE_URL = process.env["DATABASE_URL"] || path.join(__dirname, 'data.sqlite')
+console.log('SQLite DB path:', DATABASE_URL)
 
 // open DB
-const db = new sqlite3.Database(DB_FILE)
+const db = new sqlite3.Database(DATABASE_URL)
 
 function run(sql, params = []) {
   return new Promise((resolve, reject) => {
