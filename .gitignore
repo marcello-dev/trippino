@@ -1,5 +1,5 @@
 .DS_Store
 node_modules/
-backend/data.sqlite
-backend/.env
+app/data.sqlite
+app/.env
 todo.md

@@ -4,9 +4,9 @@ const { v4: uuidv4 } = require('uuid')
 const bcrypt = require('bcryptjs')
 
 const app = express()
-const PORT = process.env.PORT || 4000
+const PORT = process.env.PORT
+const API_BASE = process.env.API_BASE;
 
-const fs = require('fs')
 const path = require('path')
 const sqlite3 = require('sqlite3')
 const DATABASE_URL = process.env["DATABASE_URL"] || path.join(__dirname, 'data.sqlite')
@@ -51,17 +51,17 @@ const COOKIE_NAME = 'trippino_sid'
 app.use(express.json())
 app.use(cookieParser())
 
-// CORS-lite middleware to allow the static frontend to talk to this API
-app.use((req, res, next) => {
-  // allow any origin for now; in production lock this down
-  const origin = req.get('Origin') || '*'
-  res.setHeader('Access-Control-Allow-Origin', origin)
-  res.setHeader('Access-Control-Allow-Credentials', 'true')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
-  if (req.method === 'OPTIONS') return res.sendStatus(204)
-  next()
-})
+// --- API Health Check ---
+app.get('/api/health', (req, res) => res.json({ ok: true }))
+
+// --- Serve frontend files ---
+app.use(express.static(path.join(__dirname, "public")));
+
+// --- Dynamic config.js ---
+app.get("/config.js", (req, res) => {
+  res.type("application/javascript");
+  res.send(`window.APP_CONFIG = { API_BASE: "${API_BASE}" };`);
+});
 
 async function createSessionForUserId(userId) {
   const sid = uuidv4()
@@ -144,7 +144,6 @@ app.post('/api/state', async (req, res) => {
     if (typeof state === 'undefined') return res.status(400).json({ error: 'state missing in body' })
     const blob = JSON.stringify(state)
     await run(`INSERT OR REPLACE INTO states(user_id, state) VALUES(?,?)`, [userId, blob])
-    console.log(`Saved state for user ${s.user.email} (id ${userId}), ${blob.length} bytes`)
     return res.json({ ok: true })
   } catch (e) { console.error(e); return res.status(500).json({ error: 'server error' }) }
 })
@@ -182,6 +181,4 @@ app.get('/api/tomtom', async (req, res) => {
   }
 })
 
-app.get('/api/health', (req, res) => res.json({ ok: true }))
-
-app.listen(PORT, () => console.log(`Trippino backend listening on http://localhost:${PORT}`))
+app.listen(PORT, () => console.log(`Trippino listening on port: ${PORT}`))
