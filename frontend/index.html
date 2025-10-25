@@ -531,9 +531,12 @@
 
         function setAnonymous() {
             authArea.innerHTML = `
-                <button id="showAuthBtn" class="btn primary">Sign in / Register</button>
+                <button id="goAuthBtn" class="btn primary">Sign in / Register</button>
             `
-            document.getElementById('showAuthBtn').addEventListener('click', showAuthForm)
+            document.getElementById('goAuthBtn').addEventListener('click', () => {
+                // open the dedicated auth page
+                window.location.href = 'auth.html'
+            })
         }
 
         function setAuthenticated(user) {
