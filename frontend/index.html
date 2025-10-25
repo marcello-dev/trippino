@@ -1250,7 +1250,9 @@
                     console.log('TomTom proxy query response', url, res.status)
                     if (!res.ok) { renderList([]); return }
                     const json = await res.json()
-                    const suggestions = (json.results || []).map(r => ({ name: r.address && (r.address.countrySubdivisionName ? `${r.address.municipality || r.address.freeformAddress}, ${r.address.countrySubdivisionName}` : r.address.freeformAddress) || (r.poi && r.poi.name) || (r.address && r.address.freeformAddress) || r.type, position: r.position }))
+                    const suggestions = (json.results || []).map(r => ({ 
+                        name: `${r.address.freeformAddress}, ${r.address.countryCode || ''}`.trim()
+                    }))
                     renderList(suggestions)
                 } catch (e) { console.warn('TomTom proxy query failed', e); renderList([]) }
             }
@@ -1267,7 +1269,7 @@
                 for (const it of items) {
                     const el = document.createElement('div')
                     el.className = 'tt-item'
-                    el.textContent = it.name || (it.position && `${it.position.lat.toFixed(4)},${it.position.lon.toFixed(4)}`) || 'Unknown'
+                    el.textContent = it.name || 'Unknown'
                     el.addEventListener('click', () => {
                         cleanup()
                         onSelect(it)
