@@ -785,6 +785,7 @@
                     <button class="btn" data-action="toggle">
                         ${expandedTripIds.has(t.id) ? 'Collapse' : 'Expand'}
                     </button>
+                    <button class="btn ghost" data-action="edit" title="Edit trip name" aria-label="Edit trip name">✎</button>
                     <button class="btn ghost" data-action="del" title="Delete trip" aria-label="Delete trip">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">
                             <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -792,6 +793,18 @@
                     </button>
                 </div>`
                 header.querySelector('[data-action="del"]').addEventListener('click', (e) => { e.stopPropagation(); if (confirm('Delete trip?')) { deleteTrip(t.id); renderTripsContainer() } })
+                const editBtn = header.querySelector('[data-action="edit"]')
+                if (editBtn) {
+                    editBtn.addEventListener('click', (e) => {
+                        e.stopPropagation()
+                        const n = prompt('Trip name', t.name || '')
+                        if (n !== null) {
+                            t.name = n
+                            updateTripInStore(t)
+                            renderTripsContainer()
+                        }
+                    })
+                }
                 header.querySelector('[data-action="toggle"]').addEventListener('click', (e) => {
                     e.stopPropagation();
                     if (expandedTripIds.has(t.id)) {
@@ -961,8 +974,6 @@
             topline.className = 'topline'
             topline.innerHTML = `
                 <div style="display:flex;gap:8px;align-items:center">
-                    <label class="small">Trip name</label>
-                    <input class="trip-name" value="${escapeHtml(trip.name || '')}" />
                     <div class="small" style="margin-left:6px;color:var(--muted)">Start date</div>
                     <input class="trip-start" type="date" value="${escapeHtml(trip.start || '')}" />
                 </div>
@@ -985,10 +996,9 @@
             metaRow.innerHTML = `<div class="meta">Total nights: <span class="total-days">0</span></div>`
             container.appendChild(metaRow)
 
-            // wire interactions: name/start
-            const nameInput = topline.querySelector('.trip-name')
+            // wire interactions: edit trip name (prompt) and start date
+            const nameDisplay = topline.querySelector('.trip-name-display')
             const startInput = topline.querySelector('.trip-start')
-            nameInput.addEventListener('input', () => { trip.name = nameInput.value; updateTripInStore(trip) })
             startInput.addEventListener('change', () => { trip.start = startInput.value; updateTripInStore(trip) })
 
             // add city
