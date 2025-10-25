@@ -549,22 +549,6 @@
             document.getElementById('logoutBtn').addEventListener('click', doLogout)
         }
 
-        function showAuthForm() {
-            // simple inline form (register or login)
-            authArea.innerHTML = `
-                <div style="display:flex;gap:8px;align-items:center">
-                    <input id="authEmail" placeholder="email" />
-                    <input id="authPass" type="password" placeholder="password" />
-                    <button id="btnLogin" class="btn primary">Login</button>
-                    <button id="btnRegister" class="btn ghost">Register</button>
-                    <button id="btnCancel" class="btn">Cancel</button>
-                </div>
-            `
-            document.getElementById('btnLogin').addEventListener('click', doLogin)
-            document.getElementById('btnRegister').addEventListener('click', doRegister)
-            document.getElementById('btnCancel').addEventListener('click', checkAuth)
-        }
-
         async function doRegister() {
             const e = document.getElementById('authEmail').value.trim()
             const p = document.getElementById('authPass').value
