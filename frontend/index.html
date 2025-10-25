@@ -224,6 +224,12 @@
             border: none;
             cursor: pointer;
             background: #fff;
+            border-radius: 20px;
+            transition: background-color 0.2s;
+        }
+
+        .days-control button:hover {
+            background: #f0f0f0;
         }
 
         .days-control input {
@@ -344,22 +350,47 @@
 
             /* --- City rows --- */
             .city {
-                display: flex;
-                flex-direction: column;
-                align-items: stretch;
+                position: relative;
+                display: grid;
+                grid-template-columns: 1fr auto;
                 gap: 8px;
+                padding: 8px;
+                cursor: pointer;
             }
 
-            .city>div {
-                width: 100%;
+            .city.active {
+                background: #f6f8fa;
             }
 
-            .days-control {
-                justify-content: space-between;
+            /* Hide date range on mobile */
+            .city > div:nth-child(3) {
+                grid-column: 1 / -1;
+                font-size: 11px;
             }
 
-            .city button {
-                width: 100%;
+            /* Hide action buttons by default and render them as a full-width row below the city */
+            .city .actions {
+                display: none;
+                grid-column: 1 / -1;
+                justify-content: flex-end;
+                gap: 8px;
+                padding-top: 8px;
+                margin-top: 6px;
+                border-top: 1px solid #f0f0f0;
+                background: transparent;
+            }
+
+            /* Show actions when city is active (appear as an additional row below the city) */
+            .city.active .actions {
+                display: flex;
+            }
+
+            /* Slightly larger action buttons for touch targets on mobile */
+            .city .actions button {
+                padding: 6px 8px;
+                min-width: 36px;
+                height: 36px;
+                border-radius: 6px;
             }
 
             /* Smaller padding for mobile cards */
@@ -584,6 +615,15 @@
 
         // check auth and sync state on load
         loadAndSyncState()
+
+        // Close active city when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.city')) {
+                document.querySelectorAll('.city.active').forEach(c => 
+                    c.classList.remove('active')
+                );
+            }
+        });
 
         // Sync UI wiring
         const syncBtn = document.getElementById('syncBtn')
@@ -1025,7 +1065,7 @@
                         </div>
                         <div class="days-control">
                             <button data-action="dec">−</button>
-                            <input type="number" min="1" value="${c.days}" data-days />
+                            <div class="days-display" style="background:white;width:30px;text-align:center;padding:1px 1px;border: none;border-radius:6px">${c.days}</div>
                             <button data-action="inc">+</button>
                         </div>
                         <div class="small">
@@ -1046,11 +1086,7 @@
                         updateDays(trip.id, c.id, c.days);
                         renderTripEditor(trip, container)
                     })
-                    cityRow.querySelector('[data-days]').addEventListener('change', (e) => {
-                        c.days = Math.max(1, Number(e.target.value) || 1);
-                        updateDays(trip.id, c.id, c.days);
-                        renderTripEditor(trip, container)
-                    })
+                    // Days input is now read-only, controlled by + and - buttons only
                     cityRow.querySelector('[data-action="remove"]').addEventListener('click', () => {
                         trip.cities = trip.cities.filter(x => x.id !== c.id);
                         removeCityFromTrip(trip.id, c.id);
@@ -1069,15 +1105,20 @@
                             renderTripEditor(trip, container)
                         }, c.name)
                     })
+                    // Add click handler for mobile action buttons
+                    cityRow.addEventListener('click', (e) => {
+                        // Don't toggle if clicking a button
+                        if (e.target.closest('button')) return;
+                        
+                        // Remove active class from all other cities
+                        citiesContainer.querySelectorAll('.city.active').forEach(c => {
+                            if (c !== cityRow) c.classList.remove('active')
+                        });
+                        // Toggle active state on this city
+                        cityRow.classList.toggle('active');
+                    });
+
                     citiesContainer.appendChild(cityRow)
-                    // add a separate row under the city for the human-readable date range
-                    // if (trip.start) {
-                    //     const dateRow = document.createElement('div')
-                    //     dateRow.className = 'city-date-row small'
-                    //     dateRow.style.margin = '6px 0 12px 8px'
-                    //     dateRow.textContent = `${formatDate(addDays(new Date(trip.start), start - 1))} (${weekdayName(addDays(new Date(trip.start), start - 1))}) → ${formatDate(addDays(new Date(trip.start), end - 1))} (${weekdayName(addDays(new Date(trip.start), end - 1))})`
-                    //     citiesContainer.appendChild(dateRow)
-                    // }
                     dayCursor = end
                 }
                 // Add the bottom "Add city" button
