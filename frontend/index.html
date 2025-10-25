@@ -405,6 +405,7 @@
             </div>
 
             <div id="tripsContainer"></div>
+            <div id="yearSummary"></div>
         </div>
 
     </div>
@@ -838,6 +839,65 @@
         // render once helper
         function refreshAll() {
             renderTripsContainer()
+            renderYearSummary()
+        }
+
+        // Render per-year summary of travel days vs days at home.
+        function renderYearSummary() {
+            const container = document.getElementById('yearSummary')
+            if (!container) return
+            container.innerHTML = ''
+            // gather unique travel dates per year
+            const yearMap = new Map() // year -> Set of date strings
+            for (const trip of (appState.trips || [])) {
+                if (!trip.start) continue
+                const totalDays = (trip.cities || []).reduce((s, c) => s + Number(c.days || 0), 0)
+                if (totalDays <= 0) continue
+                const tripStart = new Date(trip.start)
+                for (let i = 0; i < totalDays; i++) {
+                    const d = addDays(tripStart, i)
+                    const y = d.getFullYear()
+                    const key = formatDate(d)
+                    if (!yearMap.has(y)) yearMap.set(y, new Set())
+                    yearMap.get(y).add(key)
+                }
+            }
+
+            if (yearMap.size === 0) {
+                // nothing to show
+                return
+            }
+
+            const card = document.createElement('div')
+            card.className = 'card'
+            const header = document.createElement('div')
+            header.style.display = 'flex'
+            header.style.justifyContent = 'space-between'
+            header.style.alignItems = 'center'
+            header.innerHTML = `<div><strong>Year summary</strong><div class="small" style="color:var(--muted)">Travel days vs days at home</div></div>`
+            card.appendChild(header)
+
+            const body = document.createElement('div')
+            body.style.marginTop = '10px'
+
+            const years = Array.from(yearMap.keys()).sort((a, b) => b - a)
+            for (const y of years) {
+                const travelSet = yearMap.get(y) || new Set()
+                const travelDays = travelSet.size
+                const daysInYear = (new Date(y, 11, 31) - new Date(y, 0, 0)) / (24 * 60 * 60 * 1000)
+                // daysInYear computed as difference between Dec 31 and Jan 0 gives 365 or 366
+                const homeDays = Math.max(0, Math.round(daysInYear) - travelDays)
+                const row = document.createElement('div')
+                row.style.display = 'flex'
+                row.style.justifyContent = 'space-between'
+                row.style.alignItems = 'center'
+                row.style.padding = '6px 0'
+                row.innerHTML = `<div><strong>${y}</strong></div><div class="small">Travel: <strong>${travelDays}</strong> days — Home: <strong>${homeDays}</strong> days</div>`
+                body.appendChild(row)
+            }
+
+            card.appendChild(body)
+            container.appendChild(card)
         }
 
         // global render shim: sync `state` to active trip and refresh UI
