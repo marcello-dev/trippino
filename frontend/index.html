@@ -479,7 +479,6 @@
                 // both not empty, take backend
                 appState = backendState
                 save(appState)
-                console.log('using backend state')
             }
 
             // normalize
@@ -638,6 +637,17 @@
         // helpers
         const uid = () => Math.random().toString(36).slice(2, 9)
         const tid = () => 't_' + Math.random().toString(36).slice(2, 9)
+
+    /* Typeahead / suggestions styles */
+    const styleEl = document.createElement('style')
+    styleEl.textContent = `
+    .tt-popup { position: absolute; background: white; border: 1px solid #eee; box-shadow: 0 6px 18px rgba(12,18,32,0.06); border-radius:6px; z-index:1000; width:260px; }
+    .tt-popup .tt-item { padding:8px; cursor:pointer; border-bottom:1px solid #f2f4f6 }
+    .tt-popup .tt-item:last-child { border-bottom:0 }
+    .tt-popup .tt-item:hover { background:#f6f8fa }
+    .tt-input-inline { padding:6px 8px; border:1px solid #ddd; border-radius:6px; width:220px }
+    `
+    document.head.appendChild(styleEl)
 
         function load() {
             const raw = localStorage.getItem(STORAGE_KEY)
@@ -1001,12 +1011,19 @@
             const startInput = topline.querySelector('.trip-start')
             startInput.addEventListener('change', () => { trip.start = startInput.value; updateTripInStore(trip) })
 
-            // add city
+            // add city - open typeahead popup to select city via TomTom
             const addBtn = topline.querySelector('.add-city')
-            addBtn.addEventListener('click', () => {
-                trip.cities.push({ id: uid(), name: 'New city', days: 1 })
-                updateTripInStore(trip)
-                renderTripEditor(trip, container)
+            addBtn.addEventListener('click', (e) => {
+                e.stopPropagation()
+                // open popup anchored to button
+                const popup = createCitySearchPopup(addBtn, async (sel) => {
+                    if (!sel) return
+                    // sel: {name, position: {lat,lng}}
+                    const newCity = { id: uid(), name: sel.name, days: 1, lat: sel.position && sel.position.lat, lon: sel.position && sel.position.lon, updatedAt: new Date().toISOString() }
+                    trip.cities.push(newCity)
+                    updateTripInStore(trip)
+                    renderTripEditor(trip, container)
+                })
             })
 
             // clear trip
@@ -1065,7 +1082,19 @@
                         removeCityFromTrip(trip.id, c.id);
                         renderTripEditor(trip, container)
                     })
-                    cityRow.querySelector('[data-action="rename"]').addEventListener('click', () => { const n = prompt('City name', c.name); if (n !== null) { c.name = n; updateTripInStore(trip); renderTripEditor(trip, container) } })
+                    cityRow.querySelector('[data-action="rename"]').addEventListener('click', (ev) => {
+                        ev.stopPropagation()
+                        // open popup anchored to the rename button
+                        const renameBtn = ev.currentTarget
+                        createCitySearchPopup(renameBtn, async (sel) => {
+                            if (!sel) return
+                            c.name = sel.name
+                            if (sel.position) { c.lat = sel.position.lat; c.lon = sel.position.lon }
+                            c.updatedAt = new Date().toISOString()
+                            updateTripInStore(trip)
+                            renderTripEditor(trip, container)
+                        }, c.name)
+                    })
                     citiesContainer.appendChild(cityRow)
                     // add a separate row under the city for the human-readable date range
                     if (trip.start) {
@@ -1180,6 +1209,115 @@
         function addDays(d, n) { const t = new Date(d); t.setDate(t.getDate() + n); return t }
         function formatDate(d) { return d.toISOString().slice(0, 10) }
         function weekdayName(d) { return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()] }
+
+        // ---------- TomTom typeahead popup helper ----------
+        function createCitySearchPopup(anchorEl, onSelect, initialValue = '') {
+            // anchorEl: DOM node to position under, onSelect: callback(selObject|null)
+            // returns the popup element
+            const popup = document.createElement('div')
+            popup.className = 'tt-popup'
+            popup.style.minWidth = '260px'
+            popup.style.padding = '8px'
+            // input
+            const input = document.createElement('input')
+            input.className = 'tt-input-inline'
+            input.value = initialValue || ''
+            popup.appendChild(input)
+            const list = document.createElement('div')
+            list.style.maxHeight = '260px'
+            list.style.overflow = 'auto'
+            list.style.marginTop = '6px'
+            popup.appendChild(list)
+
+            // position popup
+            document.body.appendChild(popup)
+            const rect = anchorEl.getBoundingClientRect()
+            popup.style.position = 'absolute'
+            popup.style.left = `${rect.left}px`
+            popup.style.top = `${rect.bottom + window.scrollY + 6}px`
+
+            let debounceTimer = null
+            let lastQuery = ''
+
+            async function doQuery(q) {
+                if (!q) {
+                    renderList([])
+                    return
+                }
+                try {
+                    const url = `${API_BASE}/api/tomtom?q=${encodeURIComponent(q)}&limit=6&typeahead=true`
+                    const res = await fetch(url, { credentials: 'include' })
+                    console.log('TomTom proxy query response', url, res.status)
+                    if (!res.ok) { renderList([]); return }
+                    const json = await res.json()
+                    const suggestions = (json.results || []).map(r => ({ name: r.address && (r.address.countrySubdivisionName ? `${r.address.municipality || r.address.freeformAddress}, ${r.address.countrySubdivisionName}` : r.address.freeformAddress) || (r.poi && r.poi.name) || (r.address && r.address.freeformAddress) || r.type, position: r.position }))
+                    renderList(suggestions)
+                } catch (e) { console.warn('TomTom proxy query failed', e); renderList([]) }
+            }
+
+            function renderList(items) {
+                list.innerHTML = ''
+                if (!items.length) {
+                    const none = document.createElement('div')
+                    none.className = 'tt-item'
+                    none.textContent = 'No suggestions'
+                    list.appendChild(none)
+                    return
+                }
+                for (const it of items) {
+                    const el = document.createElement('div')
+                    el.className = 'tt-item'
+                    el.textContent = it.name || (it.position && `${it.position.lat.toFixed(4)},${it.position.lon.toFixed(4)}`) || 'Unknown'
+                    el.addEventListener('click', () => {
+                        cleanup()
+                        onSelect(it)
+                    })
+                    list.appendChild(el)
+                }
+            }
+
+            function cleanup() {
+                if (debounceTimer) clearTimeout(debounceTimer)
+                if (popup && popup.parentNode) popup.parentNode.removeChild(popup)
+                document.removeEventListener('mousedown', docMouse)
+            }
+
+            function docMouse(e) {
+                if (!popup.contains(e.target) && !anchorEl.contains(e.target)) {
+                    cleanup()
+                    onSelect(null)
+                }
+            }
+
+            input.addEventListener('input', (ev) => {
+                const q = ev.target.value.trim()
+                lastQuery = q
+                if (debounceTimer) clearTimeout(debounceTimer)
+                debounceTimer = setTimeout(() => doQuery(q), 300)
+            })
+
+            // handle keyboard selection: Enter selects first item
+            input.addEventListener('keydown', (ev) => {
+                if (ev.key === 'Enter') {
+                    const first = list.querySelector('.tt-item')
+                    if (first) {
+                        first.click()
+                    }
+                } else if (ev.key === 'Escape') {
+                    cleanup(); onSelect(null)
+                }
+            })
+
+            document.addEventListener('mousedown', docMouse)
+
+            // initial query if value provided
+            if (input.value && input.value.length >= 2) {
+                doQuery(input.value)
+            }
+
+            input.focus()
+            return popup
+        }
 
         // escape for safety (we control the HTML but keep it safe)
         function escapeHtml(s) { return String(s).replace(/[&<>"']/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": "&#39;" }[ch] }) }

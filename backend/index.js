@@ -161,7 +161,26 @@ app.get('/api/state', async (req, res) => {
   } catch (e) { console.error(e); return res.status(500).json({ error: 'server error' }) }
 })
 
-// simple health
+// TomTom proxy - forwards queries to TomTom Search API using server-side key
+app.get('/api/tomtom', async (req, res) => {
+  try {
+    const q = req.query.q
+    if (!q) return res.status(400).json({ error: 'q query param required' })
+    const key = process.env.TOMTOM_API_KEY
+    if (!key) return res.status(500).json({ error: 'TomTom API key not configured on server' })
+    // forward to TomTom
+    const limit = req.query.limit || 6
+    const typeahead = (typeof req.query.typeahead === 'undefined') ? 'true' : String(req.query.typeahead)
+    const url = `https://api.tomtom.com/search/2/search/${encodeURIComponent(q)}.json?key=${key}&limit=${encodeURIComponent(limit)}&typeahead=${encodeURIComponent(typeahead)}`
+    const r = await fetch(url)
+    const json = await r.json()
+    return res.json(json)
+  } catch (e) {
+    console.error('tomtom proxy failed', e)
+    return res.status(500).json({ error: 'tomtom proxy failed' })
+  }
+})
+
 app.get('/api/health', (req, res) => res.json({ ok: true }))
 
 app.listen(PORT, () => console.log(`Trippino backend listening on http://localhost:${PORT}`))
