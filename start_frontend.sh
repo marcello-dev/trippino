@@ -1,1 +1,0 @@
-npx http-server frontend -p 5000

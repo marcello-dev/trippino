@@ -21,38 +21,23 @@ mkdir /etc/trippino
 chown -R trippino:trippino /etc/trippino
 
 
-cat << EOL > /etc/systemd/system/trippino-api.service
+cat << EOL > /etc/systemd/system/trippino.service
 [Unit]
-Description=trippino-api
+Description=trippino
 After=syslog.target
 
 [Service]
 User=trippino
-ExecStart=node /opt/trippino/backend/index.js
+ExecStart=node /opt/trippino/app/app.js
 EnvironmentFile=/etc/trippino/trippino.conf
 
 [Install]
 WantedBy=multi-user.target
 EOL
 
-
-cat << EOL > /etc/systemd/system/trippino-frontend.service
-[Unit]
-Description=trippino-frontend
-After=syslog.target
-
-[Service]
-User=trippino
-ExecStart=npx http-server /opt/trippino/frontend -p 5000
-SuccessExitStatus=143
-
-[Install]
-WantedBy=multi-user.target
-EOL
 systemctl daemon-reload
-systemctl enable trippino-api
-systemctl enable trippino-frontend
+systemctl enable trippino
 
-# Now deploy app and start the services
+# Now deploy app and start the service
 
 
