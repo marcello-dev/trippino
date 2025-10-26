@@ -239,7 +239,6 @@ app.get('/api/tomtom', async (req, res) => {
     const limit = req.query.limit || 6
     const typeahead = (typeof req.query.typeahead === 'undefined') ? 'true' : String(req.query.typeahead)
     const url = `https://api.tomtom.com/search/2/search/${encodeURIComponent(q)}.json?key=${key}&limit=${encodeURIComponent(limit)}&typeahead=${encodeURIComponent(typeahead)}&entityTypeSet=Municipality`
-    console.log('TomTom URL:', url)
     const r = await fetch(url)
     const json = await r.json()
     return res.json(json)
