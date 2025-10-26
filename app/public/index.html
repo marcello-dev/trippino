@@ -623,6 +623,40 @@
         const uid = () => Math.random().toString(36).slice(2, 9)
         const tid = () => 't_' + Math.random().toString(36).slice(2, 9)
 
+        const MAX_TRIPS = 50
+        const MAX_CITIES_PER_TRIP = 30
+        const MAX_TRIP_NAME_LENGTH = 80
+        const MAX_CITY_NAME_LENGTH = 60
+        const MAX_DAYS_PER_CITY = 365
+        // Allow letters, numbers, spaces, common punctuation: - ' ( ) , .
+        const NAME_SAFE_REGEX = /^[A-Za-z0-9 \-\'\(\)\.,]*$/
+
+        function validateTripName(name) {
+            if (!name || !name.trim()) return { ok: false, error: 'Trip name required' }
+            if (name.length > MAX_TRIP_NAME_LENGTH) return { ok: false, error: `Trip name too long (max ${MAX_TRIP_NAME_LENGTH} characters)` }
+            if (!NAME_SAFE_REGEX.test(name)) return { ok: false, error: 'Trip name contains invalid characters' }
+            return { ok: true }
+        }
+
+        function validateCityName(name) {
+            if (!name || !name.trim()) return { ok: false, error: 'City name required' }
+            if (name.length > MAX_CITY_NAME_LENGTH) return { ok: false, error: `City name too long (max ${MAX_CITY_NAME_LENGTH} characters)` }
+            if (!NAME_SAFE_REGEX.test(name)) return { ok: false, error: 'City name contains invalid characters' }
+            return { ok: true }
+        }
+
+        function validateDays(n) {
+            const v = Number(n) || 0
+            if (!Number.isFinite(v) || v < 1) return { ok: false, error: 'Days must be a positive number' }
+            if (v > MAX_DAYS_PER_CITY) return { ok: false, error: `Days per city cannot exceed ${MAX_DAYS_PER_CITY}` }
+            return { ok: true }
+        }
+
+        function showClientError(msg) {
+            // lightweight UX: use alert for now; can be swapped with a toast component
+            try { alert(msg) } catch (e) { console.error(msg) }
+        }
+
     /* Typeahead / suggestions styles */
     const styleEl = document.createElement('style')
     styleEl.textContent = `
@@ -694,9 +728,17 @@
         }
 
         function createTrip(name, start) {
+            const tripName = (name || 'New trip').trim()
+            // enforce max trips
+            if (appState.trips && appState.trips.length >= MAX_TRIPS) {
+                return showClientError(`Maximum number of trips reached (${MAX_TRIPS}). Delete an existing trip to create a new one.`)
+            }
+            const v = validateTripName(tripName)
+            if (!v.ok) return showClientError(v.error)
+
             const t = {
                 id: tid(),
-                name: name || 'New trip', start: start || '',
+                name: tripName, start: start || '',
                 cities: [],
                 updatedAt: new Date().toISOString()
             }
@@ -923,9 +965,18 @@
 
 
         function addCity(name = 'New city', days = 1) {
+            // enforce max cities per trip
+            if (state.cities && state.cities.length >= MAX_CITIES_PER_TRIP) {
+                return showClientError(`Maximum cities per trip reached (${MAX_CITIES_PER_TRIP}). Remove a city before adding another.`)
+            }
+            const v = validateCityName(name || '')
+            if (!v.ok) return showClientError(v.error)
+            const dv = validateDays(days)
+            if (!dv.ok) return showClientError(dv.error)
+
             state.cities.push({
                 id: uid(),
-                name,
+                name: String(name).trim(),
                 days: Math.max(1, Number(days)),
                 updatedAt: new Date().toISOString()
             })
@@ -948,7 +999,9 @@
             const c = state.cities.find(x => x.id === id)
             if (!c) return
             if (newName === null || newName === undefined) return
-            c.name = String(newName)
+            const v = validateCityName(String(newName))
+            if (!v.ok) return showClientError(v.error)
+            c.name = String(newName).trim()
             render()
         }
         function changeDays(id, delta) {
@@ -1048,7 +1101,10 @@
                         const renameBtn = ev.currentTarget
                         createCitySearchPopup(renameBtn, async (sel) => {
                             if (!sel) return
-                            c.name = sel.name
+                            const name = (sel.name || '').trim()
+                            const vname = validateCityName(name)
+                            if (!vname.ok) return showClientError(vname.error)
+                            c.name = name
                             if (sel.position) { c.lat = sel.position.lat; c.lon = sel.position.lon }
                             c.updatedAt = new Date().toISOString()
                             updateTripInStore(trip)
@@ -1080,9 +1136,14 @@
                     e.stopPropagation()
                     const popup = createCitySearchPopup(e.target, async (sel) => {
                         if (!sel) return
-                        const newCity = { 
-                            id: uid(), 
-                            name: sel.name, 
+                        // validate before adding
+                        const name = (sel.name || '').trim()
+                        const v = validateCityName(name)
+                        if (!v.ok) return showClientError(v.error)
+                        if (trip.cities && trip.cities.length >= MAX_CITIES_PER_TRIP) return showClientError(`Maximum cities per trip reached (${MAX_CITIES_PER_TRIP}).`)
+                        const newCity = {
+                            id: uid(),
+                            name: name,
                             days: 1,
                             updatedAt: new Date().toISOString()
                         }

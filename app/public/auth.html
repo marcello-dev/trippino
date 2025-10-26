@@ -108,6 +108,23 @@
         return
       }
 
+      // basic email and password validation
+      const email = emailEl.value.trim()
+      const password = passEl.value
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(email)) {
+        err.textContent = 'Invalid email address'
+        err.style.display = ''
+        msg.textContent = ''
+        return
+      }
+      if (password.length < 8) {
+        err.textContent = 'Password must be at least 8 characters'
+        err.style.display = ''
+        msg.textContent = ''
+        return
+      }
+
       err.style.display = 'none'
       msg.textContent = 'Creating account...'
       try {
@@ -116,8 +133,8 @@
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify({
-            email: emailEl.value.trim(),
-            password: passEl.value,
+            email: email,
+            password: password,
             confirmPassword: confirmPassEl.value
           })
         })
