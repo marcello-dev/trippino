@@ -2,10 +2,38 @@ const express = require('express')
 const cookieParser = require('cookie-parser')
 const { v4: uuidv4 } = require('uuid')
 const bcrypt = require('bcryptjs')
+const nodemailer = require('nodemailer')
 
 const app = express()
 const PORT = process.env.PORT
-const API_BASE = process.env.API_BASE;
+const API_BASE = `${process.env.API_BASE}:${PORT}`;
+
+// Email configuration
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: process.env.SMTP_PORT,
+  secure: process.env.SMTP_SECURE === 'true',
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASSWORD
+  }
+});
+
+async function sendVerificationEmail(email, token) {
+  const verificationUrl = `${API_BASE}/verify-email.html?token=${token}`;
+  
+  await transporter.sendMail({
+    from: process.env.SMTP_FROM,
+    to: email,
+    subject: 'Verify your email for Trippino',
+    html: `
+      <h1>Welcome to Trippino!</h1>
+      <p>Please click the link below to verify your email address:</p>
+      <p><a href="${verificationUrl}">Verify my email</a></p>
+      <p>If you didn't create an account, you can ignore this email.</p>
+    `
+  });
+}
 
 const path = require('path')
 const sqlite3 = require('sqlite3')
@@ -33,13 +61,20 @@ function all(sql, params = []) {
 
 // initialize schema
 db.serialize(() => {
-  db.run(`CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT UNIQUE, password TEXT)`)
+  db.run(`CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, 
+    email TEXT UNIQUE, 
+    password TEXT,
+    verified BOOLEAN DEFAULT 0,
+    verification_token TEXT,
+    verification_expires INTEGER
+  )`)
   db.run(`CREATE TABLE IF NOT EXISTS sessions (sid TEXT PRIMARY KEY, user_id INTEGER, createdAt INTEGER)`)
   db.run(`CREATE TABLE IF NOT EXISTS states (user_id INTEGER PRIMARY KEY, state TEXT)`)
   // seed demo users with hashed passwords
   try {
     const marcHash = bcrypt.hashSync('marc', 10)
-    db.run(`INSERT OR IGNORE INTO users(email,password) VALUES(?,?)`, ['marc@demo.com', marcHash])
+    db.run(`INSERT OR IGNORE INTO users(email,password,verified) VALUES(?,?,1)`, ['marc@demo.com', marcHash])
   } catch (e) {
     console.error('failed seeding users', e)
   }
@@ -53,6 +88,31 @@ app.use(cookieParser())
 
 // --- API Health Check ---
 app.get('/api/health', (req, res) => res.json({ ok: true }))
+
+// Verify email endpoint
+app.get('/api/verify-email', async (req, res) => {
+  try {
+    const { token } = req.query
+    if (!token) return res.status(400).json({ error: 'verification token required' })
+
+    const user = await get(
+      `SELECT id FROM users WHERE verification_token = ? AND verification_expires > ? AND verified = 0`,
+      [token, Date.now()]
+    )
+
+    if (!user) return res.status(400).json({ error: 'invalid or expired verification token' })
+
+    await run(
+      `UPDATE users SET verified = 1, verification_token = NULL WHERE id = ?`,
+      [user.id]
+    )
+
+    return res.json({ ok: true, message: 'email verified successfully' })
+  } catch (e) {
+    console.error(e)
+    return res.status(500).json({ error: 'server error' })
+  }
+})
 
 // --- Serve frontend files ---
 app.use(express.static(path.join(__dirname, "public")));
@@ -83,30 +143,38 @@ app.post('/api/login', async (req, res) => {
   try {
     const { email, password } = req.body || {}
     if (!email || !password) return res.status(400).json({ error: 'email and password required' })
-    const user = await get(`SELECT id,email,password FROM users WHERE email = ?`, [email])
+    const user = await get(`SELECT id,email,password,verified FROM users WHERE email = ?`, [email])
     if (!user) return res.status(401).json({ error: 'invalid credentials' })
     const match = await bcrypt.compare(password, user.password)
     if (!match) return res.status(401).json({ error: 'invalid credentials' })
+    if (!user.verified) return res.status(403).json({ error: 'email not verified' })
     const sid = await createSessionForUserId(user.id)
     res.cookie(COOKIE_NAME, sid, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 7 * 24 * 60 * 60 * 1000 })
     return res.json({ ok: true, email: user.email })
   } catch (e) { console.error(e); return res.status(500).json({ error: 'server error' }) }
 })
 
-// register route: simple demo-only implementation that stores email/password in memory
+// register route with email verification
 app.post('/api/register', async (req, res) => {
   try {
-    const { email, password } = req.body || {}
+    const { email, password, confirmPassword } = req.body || {}
     if (!email || !password) return res.status(400).json({ error: 'email and password required' })
-    // hash password before storing
+    if (password !== confirmPassword) return res.status(400).json({ error: 'passwords do not match' })
+    
     try {
       const hash = await bcrypt.hash(password, 10)
-      const info = await run(`INSERT INTO users(email,password) VALUES(?,?)`, [email, hash])
-      // get id of created user
-      const row = await get(`SELECT id FROM users WHERE email = ?`, [email])
-      const sid = await createSessionForUserId(row.id)
-      res.cookie(COOKIE_NAME, sid, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 7 * 24 * 60 * 60 * 1000 })
-      return res.json({ ok: true, email })
+      const verificationToken = uuidv4()
+      const verificationExpires = Date.now() + (24 * 60 * 60 * 1000) // 24 hours
+      
+      await run(
+        `INSERT INTO users(email, password, verification_token, verification_expires) VALUES(?,?,?,?)`,
+        [email, hash, verificationToken, verificationExpires]
+      )
+      
+      // Send verification email
+      await sendVerificationEmail(email, verificationToken)
+      
+      return res.json({ ok: true, message: 'verification email sent' })
     } catch (e) {
       // likely UNIQUE constraint
       if (e && e.message && e.message.indexOf('UNIQUE') !== -1) return res.status(409).json({ error: 'email already exists' })
@@ -181,4 +249,4 @@ app.get('/api/tomtom', async (req, res) => {
   }
 })
 
-app.listen(PORT, () => console.log(`Trippino listening on port: ${PORT}`))
+app.listen(PORT, () => console.log(`Trippino listening on: ${API_BASE}`))

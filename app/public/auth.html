@@ -23,15 +23,19 @@
 <body>
   <div class="app">
     <div class="card">
-      <h1>Sign in / Register</h1>
+      <h1 id="title">Sign in</h1>
       <label class="small">Email</label>
       <input id="email" type="email" placeholder="you@example.com" autocomplete="email" />
       <label class="small">Password</label>
       <input id="password" type="password" placeholder="password" autocomplete="current-password" />
+      <div id="confirmPasswordDiv" style="display:none">
+        <label class="small">Confirm Password</label>
+        <input id="confirmPassword" type="password" placeholder="confirm password" autocomplete="new-password" />
+      </div>
 
       <div class="row">
-        <button id="btnLogin" class="btn primary">Login</button>
-        <button id="btnRegister" class="btn ghost">Register</button>
+        <button id="btnSubmit" class="btn primary">Login</button>
+        <button id="btnToggle" class="btn ghost">Create Account</button>
         <button id="btnCancel" class="btn">Cancel</button>
       </div>
 
@@ -42,10 +46,18 @@
   <script src="/config.js"></script>
   <script>
     const API_BASE = window.APP_CONFIG.API_BASE
+    console.log(`API_BASE:${API_BASE}`)
     const emailEl = document.getElementById('email')
     const passEl = document.getElementById('password')
+    const confirmPassEl = document.getElementById('confirmPassword')
+    const confirmPassDiv = document.getElementById('confirmPasswordDiv')
+    const titleEl = document.getElementById('title')
+    const btnSubmit = document.getElementById('btnSubmit')
+    const btnToggle = document.getElementById('btnToggle')
     const msg = document.getElementById('msg')
     const err = document.getElementById('err')
+
+    let isLoginMode = true
 
     async function checkAuthAndRedirect() {
       try {
@@ -89,22 +101,37 @@
     }
 
     async function doRegister() {
+      if (passEl.value !== confirmPassEl.value) {
+        err.textContent = 'Passwords do not match'
+        err.style.display = ''
+        msg.textContent = ''
+        return
+      }
+
       err.style.display = 'none'
-      msg.textContent = 'Registering...'
+      msg.textContent = 'Creating account...'
       try {
         const res = await fetch(`${API_BASE}/api/register`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          credentials: 'include', body: JSON.stringify({ email: emailEl.value.trim(), password: passEl.value })
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            email: emailEl.value.trim(),
+            password: passEl.value,
+            confirmPassword: confirmPassEl.value
+          })
         })
         const json = await res.json().catch(() => ({}))
         if (!res.ok) {
-          err.textContent = json.error || 'Register failed'
+          err.textContent = json.error || 'Registration failed'
           err.style.display = ''
           msg.textContent = ''
           return
         }
-        // success -> redirect to home
-        window.location.href = 'index.html'
+        msg.textContent = 'Account created! Please check your email to verify your account.'
+        err.style.display = 'none'
+        btnSubmit.disabled = true
+        btnToggle.disabled = true
       } catch (e) {
         err.textContent = 'Network error'
         err.style.display = ''
@@ -112,12 +139,23 @@
       }
     }
 
-    document.getElementById('btnLogin').addEventListener('click', doLogin)
-    document.getElementById('btnRegister').addEventListener('click', doRegister)
-    document.getElementById('btnCancel').addEventListener('click', () => { window.location.href = 'index.html' })
+    function toggleMode() {
+      isLoginMode = !isLoginMode
+      titleEl.textContent = isLoginMode ? 'Sign in' : 'Create Account'
+      btnSubmit.textContent = isLoginMode ? 'Login' : 'Register'
+      btnToggle.textContent = isLoginMode ? 'Create Account' : 'Back to Login'
+      confirmPassDiv.style.display = isLoginMode ? 'none' : 'block'
+      err.style.display = 'none'
+      msg.textContent = ''
+    }
 
-    // allow pressing Enter in password to submit login
-    passEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') doLogin() })
+    btnSubmit.addEventListener('click', () => isLoginMode ? doLogin() : doRegister())
+    btnToggle.addEventListener('click', toggleMode)
+    btnCancel.addEventListener('click', () => { window.location.href = 'index.html' })
+
+    // allow pressing Enter in password to submit
+    passEl.addEventListener('keydown', (e) => { if (e.key === 'Enter' && isLoginMode) doLogin() })
+    confirmPassEl.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !isLoginMode) doRegister() })
 
     // on load, if already authenticated redirect back
     checkAuthAndRedirect()
