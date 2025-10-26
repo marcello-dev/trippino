@@ -6,7 +6,7 @@ const nodemailer = require('nodemailer')
 
 const app = express()
 const PORT = process.env.PORT
-const API_BASE = `${process.env.API_BASE}:${PORT}`;
+const API_BASE = process.env.NODE_ENV == "production" ? process.env.API_BASE : `http://localhost:${PORT}`
 
 // Email configuration
 const transporter = nodemailer.createTransport({
@@ -249,4 +249,4 @@ app.get('/api/tomtom', async (req, res) => {
   }
 })
 
-app.listen(PORT, () => console.log(`Trippino listening on: ${API_BASE}`))
+app.listen(PORT, () => console.log(`Trippino listening on port: ${PORT}`))
