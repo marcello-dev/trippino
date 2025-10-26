@@ -4,8 +4,7 @@
   "private": true,
   "main": "app/app.js",
   "scripts": {
-    "start": "node app/app.js",
-    "dev": "NODE_ENV=development node app/app.js"
+    "start": "bash -c 'set -a; source app/.env; set +a; node app/app.js'"
   },
   "dependencies": {
     "cookie-parser": "^1.4.6",
