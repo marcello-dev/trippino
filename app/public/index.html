@@ -396,6 +396,11 @@
             </div>
         </header>
 
+        <!-- Anonymous user banner (hidden when authenticated or no local trips) -->
+        <div id="anonBanner" style="display:none;margin-bottom:12px;padding:10px;border-radius:8px;background:var(--accent);color:#4a2a12">
+            <strong>Unsaved changes</strong> — Your trips are only stored locally on this device. <a href="auth.html" style="font-weight:700;color:var(--primary);text-decoration:underline;margin-left:8px">Create an account to persist your data</a>
+        </div>
+
         <div>
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
                 <input id="newTripName" placeholder="Trip name" style="flex:1;max-width:150px" />
@@ -412,9 +417,12 @@
     </div>
     <script src="/config.js"></script>
     <script>
-        // --- Auth config & helpers ---
-        const API_BASE = window.APP_CONFIG.API_BASE
-        const authArea = document.getElementById('authArea')
+    // --- Auth config & helpers ---
+    const API_BASE = window.APP_CONFIG.API_BASE
+    const authArea = document.getElementById('authArea')
+    const anonBanner = document.getElementById('anonBanner')
+    // currentUser: null = anonymous, otherwise object with email
+    let currentUser = null
 
         async function checkAuth() {
             try {
@@ -496,9 +504,12 @@
             // refresh UI
             refreshAll()
             render()
+            // update anon banner after state load (in case local trips exist and user is anonymous)
+            updateAnonBanner()
         }
 
         function setAnonymous() {
+            currentUser = null
             authArea.innerHTML = `
                 <button id="goAuthBtn" class="btn primary">Sign in / Register</button>
             `
@@ -506,9 +517,11 @@
                 // open the dedicated auth page
                 window.location.href = 'auth.html'
             })
+            updateAnonBanner()
         }
 
         function setAuthenticated(user) {
+            currentUser = user
             authArea.innerHTML = `
                 <div style="display:flex;gap:8px;align-items:center">
                     <div class="small">Signed in as <strong>${escapeHtml(user.email)}</strong></div>
@@ -516,6 +529,21 @@
                 </div>
             `
             document.getElementById('logoutBtn').addEventListener('click', doLogout)
+            updateAnonBanner()
+        }
+
+        function updateAnonBanner() {
+            try {
+                // show banner only when anonymous and there are local trips
+                const hasLocalTrips = appState && Array.isArray(appState.trips) && appState.trips.length > 0
+                if (!currentUser && hasLocalTrips) {
+                    anonBanner.style.display = ''
+                } else {
+                    anonBanner.style.display = 'none'
+                }
+            } catch (e) {
+                // ignore
+            }
         }
 
         async function doRegister() {
@@ -678,6 +706,8 @@
             save(appState)
             refreshAll()
             render()
+            // if an anonymous user just created their first trip, show banner
+            updateAnonBanner()
         }
 
         function deleteTrip(id) {
@@ -689,6 +719,8 @@
             save(appState)
             refreshAll()
             render()
+            // update banner in case trips count dropped to 0
+            updateAnonBanner()
         }
 
         function updateDays(tripId, cityId, newDays) {
