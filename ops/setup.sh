@@ -30,6 +30,8 @@ After=syslog.target
 User=trippino
 ExecStart=node /opt/trippino/app/app.js
 EnvironmentFile=/etc/trippino/trippino.conf
+Restart=on-failure
+RestartSec=3
 
 [Install]
 WantedBy=multi-user.target
