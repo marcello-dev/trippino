@@ -1085,6 +1085,12 @@
                             <button data-action="rename" class="btn ghost" title="Rename">✎</button>
                             <button data-action="remove" class="btn" title="Remove city" aria-label="Remove city"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                         </div>
+                        <div class="notes" style="display:none;grid-column:1 / -1;margin-top:8px">
+                            <textarea class="city-notes" placeholder="Notes about this city..." style="width:100%;min-height:72px;border:1px solid #eee;padding:8px;border-radius:8px">${escapeHtml(c.notes || '')}</textarea>
+                            <div style="text-align:right;margin-top:6px">
+                                <button data-action="save-note" class="btn primary">Save note</button>
+                            </div>
+                        </div>
                     `
                     cityRow.querySelector('[data-action="dec"]').addEventListener('click', () => {
                         c.days = Math.max(1, Number(c.days) - 1);
@@ -1120,8 +1126,8 @@
                     })
                     // Add click handler for mobile action buttons
                     cityRow.addEventListener('click', (e) => {
-                        // Don't toggle if clicking a button
-                        if (e.target.closest('button')) return;
+                        // Don't toggle if clicking a button or interacting with the notes area
+                        if (e.target.closest('button') || e.target.closest('.notes')) return;
 
                         // Remove active class from all other cities
                         citiesContainer.querySelectorAll('.city.active').forEach(c => {
@@ -1129,7 +1135,43 @@
                         });
                         // Toggle active state on this city
                         cityRow.classList.toggle('active');
+                        // show/hide notes section when toggling
+                        const notesEl = cityRow.querySelector('.notes')
+                        if (notesEl) {
+                            if (cityRow.classList.contains('active')) {
+                                notesEl.style.display = 'block'
+                                const ta = notesEl.querySelector('.city-notes')
+                                if (ta) ta.focus()
+                            } else {
+                                notesEl.style.display = 'none'
+                            }
+                        }
                     });
+
+                    // Save notes handlers
+                    const notesTa = cityRow.querySelector('.city-notes')
+                    const saveNoteBtn = cityRow.querySelector('[data-action="save-note"]')
+                    if (notesTa) {
+                        // don't let clicks in the textarea toggle the city
+                        notesTa.addEventListener('mousedown', (ev) => ev.stopPropagation())
+                        // auto-save on blur
+                        notesTa.addEventListener('blur', () => {
+                            c.notes = notesTa.value
+                            c.updatedAt = new Date().toISOString()
+                            updateTripInStore(trip)
+                        })
+                    }
+                    if (saveNoteBtn) {
+                        saveNoteBtn.addEventListener('click', (ev) => {
+                            ev.stopPropagation()
+                            if (notesTa) {
+                                c.notes = notesTa.value
+                                c.updatedAt = new Date().toISOString()
+                                updateTripInStore(trip)
+                                renderTripEditor(trip, container)
+                            }
+                        })
+                    }
 
                     citiesContainer.appendChild(cityRow)
                     dayCursor = end
