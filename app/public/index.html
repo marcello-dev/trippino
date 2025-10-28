@@ -654,7 +654,8 @@
 
         function validateDays(n) {
             const v = Number(n) || 0
-            if (!Number.isFinite(v) || v < 1) return { ok: false, error: 'Days must be a positive number' }
+            // allow 0 for stepover, otherwise must be non-negative
+            if (!Number.isFinite(v) || v < 0) return { ok: false, error: 'Days must be a non-negative number' }
             if (v > MAX_DAYS_PER_CITY) return { ok: false, error: `Days per city cannot exceed ${MAX_DAYS_PER_CITY}` }
             return { ok: true }
         }
@@ -777,7 +778,8 @@
             if (!t) return
             const c = t.cities.find(x => x.id === cityId)
             if (!c) return
-            c.days = Math.max(1, Number(newDays))
+            // allow 0 (stepover)
+            c.days = Math.max(0, Number(newDays))
             c.updatedAt = new Date().toISOString()
             // Update store in backend
 
@@ -984,7 +986,7 @@
             state.cities.push({
                 id: uid(),
                 name: String(name).trim(),
-                days: Math.max(1, Number(days)),
+                days: Math.max(0, Number(days)),
                 updatedAt: new Date().toISOString()
             })
             render()
@@ -1014,14 +1016,14 @@
         function changeDays(id, delta) {
             const c = state.cities.find(x => x.id === id)
             if (!c) return
-            const newDays = Math.max(1, Number(c.days) + delta)
+            const newDays = Math.max(0, Number(c.days) + delta)
             c.days = newDays
             render()
         }
         function setDays(id, value) {
             const c = state.cities.find(x => x.id === id)
             if (!c) return
-            c.days = Math.max(1, Number(value) || 1)
+            c.days = Math.max(0, Number(value) || 0)
             render()
         }
 
@@ -1067,38 +1069,46 @@
                     const cityRow = document.createElement('div')
                     cityRow.className = 'city'
                     cityRow.dataset.id = c.id
-                    cityRow.innerHTML = `
-                        <div>
-                            <div class="name">
-                                ${escapeHtml(c.name || 'Unnamed city')}
+                        let dateHtml = ''
+                        if (!trip.start) {
+                            dateHtml = '<div class="small" style="color:var(--muted)">No start date</div>'
+                        } else if (Number(c.days) === 0) {
+                            dateHtml = '<div class="small" style="font-weight:600;color:var(--muted)">Stepover</div>'
+                        } else {
+                            dateHtml = `<div class="small">${formatDate(addDays(new Date(trip.start), start - 1))} (${weekdayName(addDays(new Date(trip.start), start - 1))}) → ${formatDate(addDays(new Date(trip.start), end - 1))} (${weekdayName(addDays(new Date(trip.start), end - 1))})</div>`
+                        }
+
+                        cityRow.innerHTML = `
+                            <div>
+                                <div class="name">
+                                    ${escapeHtml(c.name || 'Unnamed city')}
+                                </div>
                             </div>
-                        </div>
-                        <div class="days-control">
-                            <button data-action="dec">−</button>
-                            <div class="days-display" style="background:white;width:30px;text-align:center;padding:1px 1px;border: none;border-radius:6px">${c.days}</div>
-                            <button data-action="inc">+</button>
-                        </div>
-                        <div class="small">
-                                ${formatDate(addDays(new Date(trip.start), start - 1))} (${weekdayName(addDays(new Date(trip.start), start - 1))}) → ${formatDate(addDays(new Date(trip.start), end - 1))} (${weekdayName(addDays(new Date(trip.start), end - 1))})
-                        </div>
-                        <div class="actions" style="text-align:right">
-                            <button data-action="rename" class="btn ghost" title="Rename">✎</button>
-                            <button data-action="remove" class="btn" title="Remove city" aria-label="Remove city"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-                        </div>
-                        <div class="notes" style="display:none;grid-column:1 / -1;margin-top:8px">
-                            <textarea class="city-notes" placeholder="Notes about this city..." style="width:100%;min-height:72px;border:1px solid #eee;padding:8px;border-radius:8px">${escapeHtml(c.notes || '')}</textarea>
-                            <div style="text-align:right;margin-top:6px">
-                                <button data-action="save-note" class="btn primary">Save note</button>
+                            <div class="days-control">
+                                <button data-action="dec">−</button>
+                                <div class="days-display" style="background:white;width:30px;text-align:center;padding:1px 1px;border: none;border-radius:6px">${c.days}</div>
+                                <button data-action="inc">+</button>
                             </div>
-                        </div>
-                    `
+                            ${dateHtml}
+                            <div class="actions" style="text-align:right">
+                                <button data-action="rename" class="btn ghost" title="Rename">✎</button>
+                                <button data-action="remove" class="btn" title="Remove city" aria-label="Remove city"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                            </div>
+                            <div class="notes" style="display:none;grid-column:1 / -1;margin-top:8px">
+                                <textarea class="city-notes" placeholder="Notes about this city..." style="width:100%;min-height:72px;border:1px solid #eee;padding:8px;border-radius:8px">${escapeHtml(c.notes || '')}</textarea>
+                                <div style="text-align:right;margin-top:6px">
+                                    <button data-action="save-note" class="btn primary">Save note</button>
+                                </div>
+                            </div>
+                        `
                     cityRow.querySelector('[data-action="dec"]').addEventListener('click', () => {
-                        c.days = Math.max(1, Number(c.days) - 1);
+                        // allow stepping down to 0 (stepover)
+                        c.days = Math.max(0, Number(c.days) - 1);
                         updateDays(trip.id, c.id, c.days);
                         renderTripEditor(trip, container)
                     })
                     cityRow.querySelector('[data-action="inc"]').addEventListener('click', () => {
-                        c.days = Math.max(1, Number(c.days) + 1);
+                        c.days = Math.max(0, Number(c.days) + 1);
                         updateDays(trip.id, c.id, c.days);
                         renderTripEditor(trip, container)
                     })
@@ -1226,7 +1236,17 @@
             hint.style.display = 'none'
 
             let cur = 1
-            const cityRanges = trip.cities.map(c => { const s = cur; const e = cur + Number(c.days); cur = e; return { id: c.id, name: c.name || 'Unnamed', start: s, end: e } })
+            // Build ranges but exclude stepover cities (days === 0) from the calendar
+            const cityRanges = []
+            for (const c of trip.cities) {
+                const s = cur
+                const e = cur + Number(c.days)
+                // advance cursor regardless of whether this city has days
+                if (Number(c.days) > 0) {
+                    cityRanges.push({ id: c.id, name: c.name || 'Unnamed', start: s, end: e })
+                }
+                cur = e
+            }
             const tripStart = new Date(trip.start)
             const totalDays = cityRanges.length ? cityRanges[cityRanges.length - 1].end : 0
             if (totalDays <= 0) return
