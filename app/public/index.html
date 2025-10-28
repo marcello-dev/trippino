@@ -312,15 +312,28 @@
             }
 
             /* --- Trip creation bar (top) --- */
+            /* Keep trip creation inputs on one row on mobile: name (flex) + date (auto) + button */
             body>.app>div>div[style*="display:flex"] {
-                flex-direction: column;
-                align-items: stretch;
+                flex-direction: row;
+                align-items: center;
+                gap: 8px;
+                flex-wrap: wrap;
             }
 
-            body>.app>div>div[style*="display:flex"] input,
-            body>.app>div>div[style*="display:flex"] button {
-                width: 100%;
+            /* Trip name grows, date and button keep natural size */
+            body>.app>div>div[style*="display:flex"] input#newTripName {
+                flex: 1 1 auto;
+                min-width: 120px;
+                max-width: none;
                 box-sizing: border-box;
+            }
+            body>.app>div>div[style*="display:flex"] input#newTripStart {
+                flex: 0 0 auto;
+                width: auto;
+                box-sizing: border-box;
+            }
+            body>.app>div>div[style*="display:flex"] button#createTripBtn {
+                flex: 0 0 auto;
             }
 
             /* --- Trip editor header --- */
