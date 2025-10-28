@@ -1195,8 +1195,8 @@
                     const notesTa = cityRow.querySelector('.city-notes')
                     const saveNoteBtn = cityRow.querySelector('[data-action="save-note"]')
                     if (notesTa) {
-                        // don't let clicks in the textarea toggle the city
-                        notesTa.addEventListener('mousedown', (ev) => ev.stopPropagation())
+                        // allow normal cursor placement but prevent toggling city
+                        notesTa.addEventListener('click', (ev) => ev.stopPropagation());
                         // auto-save on blur
                         notesTa.addEventListener('blur', () => {
                             c.notes = notesTa.value
