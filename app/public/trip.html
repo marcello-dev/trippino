@@ -100,14 +100,6 @@
             transform: rotate(90deg);
         }
 
-        .city .actions {
-            display: none;
-        }
-
-        .city.active .actions {
-            display: flex;
-        }
-
         .city .notes {
             display: none;
         }
@@ -116,13 +108,42 @@
             display: block;
         }
 
-        .city-reorder-controls {
+        .city-edit-actions {
             display: none;
             grid-column: 1 / -1;
             gap: 8px;
             margin-top: 8px;
             padding-top: 8px;
             border-top: 1px solid #eee;
+        }
+
+        .city.active .city-edit-actions {
+            display: flex;
+        }
+
+        .city-edit-actions button {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .city-edit-actions button:hover {
+            background: #f0f0f0;
+        }
+
+        .city-reorder-controls {
+            display: none;
+            grid-column: 1 / -1;
+            gap: 8px;
+            margin-top: 8px;
         }
 
         .city.active .city-reorder-controls {
@@ -390,15 +411,7 @@
                 margin-top: 4px;
             }
 
-            .city .actions {
-                display: none;
-            }
-
-            .city.active .actions {
-                display: flex;
-            }
-
-            .city .actions button {
+            .city-edit-actions button {
                 padding: 6px 8px;
                 min-width: 36px;
                 height: 36px;
@@ -755,9 +768,14 @@
                         <button data-action="inc">+</button>
                     </div>
                     ${dateHtml}
-                    <div class="actions" style="text-align:right">
-                        <button data-action="rename" class="btn ghost" title="Rename">✎</button>
-                        <button data-action="remove" class="btn" title="Remove city" aria-label="Remove city"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                    <div class="city-edit-actions">
+                        <button data-action="rename" class="btn ghost" title="Rename">✎ Rename</button>
+                        <button data-action="remove" class="btn ghost" title="Remove city" aria-label="Remove city">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">
+                                <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Delete
+                        </button>
                     </div>
                     <div class="city-reorder-controls">
                         <button data-action="move-up">
