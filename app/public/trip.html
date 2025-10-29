@@ -70,11 +70,13 @@
             border: 1px dashed #eee;
             margin-bottom: 8px;
             cursor: grab;
+            transition: opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
         }
 
         .city.dragging {
             opacity: 0.5;
             cursor: grabbing;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
 
         .city .drag-handle {
@@ -746,6 +748,128 @@
                         updateTripInStore()
                         render()
                     }, c.name)
+                })
+
+                // Touch/click handling for mobile
+                let touchStartTime = 0
+                let touchTimer = null
+                let isDraggingTouch = false
+                
+                cityRow.addEventListener('touchstart', (e) => {
+                    if (e.target.closest('button') || e.target.closest('.notes')) return
+                    touchStartTime = Date.now()
+                    isDraggingTouch = false
+                    
+                    // Start a timer for long press
+                    touchTimer = setTimeout(() => {
+                        isDraggingTouch = true
+                        cityRow.classList.add('dragging')
+                        cityRow.style.opacity = '0.5'
+                        cityRow.style.transform = 'scale(1.05)'
+                        // Haptic feedback if available
+                        if (navigator.vibrate) navigator.vibrate(50)
+                    }, 500) // 500ms long press
+                }, { passive: true })
+                
+                cityRow.addEventListener('touchmove', (e) => {
+                    if (!isDraggingTouch) {
+                        clearTimeout(touchTimer)
+                        return
+                    }
+                    
+                    e.preventDefault()
+                    const touch = e.touches[0]
+                    const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY)
+                    const targetCity = elementBelow?.closest('.city')
+                    
+                    // Clear all border indicators
+                    citiesContainer.querySelectorAll('.city').forEach(c => {
+                        c.style.borderTop = ''
+                        c.style.borderBottom = ''
+                    })
+                    
+                    if (targetCity && targetCity !== cityRow) {
+                        const rect = targetCity.getBoundingClientRect()
+                        const midY = rect.top + rect.height / 2
+                        if (touch.clientY < midY) {
+                            targetCity.style.borderTop = '2px solid var(--primary)'
+                        } else {
+                            targetCity.style.borderBottom = '2px solid var(--primary)'
+                        }
+                    }
+                })
+                
+                cityRow.addEventListener('touchend', (e) => {
+                    clearTimeout(touchTimer)
+                    cityRow.classList.remove('dragging')
+                    cityRow.style.opacity = ''
+                    cityRow.style.transform = ''
+                    
+                    if (isDraggingTouch) {
+                        const touch = e.changedTouches[0]
+                        const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY)
+                        const targetCity = elementBelow?.closest('.city')
+                        
+                        if (targetCity && targetCity !== cityRow) {
+                            const rect = targetCity.getBoundingClientRect()
+                            const midY = rect.top + rect.height / 2
+                            const dropAfter = touch.clientY > midY
+                            
+                            const cities = trip.cities
+                            const fromIdx = cities.findIndex(city => city.id === c.id)
+                            const toIdx = cities.findIndex(city => city.id === targetCity.dataset.id)
+                            
+                            if (fromIdx !== -1 && toIdx !== -1) {
+                                const [movedCity] = cities.splice(fromIdx, 1)
+                                const insertAt = dropAfter ? toIdx + 1 : toIdx
+                                cities.splice(insertAt, 0, movedCity)
+                                
+                                trip.updatedAt = new Date().toISOString()
+                                updateTripInStore()
+                                render()
+                            }
+                        }
+                        
+                        // Clear all border indicators
+                        citiesContainer.querySelectorAll('.city').forEach(c => {
+                            c.style.borderTop = ''
+                            c.style.borderBottom = ''
+                        })
+                        
+                        isDraggingTouch = false
+                    } else {
+                        // Short tap - toggle notes
+                        const touchDuration = Date.now() - touchStartTime
+                        if (touchDuration < 500 && !e.target.closest('button') && !e.target.closest('.notes')) {
+                            citiesContainer.querySelectorAll('.city.active').forEach(c => {
+                                if (c !== cityRow) c.classList.remove('active')
+                            })
+                            
+                            cityRow.classList.toggle('active')
+                            const notesEl = cityRow.querySelector('.notes')
+                            if (notesEl) {
+                                if (cityRow.classList.contains('active')) {
+                                    notesEl.style.display = 'block'
+                                    const ta = notesEl.querySelector('.city-notes')
+                                    if (ta) ta.focus()
+                                } else {
+                                    notesEl.style.display = 'none'
+                                }
+                            }
+                        }
+                    }
+                })
+                
+                cityRow.addEventListener('touchcancel', () => {
+                    clearTimeout(touchTimer)
+                    cityRow.classList.remove('dragging')
+                    cityRow.style.opacity = ''
+                    cityRow.style.transform = ''
+                    isDraggingTouch = false
+                    citiesContainer.querySelectorAll('.city').forEach(c => {
+                        c.style.borderTop = ''
+                        c.style.borderBottom = ''
+                    })
                 })
 
                 cityRow.addEventListener('click', (e) => {
