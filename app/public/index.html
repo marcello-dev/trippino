@@ -903,6 +903,10 @@
             card.appendChild(body)
             container.appendChild(card)
         }
+        // utility date functions
+        function addDays(d, n) { const t = new Date(d); t.setDate(t.getDate() + n); return t }
+        function formatDate(d) { return d.toISOString().slice(0, 10) }
+
         // render function for trip list page
         function render() {
             renderTripsContainer()
