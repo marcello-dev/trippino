@@ -525,10 +525,6 @@
 
             // normalize
             if (!appState.trips) appState.trips = []
-            if (!activeTripId && appState.trips.length) {
-                activeTripId = appState.trips[0].id
-                saveActiveTripId(activeTripId)
-            }
 
             // ensure updatedAt exists
             if (!appState.updatedAt) appState.updatedAt = new Date().toISOString()
@@ -628,7 +624,6 @@
             checkAuth()
             localStorage.clear()
             appState = { trips: [] }
-            activeTripId = null
             render()
         }
 
@@ -644,7 +639,7 @@
             }
         });
 
-        // App model: { trips: [{id,name,start,cities}], updatedAt } (activeTripId stored separately)
+        // App model: { trips: [{id,name,start,cities}], updatedAt }
         const STORAGE_KEY = 'simpleTripPlanner_v1'
 
         // DOM - note: global editor elements removed; per-trip editor creates its own DOM
