@@ -1,0 +1,1009 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Trip Details - Trippino</title>
+    <link rel="icon" type="image/png"
+        href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=">
+    <style>
+        :root {
+            --bg: #f6f8fa;
+            --card: #ffffff;
+            --muted: #8a5a32;
+            --primary: #f97316;
+            --accent: #ffb380;
+        }
+
+        body {
+            font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+            background: var(--bg);
+            margin: 0;
+            padding: 24px;
+            color: #111
+        }
+
+        .app {
+            max-width: 980px;
+            margin: 0 auto
+        }
+
+        header {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 18px
+        }
+
+        h1 {
+            font-size: 20px;
+            margin: 0
+        }
+
+        input[type="text"],
+        input[type="number"] {
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px
+        }
+
+        .card {
+            background: var(--card);
+            padding: 14px;
+            border-radius: 12px;
+            box-shadow: 0 6px 18px rgba(12, 18, 32, 0.06);
+            margin-bottom: 12px
+        }
+
+        .cities {
+            margin-top: 12px
+        }
+
+        .city {
+            display: grid;
+            grid-template-columns: 24px 1fr 160px 250px 80px;
+            gap: 10px;
+            align-items: center;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px dashed #eee;
+            margin-bottom: 8px;
+            cursor: grab;
+        }
+
+        .city.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+
+        .city .drag-handle {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            cursor: grab;
+            user-select: none;
+        }
+
+        .city .drag-handle svg {
+            width: 16px;
+            height: 16px
+        }
+
+        .city .name {
+            font-weight: 600
+        }
+
+        .calendar-wrapper {
+            margin-top: 12px
+        }
+
+        .months {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 12px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .month-card {
+            border-radius: 8px;
+            border: 1px solid #eee;
+            padding: 10px;
+            background: var(--card);
+            box-sizing: border-box;
+            width: 100%;
+        }
+
+        .month-header {
+            font-weight: 700;
+            margin-bottom: 6px
+        }
+
+        .weekday-row {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            font-size: 12px;
+            color: var(--muted);
+            text-align: center
+        }
+
+        .days-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0
+        }
+
+        .day {
+            height: 56px;
+            border-radius: 0;
+            background: #fff;
+            text-align: right;
+            padding: 6px;
+            font-size: 13px;
+            position: relative;
+            box-sizing: border-box;
+            overflow: visible;
+        }
+
+        .day.blank {
+            background: transparent
+        }
+
+        .day.in-range {
+            color: inherit
+        }
+
+        .day.range-start {
+            border-top-left-radius: 20px;
+            border-bottom-left-radius: 20px
+        }
+
+        .day.range-end {
+            border-top-right-radius: 20px;
+            border-bottom-right-radius: 20px
+        }
+
+        .range-seg {
+            position: absolute;
+            left: 0px;
+            right: -2px;
+            height: 14px;
+            background: var(--primary);
+            color: #fff;
+            font-size: 12px;
+            line-height: 14px;
+            padding: 0 6px;
+            box-sizing: border-box;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border-radius: 0;
+            z-index: 1;
+        }
+
+        .range-seg .seg-label {
+            font-size: 11px;
+            color: #fff;
+        }
+
+        .day .date-num {
+            z-index: 2
+        }
+
+        .range-seg.range-start {
+            border-top-left-radius: 10px;
+            border-bottom-left-radius: 10px
+        }
+
+        .range-seg.range-end {
+            border-top-right-radius: 10px;
+            border-bottom-right-radius: 10px
+        }
+
+        .day .date-num {
+            position: absolute;
+            right: 6px;
+            top: 6px;
+            font-size: 12px;
+            color: inherit
+        }
+
+        .small {
+            font-size: 12px;
+            color: var(--muted)
+        }
+
+        .days-control {
+            display: flex;
+            gap: 6px;
+            align-items: center
+        }
+
+        .days-control button {
+            width: 30px;
+            height: 30px;
+            border: none;
+            cursor: pointer;
+            background: #fff;
+            border-radius: 20px;
+            transition: background-color 0.2s;
+        }
+
+        .days-control button:hover {
+            background: #f0f0f0;
+        }
+
+        .meta {
+            font-size: 13px;
+            color: var(--muted)
+        }
+
+        .topline {
+            display: flex;
+            justify-content: space-between;
+            align-items: center
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            justify-self: end
+        }
+
+        .btn {
+            padding: 8px 10px;
+            border-radius: 8px;
+            border: 0;
+            cursor: pointer
+        }
+
+        .btn.primary {
+            background: var(--primary);
+            color: white
+        }
+
+        .btn.ghost {
+            background: transparent;
+            border: 1px solid #ddd
+        }
+
+        .back-link {
+            color: var(--primary);
+            text-decoration: none;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 720px) {
+            body {
+                overflow-x: hidden;
+            }
+
+            .topline {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            .topline>div {
+                flex-wrap: wrap;
+                width: 100%;
+            }
+
+            .topline input[type="text"],
+            .topline input[type="date"] {
+                width: 100%;
+                box-sizing: border-box;
+            }
+
+            .city {
+                position: relative;
+                display: grid;
+                grid-template-columns: 24px minmax(120px, 1fr) auto auto;
+                grid-template-rows: auto auto;
+                gap: 8px;
+                padding: 8px;
+                cursor: pointer;
+                align-items: center;
+            }
+
+            .city.active {
+                background: #f6f8fa;
+            }
+
+            .city .date-range,
+            .city .stepover,
+            .city .no-start {
+                grid-column: 2 / -1;
+                grid-row: 2;
+                font-size: 12px;
+                color: var(--muted);
+                margin-top: 4px;
+            }
+
+            .city .actions {
+                display: none;
+            }
+
+            .city.active .actions {
+                display: flex;
+            }
+
+            .city .actions button {
+                padding: 6px 8px;
+                min-width: 36px;
+                height: 36px;
+                border-radius: 6px;
+            }
+
+            .card {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app">
+        <header>
+            <a href="index.html" class="back-link">← Back to trips</a>
+            <h1 id="tripTitle">Trip Details</h1>
+        </header>
+
+        <div id="tripContainer"></div>
+    </div>
+
+    <script src="/config.js"></script>
+    <script>
+        const API_BASE = window.APP_CONFIG.API_BASE
+        const STORAGE_KEY = 'simpleTripPlanner_v1'
+        const MAX_CITIES_PER_TRIP = 30
+        const MAX_CITY_NAME_LENGTH = 60
+        const MAX_DAYS_PER_CITY = 365
+        const NAME_SAFE_REGEX = /^[A-Za-z0-9 \-\'\(\)\.,]*$/
+
+        // Get trip ID from URL
+        const urlParams = new URLSearchParams(window.location.search)
+        const tripId = urlParams.get('id')
+
+        if (!tripId) {
+            window.location.href = 'index.html'
+        }
+
+        const uid = () => Math.random().toString(36).slice(2, 9)
+
+        function load() {
+            const raw = localStorage.getItem(STORAGE_KEY)
+            if (!raw) return { trips: [] }
+            try {
+                return JSON.parse(raw)
+            } catch (e) {
+                console.warn('load failed', e)
+                return { trips: [], updatedAt: new Date().toISOString() }
+            }
+        }
+
+        function save(appState) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(appState))
+            saveApi(appState)
+        }
+
+        async function saveApi(appState) {
+            try {
+                await fetch(`${API_BASE}/api/state`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ state: appState })
+                })
+            } catch (e) {
+                console.warn('push local to backend failed', e)
+            }
+        }
+
+        let appState = load()
+        if (!appState.trips) appState.trips = []
+
+        const trip = appState.trips.find(t => t.id === tripId)
+        if (!trip) {
+            alert('Trip not found')
+            window.location.href = 'index.html'
+        }
+
+        document.getElementById('tripTitle').textContent = trip.name || 'Untitled Trip'
+
+        function validateCityName(name) {
+            if (!name || !name.trim()) return { ok: false, error: 'City name required' }
+            if (name.length > MAX_CITY_NAME_LENGTH) return { ok: false, error: `City name too long (max ${MAX_CITY_NAME_LENGTH} characters)` }
+            if (!NAME_SAFE_REGEX.test(name)) return { ok: false, error: 'City name contains invalid characters' }
+            return { ok: true }
+        }
+
+        function validateDays(n) {
+            const v = Number(n) || 0
+            if (!Number.isFinite(v) || v < 0) return { ok: false, error: 'Days must be a non-negative number' }
+            if (v > MAX_DAYS_PER_CITY) return { ok: false, error: `Days per city cannot exceed ${MAX_DAYS_PER_CITY}` }
+            return { ok: true }
+        }
+
+        function showClientError(msg) {
+            try {
+                alert(msg)
+            } catch (e) {
+                console.error(msg)
+            }
+        }
+
+        function updateDays(cityId, newDays) {
+            const c = trip.cities.find(x => x.id === cityId)
+            if (!c) return
+            c.days = Math.max(0, Number(newDays))
+            c.updatedAt = new Date().toISOString()
+            updateTripInStore()
+            render()
+        }
+
+        function removeCityFromTrip(cityId) {
+            trip.cities = trip.cities.filter(c => c.id !== cityId)
+            trip.updatedAt = new Date().toISOString()
+            updateTripInStore()
+            render()
+        }
+
+        function updateTripInStore() {
+            const idx = appState.trips.findIndex(x => x.id === trip.id)
+            if (idx === -1) return
+            appState.trips[idx] = trip
+            save(appState)
+        }
+
+        function addDays(d, n) {
+            const t = new Date(d)
+            t.setDate(t.getDate() + n)
+            return t
+        }
+
+        function formatDate(d) {
+            return d.toISOString().slice(0, 10)
+        }
+
+        function weekdayName(d) {
+            return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()]
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, function(ch) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": "&#39;" }[ch]
+            })
+        }
+
+        // Typeahead styles
+        const styleEl = document.createElement('style')
+        styleEl.textContent = `
+            .tt-popup { position: absolute; background: white; border: 1px solid #eee; box-shadow: 0 6px 18px rgba(12,18,32,0.06); border-radius:6px; z-index:1000; width:260px; }
+            .tt-popup .tt-item { padding:8px; cursor:pointer; border-bottom:1px solid #f2f4f6 }
+            .tt-popup .tt-item:last-child { border-bottom:0 }
+            .tt-popup .tt-item:hover { background:#f6f8fa }
+            .tt-input-inline { padding:6px 8px; border:1px solid #ddd; border-radius:6px; width:220px }
+        `
+        document.head.appendChild(styleEl)
+
+        function createCitySearchPopup(anchorEl, onSelect, initialValue = '') {
+            const popup = document.createElement('div')
+            popup.className = 'tt-popup'
+            popup.style.minWidth = '260px'
+            popup.style.padding = '8px'
+
+            const input = document.createElement('input')
+            input.className = 'tt-input-inline'
+            input.value = initialValue || ''
+            popup.appendChild(input)
+
+            const list = document.createElement('div')
+            list.style.maxHeight = '260px'
+            list.style.overflow = 'auto'
+            list.style.marginTop = '6px'
+            popup.appendChild(list)
+
+            document.body.appendChild(popup)
+            const rect = anchorEl.getBoundingClientRect()
+            popup.style.position = 'absolute'
+            popup.style.left = `${rect.left}px`
+            popup.style.top = `${rect.bottom + window.scrollY + 6}px`
+
+            let debounceTimer = null
+
+            async function doQuery(q) {
+                if (!q) {
+                    renderList([])
+                    return
+                }
+                try {
+                    const url = `${API_BASE}/api/tomtom?q=${encodeURIComponent(q)}&limit=6&typeahead=true`
+                    const res = await fetch(url, { credentials: 'include' })
+                    if (!res.ok) {
+                        renderList([])
+                        return
+                    }
+                    const json = await res.json()
+                    const suggestions = (json.results || []).map(r => ({
+                        name: `${r.address.freeformAddress}, ${r.address.countryCode || ''}`.trim()
+                    }))
+                    renderList(suggestions)
+                } catch (e) {
+                    console.warn('TomTom proxy query failed', e)
+                    renderList([])
+                }
+            }
+
+            function renderList(items) {
+                list.innerHTML = ''
+                if (!items.length) {
+                    const none = document.createElement('div')
+                    none.className = 'tt-item'
+                    none.textContent = 'No suggestions'
+                    list.appendChild(none)
+                    return
+                }
+                for (const it of items) {
+                    const el = document.createElement('div')
+                    el.className = 'tt-item'
+                    el.textContent = it.name || 'Unknown'
+                    el.addEventListener('click', () => {
+                        cleanup()
+                        onSelect(it)
+                    })
+                    list.appendChild(el)
+                }
+            }
+
+            function cleanup() {
+                if (debounceTimer) clearTimeout(debounceTimer)
+                if (popup && popup.parentNode) popup.parentNode.removeChild(popup)
+                document.removeEventListener('mousedown', docMouse)
+            }
+
+            function docMouse(e) {
+                if (!popup.contains(e.target) && !anchorEl.contains(e.target)) {
+                    cleanup()
+                    onSelect(null)
+                }
+            }
+
+            input.addEventListener('input', (ev) => {
+                const q = ev.target.value.trim()
+                if (debounceTimer) clearTimeout(debounceTimer)
+                debounceTimer = setTimeout(() => doQuery(q), 300)
+            })
+
+            input.addEventListener('keydown', (ev) => {
+                if (ev.key === 'Enter') {
+                    const first = list.querySelector('.tt-item')
+                    if (first) first.click()
+                } else if (ev.key === 'Escape') {
+                    cleanup()
+                    onSelect(null)
+                }
+            })
+
+            document.addEventListener('mousedown', docMouse)
+
+            if (input.value && input.value.length >= 2) {
+                doQuery(input.value)
+            }
+
+            input.focus()
+            return popup
+        }
+
+        function render() {
+            const container = document.getElementById('tripContainer')
+            container.innerHTML = ''
+
+            // Trip editor card
+            const editorCard = document.createElement('div')
+            editorCard.className = 'card'
+
+            const topline = document.createElement('div')
+            topline.className = 'topline'
+            topline.innerHTML = `
+                <div style="display:flex;gap:8px;align-items:center">
+                    <div class="small" style="color:var(--muted)">Start date</div>
+                    <input class="trip-start" type="date" value="${escapeHtml(trip.start || '')}" />
+                </div>
+            `
+            editorCard.appendChild(topline)
+
+            const citiesContainer = document.createElement('div')
+            citiesContainer.className = 'cities'
+            editorCard.appendChild(citiesContainer)
+
+            const metaRow = document.createElement('div')
+            metaRow.style.display = 'flex'
+            metaRow.style.justifyContent = 'space-between'
+            metaRow.style.alignItems = 'center'
+            metaRow.style.marginTop = '12px'
+            metaRow.innerHTML = `<div class="meta">Total nights: <span class="total-days">0</span></div>`
+            editorCard.appendChild(metaRow)
+
+            const startInput = topline.querySelector('.trip-start')
+            startInput.addEventListener('change', () => {
+                trip.start = startInput.value
+                updateTripInStore()
+                render()
+            })
+
+            renderCitiesList(citiesContainer)
+
+            const total = trip.cities.reduce((s, c) => s + Number(c.days), 0)
+            const totalDaysEl = editorCard.querySelector('.total-days')
+            if (totalDaysEl) totalDaysEl.textContent = total
+
+            container.appendChild(editorCard)
+
+            // Calendar card
+            const calCard = document.createElement('div')
+            calCard.className = 'card calendar-wrapper'
+            renderTripCalendar(calCard)
+            container.appendChild(calCard)
+        }
+
+        function renderCitiesList(citiesContainer) {
+            citiesContainer.innerHTML = ''
+            let dayCursor = 1
+
+            for (let i = 0; i < trip.cities.length; i++) {
+                const c = trip.cities[i]
+                const start = dayCursor
+                const end = dayCursor + Number(c.days)
+                const cityRow = document.createElement('div')
+                cityRow.className = 'city'
+                cityRow.dataset.id = c.id
+
+                let dateHtml = ''
+                if (!trip.start) {
+                    dateHtml = '<div class="small no-start" style="color:var(--muted)">No start date</div>'
+                } else if (Number(c.days) === 0) {
+                    dateHtml = '<div class="small stepover" style="font-weight:600;color:var(--muted)">Stepover</div>'
+                } else {
+                    dateHtml = `<div class="small date-range">${formatDate(addDays(new Date(trip.start), start - 1))} (${weekdayName(addDays(new Date(trip.start), start - 1))}) → ${formatDate(addDays(new Date(trip.start), end - 1))} (${weekdayName(addDays(new Date(trip.start), end - 1))})</div>`
+                }
+
+                cityRow.innerHTML = `
+                    <div class="drag-handle" role="button" aria-label="Drag to reorder">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M8 9h8M8 12h8M8 15h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="name">
+                            ${escapeHtml(c.name || 'Unnamed city')}
+                        </div>
+                    </div>
+                    <div class="days-control">
+                        <button data-action="dec">−</button>
+                        <div class="days-display" style="background:white;width:30px;text-align:center;padding:1px 1px;border: none;border-radius:6px">${c.days}</div>
+                        <button data-action="inc">+</button>
+                    </div>
+                    ${dateHtml}
+                    <div class="actions" style="text-align:right">
+                        <button data-action="rename" class="btn ghost" title="Rename">✎</button>
+                        <button data-action="remove" class="btn" title="Remove city" aria-label="Remove city"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                    </div>
+                    <div class="notes" style="display:none;grid-column:1 / -1;margin-top:8px">
+                        <textarea class="city-notes" placeholder="Notes about this city..." style="width:100%;min-height:72px;border:1px solid #eee;padding:8px;border-radius:8px">${escapeHtml(c.notes || '')}</textarea>
+                        <div style="text-align:right;margin-top:6px">
+                            <button data-action="save-note" class="btn primary">Save note</button>
+                        </div>
+                    </div>
+                `
+
+                cityRow.querySelector('[data-action="dec"]').addEventListener('click', (e) => {
+                    e.stopPropagation()
+                    c.days = Math.max(0, Number(c.days) - 1)
+                    updateDays(c.id, c.days)
+                })
+
+                cityRow.querySelector('[data-action="inc"]').addEventListener('click', (e) => {
+                    e.stopPropagation()
+                    c.days = Math.max(0, Number(c.days) + 1)
+                    updateDays(c.id, c.days)
+                })
+
+                cityRow.querySelector('[data-action="remove"]').addEventListener('click', (e) => {
+                    e.stopPropagation()
+                    removeCityFromTrip(c.id)
+                })
+
+                cityRow.querySelector('[data-action="rename"]').addEventListener('click', (ev) => {
+                    ev.stopPropagation()
+                    const renameBtn = ev.currentTarget
+                    createCitySearchPopup(renameBtn, async (sel) => {
+                        if (!sel) return
+                        const name = (sel.name || '').trim()
+                        const vname = validateCityName(name)
+                        if (!vname.ok) return showClientError(vname.error)
+                        c.name = name
+                        if (sel.position) {
+                            c.lat = sel.position.lat
+                            c.lon = sel.position.lon
+                        }
+                        c.updatedAt = new Date().toISOString()
+                        updateTripInStore()
+                        render()
+                    }, c.name)
+                })
+
+                cityRow.addEventListener('click', (e) => {
+                    if (e.target.closest('button') || e.target.closest('.notes')) return
+
+                    citiesContainer.querySelectorAll('.city.active').forEach(c => {
+                        if (c !== cityRow) c.classList.remove('active')
+                    })
+
+                    cityRow.classList.toggle('active')
+                    const notesEl = cityRow.querySelector('.notes')
+                    if (notesEl) {
+                        if (cityRow.classList.contains('active')) {
+                            notesEl.style.display = 'block'
+                            const ta = notesEl.querySelector('.city-notes')
+                            if (ta) ta.focus()
+                        } else {
+                            notesEl.style.display = 'none'
+                        }
+                    }
+                })
+
+                const notesTa = cityRow.querySelector('.city-notes')
+                const saveNoteBtn = cityRow.querySelector('[data-action="save-note"]')
+
+                if (notesTa) {
+                    notesTa.addEventListener('click', (ev) => ev.stopPropagation())
+                    notesTa.addEventListener('mousedown', (ev) => ev.stopPropagation())
+                    notesTa.addEventListener('blur', () => {
+                        c.notes = notesTa.value
+                        c.updatedAt = new Date().toISOString()
+                        updateTripInStore()
+                    })
+                }
+
+                if (saveNoteBtn) {
+                    saveNoteBtn.addEventListener('click', (ev) => {
+                        ev.stopPropagation()
+                        if (notesTa) {
+                            c.notes = notesTa.value
+                            c.updatedAt = new Date().toISOString()
+                            updateTripInStore()
+                            render()
+                        }
+                    })
+                }
+
+                // Drag and drop
+                cityRow.draggable = true
+                cityRow.addEventListener('dragstart', (e) => {
+                    e.stopPropagation()
+                    cityRow.classList.add('dragging')
+                    try {
+                        e.dataTransfer.setData('text/plain', c.id)
+                    } catch (err) {}
+                    e.dataTransfer.effectAllowed = 'move'
+                })
+
+                cityRow.addEventListener('dragend', () => {
+                    cityRow.classList.remove('dragging')
+                })
+
+                cityRow.addEventListener('dragover', (e) => {
+                    e.preventDefault()
+                    e.dataTransfer.dropEffect = 'move'
+                    const dragging = citiesContainer.querySelector('.dragging')
+                    if (!dragging || dragging === cityRow) return
+                    const rect = cityRow.getBoundingClientRect()
+                    const midY = rect.top + rect.height / 2
+                    if (e.clientY < midY) {
+                        cityRow.style.borderTop = '2px solid var(--primary)'
+                        cityRow.style.borderBottom = ''
+                    } else {
+                        cityRow.style.borderTop = ''
+                        cityRow.style.borderBottom = '2px solid var(--primary)'
+                    }
+                })
+
+                cityRow.addEventListener('dragleave', () => {
+                    cityRow.style.borderTop = ''
+                    cityRow.style.borderBottom = ''
+                })
+
+                cityRow.addEventListener('drop', (e) => {
+                    e.preventDefault()
+                    cityRow.style.borderTop = ''
+                    cityRow.style.borderBottom = ''
+                    const draggedId = e.dataTransfer.getData('text/plain')
+                    if (!draggedId || draggedId === c.id) return
+
+                    const rect = cityRow.getBoundingClientRect()
+                    const midY = rect.top + rect.height / 2
+                    const dropAfter = e.clientY > midY
+
+                    const cities = trip.cities
+                    const fromIdx = cities.findIndex(city => city.id === draggedId)
+                    const toIdx = cities.findIndex(city => city.id === c.id)
+                    if (fromIdx === -1) return
+
+                    const [movedCity] = cities.splice(fromIdx, 1)
+                    const insertAt = dropAfter ? toIdx + 1 : toIdx
+                    cities.splice(insertAt, 0, movedCity)
+
+                    trip.updatedAt = new Date().toISOString()
+                    updateTripInStore()
+                    render()
+                })
+
+                citiesContainer.appendChild(cityRow)
+                dayCursor = end
+            }
+
+            // Add city button
+            const bottomAddBtn = document.createElement('div')
+            bottomAddBtn.style.textAlign = 'center'
+            bottomAddBtn.style.marginTop = '12px'
+            bottomAddBtn.innerHTML = '<button class="btn ghost" style="width:100%">+ Add city</button>'
+            bottomAddBtn.querySelector('button').addEventListener('click', (e) => {
+                e.stopPropagation()
+                createCitySearchPopup(e.target, async (sel) => {
+                    if (!sel) return
+                    const name = (sel.name || '').trim()
+                    const v = validateCityName(name)
+                    if (!v.ok) return showClientError(v.error)
+                    if (trip.cities && trip.cities.length >= MAX_CITIES_PER_TRIP) return showClientError(`Maximum cities per trip reached (${MAX_CITIES_PER_TRIP}).`)
+                    const newCity = {
+                        id: uid(),
+                        name: name,
+                        days: 1,
+                        updatedAt: new Date().toISOString()
+                    }
+                    trip.cities.push(newCity)
+                    updateTripInStore()
+                    render()
+                })
+            })
+            citiesContainer.appendChild(bottomAddBtn)
+        }
+
+        function renderTripCalendar(container) {
+            container.innerHTML = '<h3 style="margin:0 0 8px 0">Calendar view</h3>'
+            const hint = document.createElement('div')
+            hint.className = 'small'
+            hint.textContent = 'Set a trip start date to see the calendar.'
+            container.appendChild(hint)
+            const months = document.createElement('div')
+            months.className = 'months'
+            container.appendChild(months)
+
+            if (!trip.start || trip.cities.length === 0) {
+                hint.style.display = 'block'
+                return
+            }
+            hint.style.display = 'none'
+
+            let cur = 1
+            const cityRanges = []
+            for (const c of trip.cities) {
+                const s = cur
+                const e = cur + Number(c.days)
+                if (Number(c.days) > 0) {
+                    cityRanges.push({ id: c.id, name: c.name || 'Unnamed', start: s, end: e })
+                }
+                cur = e
+            }
+
+            const tripStart = new Date(trip.start)
+            const totalDays = cityRanges.length ? cityRanges[cityRanges.length - 1].end : 0
+            if (totalDays <= 0) return
+
+            const tripFirstDate = addDays(tripStart, 0)
+            const tripLastDate = addDays(tripStart, totalDays - 1)
+            const shownMonths = []
+            const m = new Date(tripFirstDate.getFullYear(), tripFirstDate.getMonth(), 1)
+            while (m <= tripLastDate) {
+                shownMonths.push(new Date(m))
+                m.setMonth(m.getMonth() + 1)
+            }
+
+            const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+            for (const monthStart of shownMonths) {
+                const monthCard = document.createElement('div')
+                monthCard.className = 'month-card'
+                const monthLabel = monthStart.toLocaleString(undefined, { month: 'long', year: 'numeric' })
+                const header = document.createElement('div')
+                header.className = 'month-header'
+                header.textContent = monthLabel
+                monthCard.appendChild(header)
+
+                const wk = document.createElement('div')
+                wk.className = 'weekday-row'
+                wk.innerHTML = weekdays.map(w => `<div>${w}</div>`).join('')
+                monthCard.appendChild(wk)
+
+                const daysGrid = document.createElement('div')
+                daysGrid.className = 'days-grid'
+                const firstOfMonth = new Date(monthStart.getFullYear(), monthStart.getMonth(), 1)
+                let weekday = firstOfMonth.getDay()
+                let blanks = (weekday === 0) ? 6 : (weekday - 1)
+
+                for (let i = 0; i < blanks; i++) {
+                    const b = document.createElement('div')
+                    b.className = 'day blank'
+                    daysGrid.appendChild(b)
+                }
+
+                const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate()
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const date = new Date(monthStart.getFullYear(), monthStart.getMonth(), d)
+                    const msPerDay = 24 * 60 * 60 * 1000
+                    const absDay = Math.floor((Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) - Date.UTC(tripStart.getFullYear(), tripStart.getMonth(), tripStart.getDate())) / msPerDay) + 1
+                    const dayEl = document.createElement('div')
+                    dayEl.className = 'day'
+                    dayEl.innerHTML = `<div class="date-num">${d}</div>`
+
+                    if (absDay >= 1 && absDay <= totalDays) {
+                        const matches = cityRanges.filter(r => absDay >= r.start && absDay <= r.end)
+                        if (matches.length) {
+                            dayEl.classList.add('in-range')
+                            const topBase = 26
+                            const step = 16
+                            for (const cr of matches) {
+                                const seg = document.createElement('div')
+                                seg.className = 'range-seg'
+                                const idxAll = cityRanges.findIndex(r => r.id === cr.id)
+                                const layer = idxAll % 2
+                                seg.style.top = `${topBase + layer * step}px`
+                                if (absDay === cr.start) seg.classList.add('range-start')
+                                if (absDay === cr.end) seg.classList.add('range-end')
+                                if (absDay === cr.start) {
+                                    const segLabel = document.createElement('div')
+                                    segLabel.className = 'seg-label'
+                                    segLabel.textContent = cr.name
+                                    seg.appendChild(segLabel)
+                                }
+                                dayEl.appendChild(seg)
+                            }
+                        }
+                    } else {
+                        dayEl.classList.add('blank')
+                    }
+                    daysGrid.appendChild(dayEl)
+                }
+                monthCard.appendChild(daysGrid)
+                months.appendChild(monthCard)
+            }
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.city')) {
+                document.querySelectorAll('.city.active').forEach(c =>
+                    c.classList.remove('active')
+                )
+            }
+        })
+
+        render()
+    </script>
+</body>
+
+</html>

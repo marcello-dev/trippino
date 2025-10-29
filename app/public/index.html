@@ -728,40 +728,9 @@
             } catch (e) { console.warn('push local to backend failed', e) }
         }
 
-        // app state (trips and other data) — activeTripId is stored separately
-        const ACTIVE_TRIP_KEY = 'simpleTripPlanner_activeTrip_v1'
-        let activeTripId = null
-
+        // app state
         let appState = load()
         if (!appState.trips) appState.trips = []
-
-        // load activeTripId from separate storage if present, otherwise default to first trip
-        function loadActiveTripId() {
-            const v = localStorage.getItem(ACTIVE_TRIP_KEY)
-            if (v) return v
-            if (appState.trips && appState.trips.length) return appState.trips[0].id
-            return null
-        }
-        function saveActiveTripId(id) {
-            if (id === null || typeof id === 'undefined') localStorage.removeItem(ACTIVE_TRIP_KEY)
-            else localStorage.setItem(ACTIVE_TRIP_KEY, id)
-        }
-
-        activeTripId = loadActiveTripId()
-
-        function getActiveTrip() {
-            if (!activeTripId) return null
-            return appState.trips.find(t => t.id === activeTripId) || null
-        }
-
-        function setActiveTrip(id) {
-            // do not modify appState — active trip id is stored separately
-            activeTripId = id
-            saveActiveTripId(id)
-            state = getActiveTrip() || { tripName: '', tripStart: '', cities: [] }
-            refreshAll()
-            render()
-        }
 
         function createTrip(name, start) {
             const tripName = (name || 'New trip').trim()
@@ -779,8 +748,7 @@
                 updatedAt: new Date().toISOString()
             }
             appState.trips.push(t)
-            appState.updatedAt = new Date().toISOString();
-            setActiveTrip(t.id)
+            appState.updatedAt = new Date().toISOString()
             save(appState)
             refreshAll()
             render()
@@ -792,36 +760,12 @@
             const idx = appState.trips.findIndex(t => t.id === id)
             if (idx === -1) return
             appState.trips.splice(idx, 1)
-            appState.updatedAt = new Date().toISOString();
-            if (activeTripId === id) setActiveTrip(appState.trips.length ? appState.trips[0].id : null)
+            appState.updatedAt = new Date().toISOString()
             save(appState)
             refreshAll()
             render()
             // update banner in case trips count dropped to 0
             updateAnonBanner()
-        }
-
-        function updateDays(tripId, cityId, newDays) {
-            const t = appState.trips.find(x => x.id === tripId)
-            if (!t) return
-            const c = t.cities.find(x => x.id === cityId)
-            if (!c) return
-            // allow 0 (stopover)
-            c.days = Math.max(0, Number(newDays))
-            c.updatedAt = new Date().toISOString()
-            // Update store in backend
-
-            save(appState)
-            refreshAll()
-        }
-
-        function removeCityFromTrip(tripId, cityId) {
-            const t = appState.trips.find(x => x.id === tripId)
-            if (!t) return
-            t.cities = t.cities.filter(c => c.id !== cityId)
-            t.updatedAt = new Date().toISOString()
-            save(appState)
-            refreshAll()
         }
 
         function updateTripInStore(t) {
@@ -831,9 +775,6 @@
             save(appState)
             refreshAll()
         }
-
-        // transient UI set for expanded trip ids (not persisted)
-        const expandedTripIds = new Set()
 
         function renderTripsContainer() {
             // sort by start date desc (most recent first). Empty start goes last.
@@ -848,21 +789,19 @@
                 const card = document.createElement('div')
                 card.className = 'card'
                 card.style.marginBottom = '12px'
+                card.style.cursor = 'pointer'
 
                 const header = document.createElement('div')
                 header.style.display = 'flex'
                 header.style.justifyContent = 'space-between'
                 header.style.alignItems = 'center'
-                header.style.cursor = 'pointer'
                 header.innerHTML = `
                 <div>
                     <strong>${escapeHtml(t.name || 'Untitled')}</strong>
                     <div class="small" style="color:var(--muted)">${t.start || ''}</div>
+                    <div class="small" style="color:var(--muted)">${t.cities ? t.cities.length : 0} ${(t.cities?.length === 1) ? 'city' : 'cities'}</div>
                 </div>
                 <div style="display:flex;gap:8px">
-                    <button class="btn" data-action="toggle">
-                        ${expandedTripIds.has(t.id) ? 'Collapse' : 'Expand'}
-                    </button>
                     <button class="btn ghost" data-action="edit" title="Edit trip name" aria-label="Edit trip name">✎</button>
                     <button class="btn ghost" data-action="del" title="Delete trip" aria-label="Delete trip">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">
@@ -870,7 +809,15 @@
                         </svg>
                     </button>
                 </div>`
-                header.querySelector('[data-action="del"]').addEventListener('click', (e) => { e.stopPropagation(); if (confirm('Delete trip?')) { deleteTrip(t.id); renderTripsContainer() } })
+
+                header.querySelector('[data-action="del"]').addEventListener('click', (e) => {
+                    e.stopPropagation()
+                    if (confirm('Delete trip?')) {
+                        deleteTrip(t.id)
+                        renderTripsContainer()
+                    }
+                })
+
                 const editBtn = header.querySelector('[data-action="edit"]')
                 if (editBtn) {
                     editBtn.addEventListener('click', (e) => {
@@ -883,46 +830,12 @@
                         }
                     })
                 }
-                header.querySelector('[data-action="toggle"]').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    if (expandedTripIds.has(t.id)) {
-                        expandedTripIds.delete(t.id)
-                    } else {
-                        expandedTripIds.add(t.id);
-                        /* make this trip active for editing */
-                        setActiveTrip(t.id)
-                    }
-                    renderTripsContainer()
-                })
+
                 header.addEventListener('click', () => {
-                    if (expandedTripIds.has(t.id)) {
-                        expandedTripIds.delete(t.id)
-                    } else {
-                        expandedTripIds.add(t.id);
-                        setActiveTrip(t.id)
-                    } renderTripsContainer()
+                    window.location.href = `trip.html?id=${t.id}`
                 })
 
                 card.appendChild(header)
-
-                if (expandedTripIds.has(t.id)) {
-                    const body = document.createElement('div')
-                    body.style.marginTop = '10px'
-                    // editor area
-                    const editorWrap = document.createElement('div')
-                    editorWrap.className = 'card'
-                    renderTripEditor(t, editorWrap)
-                    body.appendChild(editorWrap)
-                    // calendar
-                    const calWrap = document.createElement('div')
-                    calWrap.className = 'card calendar-wrapper'
-                    renderTripCalendar(t, calWrap)
-                    body.appendChild(calWrap)
-
-
-                    card.appendChild(body)
-                }
-
                 tripsContainer.appendChild(card)
             }
         }
@@ -990,544 +903,9 @@
             card.appendChild(body)
             container.appendChild(card)
         }
-
-        // global render shim: sync `state` to active trip and refresh UI
+        // render function for trip list page
         function render() {
-            state = getActiveTrip() || { tripName: '', tripStart: '', cities: [] }
-            refreshAll()
-        }
-
-        // state (active trip editor state)
-        let state = getActiveTrip() || { tripName: '', tripStart: '', cities: [] }
-
-
-        function addCity(name = 'New city', days = 1) {
-            // enforce max cities per trip
-            if (state.cities && state.cities.length >= MAX_CITIES_PER_TRIP) {
-                return showClientError(`Maximum cities per trip reached (${MAX_CITIES_PER_TRIP}). Remove a city before adding another.`)
-            }
-            const v = validateCityName(name || '')
-            if (!v.ok) return showClientError(v.error)
-            const dv = validateDays(days)
-            if (!dv.ok) return showClientError(dv.error)
-
-            state.cities.push({
-                id: uid(),
-                name: String(name).trim(),
-                days: Math.max(0, Number(days)),
-                updatedAt: new Date().toISOString()
-            })
-            render()
-        }
-        function removeCity(id) {
-            state.cities = state.cities.filter(c => c.id !== id)
-            render()
-        }
-        function renameCity(id) {
-            // keep for UI-driven rename (prompt) but delegate actual update to updateCityName
-            const c = state.cities.find(x => x.id === id)
-            if (!c) return
-            const n = prompt('City name', c.name)
-            if (n !== null) updateCityName(id, n)
-        }
-
-        // Programmatic updater for a city's name. Validates input and re-renders.
-        function updateCityName(id, newName) {
-            const c = state.cities.find(x => x.id === id)
-            if (!c) return
-            if (newName === null || newName === undefined) return
-            const v = validateCityName(String(newName))
-            if (!v.ok) return showClientError(v.error)
-            c.name = String(newName).trim()
-            render()
-        }
-        function changeDays(id, delta) {
-            const c = state.cities.find(x => x.id === id)
-            if (!c) return
-            const newDays = Math.max(0, Number(c.days) + delta)
-            c.days = newDays
-            render()
-        }
-        function setDays(id, value) {
-            const c = state.cities.find(x => x.id === id)
-            if (!c) return
-            c.days = Math.max(0, Number(value) || 0)
-            render()
-        }
-
-        // --- per-trip render helpers for stacked UI ---
-        function renderTripEditor(trip, container) {
-            container.innerHTML = ''
-            // header inputs
-            const topline = document.createElement('div')
-            topline.className = 'topline'
-            topline.innerHTML = `
-                <div style="display:flex;gap:8px;align-items:center">
-                    <div class="small" style="margin-left:6px;color:var(--muted)">Start date</div>
-                    <input class="trip-start" type="date" value="${escapeHtml(trip.start || '')}" />
-                </div>
-            `
-            container.appendChild(topline)
-
-            const citiesContainer = document.createElement('div')
-            citiesContainer.className = 'cities'
-            container.appendChild(citiesContainer)
-
-            const metaRow = document.createElement('div')
-            metaRow.style.display = 'flex'
-            metaRow.style.justifyContent = 'space-between'
-            metaRow.style.alignItems = 'center'
-            metaRow.style.marginTop = '12px'
-            metaRow.innerHTML = `<div class="meta">Total nights: <span class="total-days">0</span></div>`
-            container.appendChild(metaRow)
-
-            // wire interactions: edit trip name (prompt) and start date
-            const nameDisplay = topline.querySelector('.trip-name-display')
-            const startInput = topline.querySelector('.trip-start')
-            startInput.addEventListener('change', () => { trip.start = startInput.value; updateTripInStore(trip) })
-
-            // render cities list
-            function renderCitiesList() {
-                citiesContainer.innerHTML = ''
-                let dayCursor = 1
-                for (let i = 0; i < trip.cities.length; i++) {
-                    const c = trip.cities[i]
-                    const start = dayCursor
-                    const end = dayCursor + Number(c.days)
-                    const cityRow = document.createElement('div')
-                    cityRow.className = 'city'
-                    cityRow.dataset.id = c.id
-                        let dateHtml = ''
-                        if (!trip.start) {
-                            dateHtml = '<div class="small no-start" style="color:var(--muted)">No start date</div>'
-                        } else if (Number(c.days) === 0) {
-                            dateHtml = '<div class="small stopover" style="font-weight:600;color:var(--muted)">Stopover</div>'
-                        } else {
-                            dateHtml = `<div class="small date-range">${formatDate(addDays(new Date(trip.start), start - 1))} (${weekdayName(addDays(new Date(trip.start), start - 1))}) → ${formatDate(addDays(new Date(trip.start), end - 1))} (${weekdayName(addDays(new Date(trip.start), end - 1))})</div>`
-                        }
-
-                        cityRow.innerHTML = `
-                            <div class="drag-handle" role="button" aria-label="Drag to reorder">
-                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M8 9h8M8 12h8M8 15h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <div class="name">
-                                    ${escapeHtml(c.name || 'Unnamed city')}
-                                </div>
-                            </div>
-                            <div class="days-control">
-                                <button data-action="dec">−</button>
-                                <div class="days-display" style="background:white;width:30px;text-align:center;padding:1px 1px;border: none;border-radius:6px">${c.days}</div>
-                                <button data-action="inc">+</button>
-                            </div>
-                            ${dateHtml}
-                            <div class="actions" style="text-align:right">
-                                <button data-action="rename" class="btn ghost" title="Rename">✎</button>
-                                <button data-action="remove" class="btn" title="Remove city" aria-label="Remove city"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-                            </div>
-                            <div class="notes" style="display:none;grid-column:1 / -1;margin-top:8px">
-                                <textarea class="city-notes" placeholder="Notes about this city..." style="width:100%;min-height:72px;border:1px solid #eee;padding:8px;border-radius:8px">${escapeHtml(c.notes || '')}</textarea>
-                                <div style="text-align:right;margin-top:6px">
-                                    <button data-action="save-note" class="btn primary">Save note</button>
-                                </div>
-                            </div>
-                        `
-                    cityRow.querySelector('[data-action="dec"]').addEventListener('click', () => {
-                        // allow stepping down to 0 (stopover)
-                        c.days = Math.max(0, Number(c.days) - 1);
-                        updateDays(trip.id, c.id, c.days);
-                        renderTripEditor(trip, container)
-                    })
-                    cityRow.querySelector('[data-action="inc"]').addEventListener('click', () => {
-                        c.days = Math.max(0, Number(c.days) + 1);
-                        updateDays(trip.id, c.id, c.days);
-                        renderTripEditor(trip, container)
-                    })
-                    // Days input is now read-only, controlled by + and - buttons only
-                    cityRow.querySelector('[data-action="remove"]').addEventListener('click', () => {
-                        trip.cities = trip.cities.filter(x => x.id !== c.id);
-                        removeCityFromTrip(trip.id, c.id);
-                        renderTripEditor(trip, container)
-                    })
-                    cityRow.querySelector('[data-action="rename"]').addEventListener('click', (ev) => {
-                        ev.stopPropagation()
-                        // open popup anchored to the rename button
-                        const renameBtn = ev.currentTarget
-                        createCitySearchPopup(renameBtn, async (sel) => {
-                            if (!sel) return
-                            const name = (sel.name || '').trim()
-                            const vname = validateCityName(name)
-                            if (!vname.ok) return showClientError(vname.error)
-                            c.name = name
-                            if (sel.position) { c.lat = sel.position.lat; c.lon = sel.position.lon }
-                            c.updatedAt = new Date().toISOString()
-                            updateTripInStore(trip)
-                            renderTripEditor(trip, container)
-                        }, c.name)
-                    })
-                    // Add click handler for mobile action buttons
-                    cityRow.addEventListener('click', (e) => {
-                        // Don't toggle if clicking a button or interacting with the notes area
-                        if (e.target.closest('button') || e.target.closest('.notes')) return;
-
-                        // Remove active class from all other cities
-                        citiesContainer.querySelectorAll('.city.active').forEach(c => {
-                            if (c !== cityRow) c.classList.remove('active')
-                        });
-                        // Toggle active state on this city
-                        cityRow.classList.toggle('active');
-                        // show/hide notes section when toggling
-                        const notesEl = cityRow.querySelector('.notes')
-                        if (notesEl) {
-                            if (cityRow.classList.contains('active')) {
-                                notesEl.style.display = 'block'
-                                const ta = notesEl.querySelector('.city-notes')
-                                if (ta) ta.focus()
-                            } else {
-                                notesEl.style.display = 'none'
-                            }
-                        }
-                    });
-
-                    // Save notes handlers
-                    const notesTa = cityRow.querySelector('.city-notes')
-                    const saveNoteBtn = cityRow.querySelector('[data-action="save-note"]')
-                    if (notesTa) {
-                        // allow normal cursor placement but prevent toggling city
-                        notesTa.addEventListener('click', (ev) => ev.stopPropagation());
-                        // auto-save on blur
-                        notesTa.addEventListener('blur', () => {
-                            c.notes = notesTa.value
-                            c.updatedAt = new Date().toISOString()
-                            updateTripInStore(trip)
-                        })
-                    }
-                    if (saveNoteBtn) {
-                        saveNoteBtn.addEventListener('click', (ev) => {
-                            ev.stopPropagation()
-                            if (notesTa) {
-                                c.notes = notesTa.value
-                                c.updatedAt = new Date().toISOString()
-                                updateTripInStore(trip)
-                                renderTripEditor(trip, container)
-                            }
-                        })
-                    }
-
-                    // Enable drag and drop reordering
-                    cityRow.draggable = true
-                    cityRow.addEventListener('dragstart', (e) => {
-                        e.stopPropagation()
-                        cityRow.classList.add('dragging')
-                        try { e.dataTransfer.setData('text/plain', c.id) } catch (err) { /* ignore */ }
-                        e.dataTransfer.effectAllowed = 'move'
-                    })
-
-                    cityRow.addEventListener('dragend', () => {
-                        cityRow.classList.remove('dragging')
-                    })
-
-                    cityRow.addEventListener('dragover', (e) => {
-                        e.preventDefault()
-                        e.dataTransfer.dropEffect = 'move'
-                        const dragging = citiesContainer.querySelector('.dragging')
-                        if (!dragging || dragging === cityRow) return
-                        const rect = cityRow.getBoundingClientRect()
-                        const midY = rect.top + rect.height / 2
-                        if (e.clientY < midY) {
-                            cityRow.style.borderTop = '2px solid var(--primary)'
-                            cityRow.style.borderBottom = ''
-                        } else {
-                            cityRow.style.borderTop = ''
-                            cityRow.style.borderBottom = '2px solid var(--primary)'
-                        }
-                    })
-
-                    cityRow.addEventListener('dragleave', () => {
-                        cityRow.style.borderTop = ''
-                        cityRow.style.borderBottom = ''
-                    })
-
-                    cityRow.addEventListener('drop', (e) => {
-                        e.preventDefault()
-                        cityRow.style.borderTop = ''
-                        cityRow.style.borderBottom = ''
-                        const draggedId = e.dataTransfer.getData('text/plain')
-                        if (!draggedId || draggedId === c.id) return
-
-                        const rect = cityRow.getBoundingClientRect()
-                        const midY = rect.top + rect.height / 2
-                        const dropAfter = e.clientY > midY
-
-                        const cities = trip.cities
-                        const fromIdx = cities.findIndex(city => city.id === draggedId)
-                        const toIdx = cities.findIndex(city => city.id === c.id)
-                        if (fromIdx === -1) return
-
-                        const [movedCity] = cities.splice(fromIdx, 1)
-                        const insertAt = dropAfter ? toIdx + 1 : toIdx
-                        cities.splice(insertAt, 0, movedCity)
-
-                        trip.updatedAt = new Date().toISOString()
-                        updateTripInStore(trip)
-                        renderTripEditor(trip, container)
-                    })
-
-                    citiesContainer.appendChild(cityRow)
-                    dayCursor = end
-                }
-                // Add the bottom "Add city" button
-                const bottomAddBtn = document.createElement('div')
-                bottomAddBtn.style.textAlign = 'center'
-                bottomAddBtn.style.marginTop = '12px'
-                bottomAddBtn.innerHTML = '<button class="btn ghost" style="width:100%">+ Add city</button>'
-                bottomAddBtn.querySelector('button').addEventListener('click', (e) => {
-                    e.stopPropagation()
-                    const popup = createCitySearchPopup(e.target, async (sel) => {
-                        if (!sel) return
-                        // validate before adding
-                        const name = (sel.name || '').trim()
-                        const v = validateCityName(name)
-                        if (!v.ok) return showClientError(v.error)
-                        if (trip.cities && trip.cities.length >= MAX_CITIES_PER_TRIP) return showClientError(`Maximum cities per trip reached (${MAX_CITIES_PER_TRIP}).`)
-                        const newCity = {
-                            id: uid(),
-                            name: name,
-                            days: 1,
-                            updatedAt: new Date().toISOString()
-                        }
-                        trip.cities.push(newCity)
-                        updateTripInStore(trip)
-                        renderTripEditor(trip, container)
-                    })
-                })
-                citiesContainer.appendChild(bottomAddBtn)
-
-                // update total days
-                const total = trip.cities.reduce((s, c) => s + Number(c.days), 0)
-                const totalDaysEl = container.querySelector('.total-days')
-                if (totalDaysEl) totalDaysEl.textContent = total
-            }
-
-            renderCitiesList()
-        }
-
-        function renderTripCalendar(trip, container) {
-            container.innerHTML = '<h3 style="margin:0 0 8px 0">Calendar view</h3>'
-            const hint = document.createElement('div')
-            hint.className = 'small'
-            hint.textContent = 'Set a trip start date to see the calendar.'
-            container.appendChild(hint)
-            const months = document.createElement('div')
-            months.className = 'months'
-            container.appendChild(months)
-
-            if (!trip.start || trip.cities.length === 0) { hint.style.display = 'block'; return }
-            hint.style.display = 'none'
-
-            let cur = 1
-            // Build ranges but exclude stopover cities (days === 0) from the calendar
-            const cityRanges = []
-            for (const c of trip.cities) {
-                const s = cur
-                const e = cur + Number(c.days)
-                // advance cursor regardless of whether this city has days
-                if (Number(c.days) > 0) {
-                    cityRanges.push({ id: c.id, name: c.name || 'Unnamed', start: s, end: e })
-                }
-                cur = e
-            }
-            const tripStart = new Date(trip.start)
-            const totalDays = cityRanges.length ? cityRanges[cityRanges.length - 1].end : 0
-            if (totalDays <= 0) return
-
-            const tripFirstDate = addDays(tripStart, 0)
-            const tripLastDate = addDays(tripStart, totalDays - 1)
-            const shownMonths = []
-            const m = new Date(tripFirstDate.getFullYear(), tripFirstDate.getMonth(), 1)
-            while (m <= tripLastDate) { shownMonths.push(new Date(m)); m.setMonth(m.getMonth() + 1) }
-
-            const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-            for (const monthStart of shownMonths) {
-                const monthCard = document.createElement('div')
-                monthCard.className = 'month-card'
-                const monthLabel = monthStart.toLocaleString(undefined, { month: 'long', year: 'numeric' })
-                const header = document.createElement('div')
-                header.className = 'month-header'
-                header.textContent = monthLabel
-                monthCard.appendChild(header)
-                const wk = document.createElement('div')
-                wk.className = 'weekday-row'
-                wk.innerHTML = weekdays.map(w => `<div>${w}</div>`).join('')
-                monthCard.appendChild(wk)
-                const daysGrid = document.createElement('div')
-                daysGrid.className = 'days-grid'
-                const firstOfMonth = new Date(monthStart.getFullYear(), monthStart.getMonth(), 1)
-                let weekday = firstOfMonth.getDay()
-                let blanks = (weekday === 0) ? 6 : (weekday - 1)
-                for (let i = 0; i < blanks; i++) { const b = document.createElement('div'); b.className = 'day blank'; daysGrid.appendChild(b) }
-                const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate()
-                for (let d = 1; d <= daysInMonth; d++) {
-                    const date = new Date(monthStart.getFullYear(), monthStart.getMonth(), d)
-                    // compute day difference using UTC midnight to avoid timezone shifts
-                    const msPerDay = 24 * 60 * 60 * 1000
-                    const absDay = Math.floor((Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) - Date.UTC(tripStart.getFullYear(), tripStart.getMonth(), tripStart.getDate())) / msPerDay) + 1
-                    const dayEl = document.createElement('div')
-                    dayEl.className = 'day'
-                    dayEl.innerHTML = `<div class="date-num">${d}</div>`
-                    if (absDay >= 1 && absDay <= totalDays) {
-                        const matches = cityRanges.filter(r => absDay >= r.start && absDay <= r.end)
-                        if (matches.length) {
-                            dayEl.classList.add('in-range')
-                            // render contiguous thin segments per city across their range.
-                            // position (vertical layer) alternates by city index so adjacent cities don't overlap.
-                            const topBase = 26 // px, below date number
-                            const step = 16 // px between two alternating layers
-                            for (const cr of matches) {
-                                const seg = document.createElement('div')
-                                seg.className = 'range-seg'
-                                // determine layer by the city's index in cityRanges (alternating 0/1)
-                                const idxAll = cityRanges.findIndex(r => r.id === cr.id)
-                                const layer = idxAll % 2
-                                seg.style.top = `${topBase + layer * step}px`
-                                if (absDay === cr.start) seg.classList.add('range-start')
-                                if (absDay === cr.end) seg.classList.add('range-end')
-                                // only show the name label at the beginning of the city's bar
-                                if (absDay === cr.start) {
-                                    const segLabel = document.createElement('div')
-                                    segLabel.className = 'seg-label'
-                                    segLabel.textContent = cr.name
-                                    seg.appendChild(segLabel)
-                                }
-                                dayEl.appendChild(seg)
-                            }
-                        }
-                    } else {
-                        dayEl.classList.add('blank')
-                    }
-                    daysGrid.appendChild(dayEl)
-                }
-                monthCard.appendChild(daysGrid)
-                months.appendChild(monthCard)
-            }
-        }
-
-        // utility date functions
-        function addDays(d, n) { const t = new Date(d); t.setDate(t.getDate() + n); return t }
-        function formatDate(d) { return d.toISOString().slice(0, 10) }
-        function weekdayName(d) { return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()] }
-
-        // ---------- TomTom typeahead popup helper ----------
-        function createCitySearchPopup(anchorEl, onSelect, initialValue = '') {
-            // anchorEl: DOM node to position under, onSelect: callback(selObject|null)
-            // returns the popup element
-            const popup = document.createElement('div')
-            popup.className = 'tt-popup'
-            popup.style.minWidth = '260px'
-            popup.style.padding = '8px'
-            // input
-            const input = document.createElement('input')
-            input.className = 'tt-input-inline'
-            input.value = initialValue || ''
-            popup.appendChild(input)
-            const list = document.createElement('div')
-            list.style.maxHeight = '260px'
-            list.style.overflow = 'auto'
-            list.style.marginTop = '6px'
-            popup.appendChild(list)
-
-            // position popup
-            document.body.appendChild(popup)
-            const rect = anchorEl.getBoundingClientRect()
-            popup.style.position = 'absolute'
-            popup.style.left = `${rect.left}px`
-            popup.style.top = `${rect.bottom + window.scrollY + 6}px`
-
-            let debounceTimer = null
-            let lastQuery = ''
-
-            async function doQuery(q) {
-                if (!q) {
-                    renderList([])
-                    return
-                }
-                try {
-                    const url = `${API_BASE}/api/tomtom?q=${encodeURIComponent(q)}&limit=6&typeahead=true`
-                    const res = await fetch(url, { credentials: 'include' })
-                    console.log('TomTom proxy query response', url, res.status)
-                    if (!res.ok) { renderList([]); return }
-                    const json = await res.json()
-                    const suggestions = (json.results || []).map(r => ({
-                        name: `${r.address.freeformAddress}, ${r.address.countryCode || ''}`.trim()
-                    }))
-                    renderList(suggestions)
-                } catch (e) { console.warn('TomTom proxy query failed', e); renderList([]) }
-            }
-
-            function renderList(items) {
-                list.innerHTML = ''
-                if (!items.length) {
-                    const none = document.createElement('div')
-                    none.className = 'tt-item'
-                    none.textContent = 'No suggestions'
-                    list.appendChild(none)
-                    return
-                }
-                for (const it of items) {
-                    const el = document.createElement('div')
-                    el.className = 'tt-item'
-                    el.textContent = it.name || 'Unknown'
-                    el.addEventListener('click', () => {
-                        cleanup()
-                        onSelect(it)
-                    })
-                    list.appendChild(el)
-                }
-            }
-
-            function cleanup() {
-                if (debounceTimer) clearTimeout(debounceTimer)
-                if (popup && popup.parentNode) popup.parentNode.removeChild(popup)
-                document.removeEventListener('mousedown', docMouse)
-            }
-
-            function docMouse(e) {
-                if (!popup.contains(e.target) && !anchorEl.contains(e.target)) {
-                    cleanup()
-                    onSelect(null)
-                }
-            }
-
-            input.addEventListener('input', (ev) => {
-                const q = ev.target.value.trim()
-                lastQuery = q
-                if (debounceTimer) clearTimeout(debounceTimer)
-                debounceTimer = setTimeout(() => doQuery(q), 300)
-            })
-
-            // handle keyboard selection: Enter selects first item
-            input.addEventListener('keydown', (ev) => {
-                if (ev.key === 'Enter') {
-                    const first = list.querySelector('.tt-item')
-                    if (first) {
-                        first.click()
-                    }
-                } else if (ev.key === 'Escape') {
-                    cleanup(); onSelect(null)
-                }
-            })
-
-            document.addEventListener('mousedown', docMouse)
-
-            // initial query if value provided
-            if (input.value && input.value.length >= 2) {
-                doQuery(input.value)
-            }
-
-            input.focus()
-            return popup
+            renderTripsContainer()
         }
 
         // escape for safety (we control the HTML but keep it safe)
