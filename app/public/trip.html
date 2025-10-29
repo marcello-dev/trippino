@@ -774,7 +774,7 @@
                         </button>
                     </div>
                     <div class="notes" style="grid-column:1 / -1;margin-top:8px">
-                        <textarea class="city-notes" placeholder="Notes about this city..." style="width:100%;min-height:72px;border:1px solid #eee;padding:8px;border-radius:8px">${escapeHtml(c.notes || '')}</textarea>
+                        <textarea class="city-notes" placeholder="Notes about this city..." style="width:100%;min-height:72px;border:1px solid #eee;padding:8px;border-radius:8px;box-sizing:border-box">${escapeHtml(c.notes || '')}</textarea>
                         <div style="text-align:right;margin-top:6px">
                             <button data-action="save-note" class="btn primary">Save note</button>
                         </div>
