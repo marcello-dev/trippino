@@ -69,30 +69,87 @@
             border-radius: 8px;
             border: 1px dashed #eee;
             margin-bottom: 8px;
-            cursor: grab;
-            transition: opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+            cursor: default;
         }
 
-        .city.dragging {
-            opacity: 0.5;
-            cursor: grabbing;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        .city.active {
+            background: #f6f8fa;
         }
 
-        .city .drag-handle {
+        .city .expand-arrow {
             width: 24px;
             height: 24px;
             display: flex;
             align-items: center;
             justify-content: center;
             color: #999;
-            cursor: grab;
-            user-select: none;
+            transition: transform 0.2s ease;
+            cursor: pointer;
         }
 
-        .city .drag-handle svg {
+        .city .expand-arrow:hover {
+            color: var(--primary);
+        }
+
+        .city .expand-arrow svg {
             width: 16px;
-            height: 16px
+            height: 16px;
+        }
+
+        .city.active .expand-arrow {
+            transform: rotate(90deg);
+        }
+
+        .city .actions {
+            display: none;
+        }
+
+        .city.active .actions {
+            display: flex;
+        }
+
+        .city .notes {
+            display: none;
+        }
+
+        .city.active .notes {
+            display: block;
+        }
+
+        .city-reorder-controls {
+            display: none;
+            grid-column: 1 / -1;
+            gap: 8px;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #eee;
+        }
+
+        .city.active .city-reorder-controls {
+            display: flex;
+        }
+
+        .city-reorder-controls button {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .city-reorder-controls button:active {
+            background: #f0f0f0;
+        }
+
+        .city-reorder-controls button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
         }
 
         .city .name {
@@ -319,12 +376,8 @@
                 grid-template-rows: auto auto;
                 gap: 8px;
                 padding: 8px;
-                cursor: pointer;
+                cursor: default;
                 align-items: center;
-            }
-
-            .city.active {
-                background: #f6f8fa;
             }
 
             .city .date-range,
@@ -686,9 +739,9 @@
                 }
 
                 cityRow.innerHTML = `
-                    <div class="drag-handle" role="button" aria-label="Drag to reorder">
+                    <div class="expand-arrow" role="button" aria-label="Expand city">
                         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M8 9h8M8 12h8M8 15h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                     </div>
                     <div>
@@ -706,7 +759,21 @@
                         <button data-action="rename" class="btn ghost" title="Rename">✎</button>
                         <button data-action="remove" class="btn" title="Remove city" aria-label="Remove city"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                     </div>
-                    <div class="notes" style="display:none;grid-column:1 / -1;margin-top:8px">
+                    <div class="city-reorder-controls">
+                        <button data-action="move-up">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M18 15l-6-6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Move Up
+                        </button>
+                        <button data-action="move-down">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Move Down
+                        </button>
+                    </div>
+                    <div class="notes" style="grid-column:1 / -1;margin-top:8px">
                         <textarea class="city-notes" placeholder="Notes about this city..." style="width:100%;min-height:72px;border:1px solid #eee;padding:8px;border-radius:8px">${escapeHtml(c.notes || '')}</textarea>
                         <div style="text-align:right;margin-top:6px">
                             <button data-action="save-note" class="btn primary">Save note</button>
@@ -750,145 +817,57 @@
                     }, c.name)
                 })
 
-                // Touch/click handling for mobile
-                let touchStartTime = 0
-                let touchTimer = null
-                let isDraggingTouch = false
-                
-                cityRow.addEventListener('touchstart', (e) => {
-                    if (e.target.closest('button') || e.target.closest('.notes')) return
-                    touchStartTime = Date.now()
-                    isDraggingTouch = false
+                // Move up/down buttons
+                const moveUpBtn = cityRow.querySelector('[data-action="move-up"]')
+                const moveDownBtn = cityRow.querySelector('[data-action="move-down"]')
+
+                // Disable buttons if at the edges
+                if (i === 0) moveUpBtn.disabled = true
+                if (i === trip.cities.length - 1) moveDownBtn.disabled = true
+
+                moveUpBtn.addEventListener('click', (e) => {
+                    e.stopPropagation()
+                    if (i === 0) return
                     
-                    // Start a timer for long press
-                    touchTimer = setTimeout(() => {
-                        isDraggingTouch = true
-                        cityRow.classList.add('dragging')
-                        cityRow.style.opacity = '0.5'
-                        cityRow.style.transform = 'scale(1.05)'
-                        // Haptic feedback if available
-                        if (navigator.vibrate) navigator.vibrate(50)
-                    }, 500) // 500ms long press
-                }, { passive: true })
-                
-                cityRow.addEventListener('touchmove', (e) => {
-                    if (!isDraggingTouch) {
-                        clearTimeout(touchTimer)
-                        return
-                    }
+                    // Swap with previous city
+                    const temp = trip.cities[i]
+                    trip.cities[i] = trip.cities[i - 1]
+                    trip.cities[i - 1] = temp
                     
-                    e.preventDefault()
-                    const touch = e.touches[0]
-                    const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY)
-                    const targetCity = elementBelow?.closest('.city')
-                    
-                    // Clear all border indicators
-                    citiesContainer.querySelectorAll('.city').forEach(c => {
-                        c.style.borderTop = ''
-                        c.style.borderBottom = ''
-                    })
-                    
-                    if (targetCity && targetCity !== cityRow) {
-                        const rect = targetCity.getBoundingClientRect()
-                        const midY = rect.top + rect.height / 2
-                        if (touch.clientY < midY) {
-                            targetCity.style.borderTop = '2px solid var(--primary)'
-                        } else {
-                            targetCity.style.borderBottom = '2px solid var(--primary)'
-                        }
-                    }
-                })
-                
-                cityRow.addEventListener('touchend', (e) => {
-                    clearTimeout(touchTimer)
-                    cityRow.classList.remove('dragging')
-                    cityRow.style.opacity = ''
-                    cityRow.style.transform = ''
-                    
-                    if (isDraggingTouch) {
-                        const touch = e.changedTouches[0]
-                        const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY)
-                        const targetCity = elementBelow?.closest('.city')
-                        
-                        if (targetCity && targetCity !== cityRow) {
-                            const rect = targetCity.getBoundingClientRect()
-                            const midY = rect.top + rect.height / 2
-                            const dropAfter = touch.clientY > midY
-                            
-                            const cities = trip.cities
-                            const fromIdx = cities.findIndex(city => city.id === c.id)
-                            const toIdx = cities.findIndex(city => city.id === targetCity.dataset.id)
-                            
-                            if (fromIdx !== -1 && toIdx !== -1) {
-                                const [movedCity] = cities.splice(fromIdx, 1)
-                                const insertAt = dropAfter ? toIdx + 1 : toIdx
-                                cities.splice(insertAt, 0, movedCity)
-                                
-                                trip.updatedAt = new Date().toISOString()
-                                updateTripInStore()
-                                render()
-                            }
-                        }
-                        
-                        // Clear all border indicators
-                        citiesContainer.querySelectorAll('.city').forEach(c => {
-                            c.style.borderTop = ''
-                            c.style.borderBottom = ''
-                        })
-                        
-                        isDraggingTouch = false
-                    } else {
-                        // Short tap - toggle notes
-                        const touchDuration = Date.now() - touchStartTime
-                        if (touchDuration < 500 && !e.target.closest('button') && !e.target.closest('.notes')) {
-                            citiesContainer.querySelectorAll('.city.active').forEach(c => {
-                                if (c !== cityRow) c.classList.remove('active')
-                            })
-                            
-                            cityRow.classList.toggle('active')
-                            const notesEl = cityRow.querySelector('.notes')
-                            if (notesEl) {
-                                if (cityRow.classList.contains('active')) {
-                                    notesEl.style.display = 'block'
-                                    const ta = notesEl.querySelector('.city-notes')
-                                    if (ta) ta.focus()
-                                } else {
-                                    notesEl.style.display = 'none'
-                                }
-                            }
-                        }
-                    }
-                })
-                
-                cityRow.addEventListener('touchcancel', () => {
-                    clearTimeout(touchTimer)
-                    cityRow.classList.remove('dragging')
-                    cityRow.style.opacity = ''
-                    cityRow.style.transform = ''
-                    isDraggingTouch = false
-                    citiesContainer.querySelectorAll('.city').forEach(c => {
-                        c.style.borderTop = ''
-                        c.style.borderBottom = ''
-                    })
+                    trip.updatedAt = new Date().toISOString()
+                    updateTripInStore()
+                    render()
                 })
 
-                cityRow.addEventListener('click', (e) => {
-                    if (e.target.closest('button') || e.target.closest('.notes')) return
+                moveDownBtn.addEventListener('click', (e) => {
+                    e.stopPropagation()
+                    if (i === trip.cities.length - 1) return
+                    
+                    // Swap with next city
+                    const temp = trip.cities[i]
+                    trip.cities[i] = trip.cities[i + 1]
+                    trip.cities[i + 1] = temp
+                    
+                    trip.updatedAt = new Date().toISOString()
+                    updateTripInStore()
+                    render()
+                })
+
+                // Click handling to expand/collapse - only on arrow
+                const expandArrow = cityRow.querySelector('.expand-arrow')
+                expandArrow.addEventListener('click', (e) => {
+                    e.stopPropagation()
 
                     citiesContainer.querySelectorAll('.city.active').forEach(c => {
                         if (c !== cityRow) c.classList.remove('active')
                     })
 
                     cityRow.classList.toggle('active')
-                    const notesEl = cityRow.querySelector('.notes')
-                    if (notesEl) {
-                        if (cityRow.classList.contains('active')) {
-                            notesEl.style.display = 'block'
-                            const ta = notesEl.querySelector('.city-notes')
-                            if (ta) ta.focus()
-                        } else {
-                            notesEl.style.display = 'none'
-                        }
+                    
+                    // Focus textarea when expanding
+                    if (cityRow.classList.contains('active')) {
+                        const ta = cityRow.querySelector('.city-notes')
+                        if (ta) setTimeout(() => ta.focus(), 100)
                     }
                 })
 
@@ -896,8 +875,7 @@
                 const saveNoteBtn = cityRow.querySelector('[data-action="save-note"]')
 
                 if (notesTa) {
-                    notesTa.addEventListener('click', (ev) => ev.stopPropagation())
-                    notesTa.addEventListener('mousedown', (ev) => ev.stopPropagation())
+                    // Auto-save on blur
                     notesTa.addEventListener('blur', () => {
                         c.notes = notesTa.value
                         c.updatedAt = new Date().toISOString()
@@ -918,66 +896,6 @@
                 }
 
                 // Drag and drop
-                cityRow.draggable = true
-                cityRow.addEventListener('dragstart', (e) => {
-                    e.stopPropagation()
-                    cityRow.classList.add('dragging')
-                    try {
-                        e.dataTransfer.setData('text/plain', c.id)
-                    } catch (err) {}
-                    e.dataTransfer.effectAllowed = 'move'
-                })
-
-                cityRow.addEventListener('dragend', () => {
-                    cityRow.classList.remove('dragging')
-                })
-
-                cityRow.addEventListener('dragover', (e) => {
-                    e.preventDefault()
-                    e.dataTransfer.dropEffect = 'move'
-                    const dragging = citiesContainer.querySelector('.dragging')
-                    if (!dragging || dragging === cityRow) return
-                    const rect = cityRow.getBoundingClientRect()
-                    const midY = rect.top + rect.height / 2
-                    if (e.clientY < midY) {
-                        cityRow.style.borderTop = '2px solid var(--primary)'
-                        cityRow.style.borderBottom = ''
-                    } else {
-                        cityRow.style.borderTop = ''
-                        cityRow.style.borderBottom = '2px solid var(--primary)'
-                    }
-                })
-
-                cityRow.addEventListener('dragleave', () => {
-                    cityRow.style.borderTop = ''
-                    cityRow.style.borderBottom = ''
-                })
-
-                cityRow.addEventListener('drop', (e) => {
-                    e.preventDefault()
-                    cityRow.style.borderTop = ''
-                    cityRow.style.borderBottom = ''
-                    const draggedId = e.dataTransfer.getData('text/plain')
-                    if (!draggedId || draggedId === c.id) return
-
-                    const rect = cityRow.getBoundingClientRect()
-                    const midY = rect.top + rect.height / 2
-                    const dropAfter = e.clientY > midY
-
-                    const cities = trip.cities
-                    const fromIdx = cities.findIndex(city => city.id === draggedId)
-                    const toIdx = cities.findIndex(city => city.id === c.id)
-                    if (fromIdx === -1) return
-
-                    const [movedCity] = cities.splice(fromIdx, 1)
-                    const insertAt = dropAfter ? toIdx + 1 : toIdx
-                    cities.splice(insertAt, 0, movedCity)
-
-                    trip.updatedAt = new Date().toISOString()
-                    updateTripInStore()
-                    render()
-                })
-
                 citiesContainer.appendChild(cityRow)
                 dayCursor = end
             }
