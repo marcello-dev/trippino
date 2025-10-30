@@ -437,6 +437,13 @@
 
     <script src="/config.js"></script>
     <script>
+        // --- Service Worker registration ---
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(reg => console.log('Service Worker registered:', reg.scope))
+                .catch(err => console.error('Service Worker registration failed:', err))
+        }
+
         const API_BASE = window.APP_CONFIG.API_BASE
         const STORAGE_KEY = 'simpleTripPlanner_v1'
         const MAX_CITIES_PER_TRIP = 30
