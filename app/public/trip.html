@@ -881,12 +881,6 @@
                     })
 
                     cityRow.classList.toggle('active')
-                    
-                    // Focus textarea when expanding
-                    if (cityRow.classList.contains('active')) {
-                        const ta = cityRow.querySelector('.city-notes')
-                        if (ta) setTimeout(() => ta.focus(), 100)
-                    }
                 })
 
                 const notesTa = cityRow.querySelector('.city-notes')
