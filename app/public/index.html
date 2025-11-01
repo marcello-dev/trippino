@@ -674,8 +674,8 @@
             checkAuth()
             localStorage.clear()
             appState = { trips: [] }
-            renderHome()
-            renderYearSummary()
+            refreshAll()
+            burgerBtn.style.display = 'none'
         }
 
         // check auth and sync state on load
