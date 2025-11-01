@@ -104,30 +104,16 @@
     </div>
 
     <script src="/config.js"></script>
+    <script type="module">
+        import { getCsrfToken as _getCsrfToken } from '/modules/csrf.js'
+        window.getCsrfToken = _getCsrfToken
+    </script>
     <script>
         const API_BASE = window.APP_CONFIG.API_BASE
         const authArea = document.getElementById('authArea')
         let currentUser = null
 
-        // CSRF token management
-        let csrfToken = null
-        async function getCsrfToken() {
-            if (csrfToken) return csrfToken
-            try {
-                const res = await fetch(`${API_BASE}/api/csrf-token`, { credentials: 'include' })
-                if (res.ok) {
-                    const data = await res.json()
-                    csrfToken = data.csrfToken
-                    return csrfToken
-                }
-            } catch (e) {
-                console.error('Failed to get CSRF token', e)
-            }
-            return null
-        }
-
-        // Initialize CSRF token on page load
-        getCsrfToken()
+        // CSRF token is provided by modules/csrf.js as window.getCsrfToken
 
         async function checkAuth() {
             try {
