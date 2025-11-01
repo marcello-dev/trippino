@@ -106,7 +106,7 @@
         
         function setAuthenticated(user) {
             currentUser = user;
-            authArea.innerHTML = `<div class="small">Signed in as <strong>${user.email}</strong></div>`;
+            authArea.innerHTML = '';
             const burgerBtn = document.getElementById('burgerBtn');
             if (burgerBtn) burgerBtn.style.display = '';
             const menu = document.getElementById('burgerMenu');

@@ -585,11 +585,7 @@
 
         function setAuthenticated(user) {
             currentUser = user
-            authArea.innerHTML = `
-                <div style="display:flex;gap:8px;align-items:center">
-                    <div class="small">Signed in as <strong>${escapeHtml(user.email)}</strong></div>
-                </div>
-            `
+            authArea.innerHTML = ''
             // show burger button when authenticated
             const burgerBtn = document.getElementById('burgerBtn')
             if (burgerBtn) burgerBtn.style.display = ''
