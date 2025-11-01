@@ -445,6 +445,7 @@
                 <div id="burgerWrapper" style="position:relative;margin-left:8px">
                     <button id="burgerBtn" aria-label="Open menu" class="btn ghost">☰</button>
                     <div id="burgerMenu" style="display:none;position:absolute;right:0;top:40px;background:var(--card);border:1px solid #eee;border-radius:8px;box-shadow:0 6px 18px rgba(12,18,32,0.06);z-index:1000;min-width:160px;padding:6px">
+                        <div class="small menu-item" data-action="home" style="padding:8px;cursor:pointer">Home</div>
                         <div class="small menu-item" data-action="profile" style="padding:8px;cursor:pointer">Profile</div>
                         <div class="small menu-item" data-action="about" style="padding:8px;cursor:pointer">About</div>
                         <div class="small menu-item" data-action="logout" style="padding:8px;cursor:pointer">Logout</div>
@@ -603,6 +604,8 @@
                             window.location.href = 'profile.html'
                         } else if (act === 'about') {
                             window.location.href = 'about.html'
+                        } else if (act === 'home') {
+                            window.location.href = 'index.html'
                         }
                         menu.style.display = 'none'
                     })

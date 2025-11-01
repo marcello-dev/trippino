@@ -192,6 +192,45 @@ app.get('/api/me', async (req, res) => {
   } catch (e) { console.error(e); return res.status(500).json({ error: 'server error' }) }
 })
 
+// change password
+app.post('/api/change-password', async (req, res) => {
+  try {
+    const s = await getSession(req)
+    if (!s) return res.status(401).json({ error: 'not authenticated' })
+    
+    const { currentPassword, newPassword } = req.body || {}
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'current password and new password required' })
+    }
+    
+    // Validate new password length
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'new password must be at least 6 characters' })
+    }
+    
+    // Get user with current password hash
+    const user = await get(`SELECT id, password FROM users WHERE id = ?`, [s.user.id])
+    if (!user) return res.status(404).json({ error: 'user not found' })
+    
+    // Verify current password
+    const match = await bcrypt.compare(currentPassword, user.password)
+    if (!match) {
+      return res.status(401).json({ error: 'current password is incorrect' })
+    }
+    
+    // Hash new password
+    const newHash = await bcrypt.hash(newPassword, 10)
+    
+    // Update password
+    await run(`UPDATE users SET password = ? WHERE id = ?`, [newHash, user.id])
+    
+    return res.json({ ok: true, message: 'password changed successfully' })
+  } catch (e) { 
+    console.error(e)
+    return res.status(500).json({ error: 'server error' }) 
+  }
+})
+
 // logout
 app.post('/api/logout', async (req, res) => {
   try {
