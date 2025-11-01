@@ -58,6 +58,23 @@
             background: #f6f6f6;
             border-radius: 6px
         }
+
+        .btn {
+            padding: 8px 10px;
+            border-radius: 8px;
+            border: 0;
+            cursor: pointer
+        }
+
+        .btn.primary {
+            background: var(--primary);
+            color: white
+        }
+
+        .btn.ghost {
+            background: transparent;
+            border: 1px solid #ddd
+        }
     </style>
 </head>
 
@@ -68,15 +85,13 @@
             <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
                 <div id="authArea"></div>
                 <div id="burgerWrapper" style="position:relative;margin-left:8px">
-                    <button id="burgerBtn" aria-label="Open menu" class="btn ghost">☰</button>
-                    <div id="burgerMenu"
-                        style="display:none;position:absolute;right:0;top:40px;background:var(--card);border:1px solid #eee;border-radius:8px;box-shadow:0 6px 18px rgba(12,18,32,0.06);z-index:1000;min-width:160px;padding:6px">
-                        <div class="small menu-item" data-action="home" style="padding:8px;cursor:pointer">Home</div>
-                        <div class="small menu-item" data-action="profile" style="padding:8px;cursor:pointer">Profile</div>
-                        <div class="small menu-item" data-action="about" style="padding:8px;cursor:pointer">About</div>
-                        <div class="small menu-item" data-action="logout" style="padding:8px;cursor:pointer">Logout
-                        </div>
-                    </div>
+                <button id="burgerBtn" aria-label="Open menu" class="btn ghost">☰</button>
+                <div id="burgerMenu" style="display:none;position:absolute;right:0;top:40px;background:var(--card);border:1px solid #eee;border-radius:8px;box-shadow:0 6px 18px rgba(12,18,32,0.06);z-index:1000;min-width:160px;padding:6px">
+                    <div class="small menu-item" data-action="home" style="padding:8px;cursor:pointer">Home</div>
+                    <div class="small menu-item" data-action="profile" style="padding:8px;cursor:pointer">Profile</div>
+                    <div class="small menu-item" data-action="about" style="padding:8px;cursor:pointer">About</div>
+                    <div class="small menu-item" data-action="logout" style="padding:8px;cursor:pointer">Logout</div>
+                </div>
                 </div>
             </div>
         </header>
@@ -102,7 +117,13 @@
                 return data.user
             } catch (e) { setAnonymous(); return null }
         }
-        function setAnonymous() { currentUser = null; authArea.innerHTML = `<button id="goAuthBtn" class="btn primary">Sign in / Register</button>`; document.getElementById('goAuthBtn').addEventListener('click', () => window.location.href = 'auth.html'); const burgerBtn = document.getElementById('burgerBtn'); if (burgerBtn) burgerBtn.style.display = 'none'; }
+        function setAnonymous() { 
+            currentUser = null; 
+            authArea.innerHTML = `<button id="goAuthBtn" class="btn primary">Sign in / Register</button>`; 
+            document.getElementById('goAuthBtn').addEventListener('click', () => window.location.href = 'auth.html'); 
+            const burgerBtn = document.getElementById('burgerBtn'); 
+            if (burgerBtn) burgerBtn.style.display = 'none'; 
+        }
         
         function setAuthenticated(user) {
             currentUser = user;
