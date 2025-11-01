@@ -3,6 +3,7 @@ const cookieParser = require('cookie-parser')
 const { v4: uuidv4 } = require('uuid')
 const bcrypt = require('bcryptjs')
 const nodemailer = require('nodemailer')
+const rateLimit = require('express-rate-limit')
 
 const app = express()
 const PORT = process.env.PORT
@@ -86,6 +87,63 @@ const COOKIE_NAME = 'trippino_sid'
 app.use(express.json())
 app.use(cookieParser())
 
+// --- Rate Limiters ---
+
+// Strict rate limiter for authentication endpoints (login, register)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 attempts per window
+  message: { error: 'Too many attempts, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Use IP address as identifier
+  keyGenerator: (req) => {
+    return req.ip || req.connection.remoteAddress
+  }
+})
+
+// Moderate rate limiter for registration (prevent spam account creation)
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3, // 3 registrations per hour per IP
+  message: { error: 'Too many registration attempts, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    return req.ip || req.connection.remoteAddress
+  }
+})
+
+// Rate limiter for password change (prevent brute force on current password)
+const passwordChangeLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5, // 5 password change attempts per hour
+  message: { error: 'Too many password change attempts, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    // Use session ID if available, otherwise IP
+    return req.cookies[COOKIE_NAME] || req.ip || req.connection.remoteAddress
+  }
+})
+
+// General API rate limiter (prevent abuse of all endpoints)
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // 100 requests per window
+  message: { error: 'Too many requests, please slow down' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    return req.ip || req.connection.remoteAddress
+  },
+  // Skip rate limiting for health check
+  skip: (req) => req.path === '/api/health'
+})
+
+// Apply general API rate limiter to all /api routes
+app.use('/api', apiLimiter)
+
 // --- API Health Check ---
 app.get('/api/health', (req, res) => res.json({ ok: true }))
 
@@ -139,7 +197,7 @@ async function getSession(req) {
 }
 
 // login route
-app.post('/api/login', async (req, res) => {
+app.post('/api/login', authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body || {}
     if (!email || !password) return res.status(400).json({ error: 'email and password required' })
@@ -155,7 +213,7 @@ app.post('/api/login', async (req, res) => {
 })
 
 // register route with email verification
-app.post('/api/register', async (req, res) => {
+app.post('/api/register', registerLimiter, async (req, res) => {
   try {
     const { email, password, confirmPassword } = req.body || {}
     if (!email || !password) return res.status(400).json({ error: 'email and password required' })
@@ -193,7 +251,7 @@ app.get('/api/me', async (req, res) => {
 })
 
 // change password
-app.post('/api/change-password', async (req, res) => {
+app.post('/api/change-password', passwordChangeLimiter, async (req, res) => {
   try {
     const s = await getSession(req)
     if (!s) return res.status(401).json({ error: 'not authenticated' })
