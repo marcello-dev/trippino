@@ -70,24 +70,20 @@
 
   <script src="/config.js"></script>
   <script type="module">
-    import { getCsrfToken as _getCsrfToken } from '/modules/csrf.js'
-    window.getCsrfToken = _getCsrfToken
-  </script>
-  <script>
+    import { getCsrfToken } from '/modules/csrf.js'
+    import { getCurrentUser, logout } from '/modules/auth.js'
+    
     // reuse small auth logic similar to index/trip pages
     const API_BASE = window.APP_CONFIG.API_BASE
     const authArea = document.getElementById('authArea')
     let currentUser = null
 
-    // CSRF token is provided by modules/csrf.js as window.getCsrfToken
-
     async function checkAuth() {
       try {
-        const res = await fetch(`${API_BASE}/api/me`, { credentials: 'include' })
-        if (!res.ok) { setAnonymous(); return null }
-        const data = await res.json()
-        setAuthenticated(data.user)
-        return data.user
+        const user = await getCurrentUser()
+        if (!user) { setAnonymous(); return null }
+        setAuthenticated(user)
+        return user
       } catch (e) { setAnonymous(); return null }
     }
 
@@ -111,12 +107,7 @@
           const act = mi.dataset.action
           if (act === 'logout') { 
             localStorage.clear()
-            const token = await getCsrfToken()
-            await fetch(`${API_BASE}/api/logout`, { 
-              method: 'POST', 
-              headers: { 'CSRF-Token': token },
-              credentials: 'include' 
-            })
+            await logout()
             window.location.href = 'index.html'
           }
           else if (act === 'profile') window.location.href = 'profile.html'
@@ -181,7 +172,7 @@
     }
 
     setupBurgerMenu()
-
+    // Kick off auth check (module ensures imports are ready)
     checkAuth()
 
     // Handle password change form

@@ -61,7 +61,10 @@
             text-decoration: none;
         }
 
-        .menu-item:hover { background: #f6f6f6; border-radius:6px }
+        .menu-item:hover {
+            background: #f6f6f6;
+            border-radius: 6px
+        }
 
         input[type="text"],
         input[type="number"] {
@@ -110,7 +113,10 @@
             user-select: none;
         }
 
-        .city .drag-handle svg { width: 16px; height: 16px }
+        .city .drag-handle svg {
+            width: 16px;
+            height: 16px
+        }
 
         .city .name {
             font-weight: 600
@@ -344,11 +350,13 @@
                 max-width: none;
                 box-sizing: border-box;
             }
+
             body>.app>div>div[style*="display:flex"] input#newTripStart {
                 flex: 0 0 auto;
                 width: auto;
                 box-sizing: border-box;
             }
+
             body>.app>div>div[style*="display:flex"] button#createTripBtn {
                 flex: 0 0 auto;
             }
@@ -444,11 +452,14 @@
                 <div id="authArea"></div>
                 <div id="burgerWrapper" style="position:relative;margin-left:8px">
                     <button id="burgerBtn" aria-label="Open menu" class="btn ghost">☰</button>
-                    <div id="burgerMenu" style="display:none;position:absolute;right:0;top:40px;background:var(--card);border:1px solid #eee;border-radius:8px;box-shadow:0 6px 18px rgba(12,18,32,0.06);z-index:1000;min-width:160px;padding:6px">
+                    <div id="burgerMenu"
+                        style="display:none;position:absolute;right:0;top:40px;background:var(--card);border:1px solid #eee;border-radius:8px;box-shadow:0 6px 18px rgba(12,18,32,0.06);z-index:1000;min-width:160px;padding:6px">
                         <div class="small menu-item" data-action="home" style="padding:8px;cursor:pointer">Home</div>
-                        <div class="small menu-item" data-action="profile" style="padding:8px;cursor:pointer">Profile</div>
+                        <div class="small menu-item" data-action="profile" style="padding:8px;cursor:pointer">Profile
+                        </div>
                         <div class="small menu-item" data-action="about" style="padding:8px;cursor:pointer">About</div>
-                        <div class="small menu-item" data-action="logout" style="padding:8px;cursor:pointer">Logout</div>
+                        <div class="small menu-item" data-action="logout" style="padding:8px;cursor:pointer">Logout
+                        </div>
                     </div>
                 </div>
             </div>
@@ -478,10 +489,8 @@
     </div>
     <script src="/config.js"></script>
     <script type="module">
-        import { getCsrfToken as _getCsrfToken } from '/modules/csrf.js'
-        window.getCsrfToken = _getCsrfToken
-    </script>
-    <script>
+        import { getCsrfToken } from '/modules/csrf.js'
+        import { getCurrentUser, logout } from '/modules/auth.js'
         // --- Service Worker registration ---
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js')
@@ -499,11 +508,10 @@
 
         async function checkAuth() {
             try {
-                const res = await fetch(`${API_BASE}/api/me`, { credentials: 'include' })
-                if (!res.ok) { setAnonymous(); return null }
-                const data = await res.json()
-                setAuthenticated(data.user)
-                return data.user
+                const user = await getCurrentUser()
+                if (!user) { setAnonymous(); return null }
+                setAuthenticated(user)
+                return user
             } catch (e) {
                 console.warn('auth check failed', e)
                 setAnonymous()
@@ -550,14 +558,14 @@
                 appState = localState || { trips: [] }
                 try {
                     const token = await getCsrfToken()
-                    await fetch(`${API_BASE}/api/state`, { 
-                        method: 'POST', 
-                        headers: { 
+                    await fetch(`${API_BASE}/api/state`, {
+                        method: 'POST',
+                        headers: {
                             'Content-Type': 'application/json',
                             'CSRF-Token': token
-                        }, 
-                        credentials: 'include', 
-                        body: JSON.stringify({ state: appState }) 
+                        },
+                        credentials: 'include',
+                        body: JSON.stringify({ state: appState })
                     })
                 } catch (e) { console.warn('push local to backend failed', e) }
             } else if ((!localState || !localState.trips || !localState.trips.length) && (backendState.trips && backendState.trips.length)) {
@@ -656,7 +664,7 @@
                     const err = await res.json().catch(() => ({}))
                     return alert(err.error || 'register failed')
                 }
-                    // re-load and sync state after registering
+                // re-load and sync state after registering
                 await loadAndSyncState()
             } catch (e) { console.error(e); alert('register failed') }
         }
@@ -676,19 +684,14 @@
                     const err = await res.json().catch(() => ({}))
                     return alert(err.error || 'login failed')
                 }
-                    // re-load and sync state after login
+                // re-load and sync state after login
                 await loadAndSyncState()
             } catch (e) { console.error(e); alert('login failed') }
         }
 
         async function doLogout() {
             try {
-                const token = await getCsrfToken()
-                await fetch(`${API_BASE}/api/logout`, { 
-                    method: 'POST', 
-                    headers: { 'CSRF-Token': token },
-                    credentials: 'include' 
-                })
+                await logout()
             } catch (e) { console.warn('logout failed', e) }
             checkAuth()
             localStorage.clear()
@@ -790,14 +793,14 @@
         async function saveApi(appState) {
             try {
                 const token = await getCsrfToken()
-                await fetch(`${API_BASE}/api/state`, { 
-                    method: 'POST', 
-                    headers: { 
+                await fetch(`${API_BASE}/api/state`, {
+                    method: 'POST',
+                    headers: {
                         'Content-Type': 'application/json',
                         'CSRF-Token': token
-                    }, 
-                    credentials: 'include', 
-                    body: JSON.stringify({ state: appState }) 
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ state: appState })
                 })
             } catch (e) { console.warn('push local to backend failed', e) }
         }
@@ -998,9 +1001,9 @@
             newTripStart.value = ''
         })
 
-    // initial render
-    refreshAll()
-    renderHome()
+        // initial render
+        refreshAll()
+        renderHome()
 
         // burger menu toggle (named function)
         function setupBurgerMenu() {
