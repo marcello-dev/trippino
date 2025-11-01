@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Profile - Trippino</title>
+  <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=">
+  <style>
+    :root{--bg:#f6f8fa;--card:#ffffff;--muted:#8a5a32;--primary:#f97316;}
+    body{font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;background:var(--bg);margin:0;padding:24px;color:#111}
+    .app{max-width:980px;margin:0 auto}
+    .topnav{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+    .topnav .brand{font-size:20px;font-weight:700;color:inherit;text-decoration:none}
+    .card{background:var(--card);padding:14px;border-radius:12px;box-shadow:0 6px 18px rgba(12,18,32,0.06);}
+    .small{font-size:12px;color:var(--muted)}
+    .menu-item:hover{background:#f6f6f6;border-radius:6px}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topnav">
+      <a href="index.html" class="brand">Trippino</a>
+      <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+        <div id="authArea"></div>
+        <div id="burgerWrapper" style="position:relative;margin-left:8px">
+          <button id="burgerBtn" aria-label="Open menu" class="btn ghost">☰</button>
+          <div id="burgerMenu" style="display:none;position:absolute;right:0;top:40px;background:var(--card);border:1px solid #eee;border-radius:8px;box-shadow:0 6px 18px rgba(12,18,32,0.06);z-index:1000;min-width:160px;padding:6px">
+            <div class="small menu-item" data-action="profile" style="padding:8px;cursor:pointer">Profile</div>
+            <div class="small menu-item" data-action="about" style="padding:8px;cursor:pointer">About</div>
+            <div class="small menu-item" data-action="logout" style="padding:8px;cursor:pointer">Logout</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="card">
+      <h2>Profile</h2>
+      <p class="small">This is a placeholder profile page. We'll add account settings here later.</p>
+    </div>
+  </div>
+
+  <script src="/config.js"></script>
+  <script>
+    // reuse small auth logic similar to index/trip pages
+    const API_BASE = window.APP_CONFIG.API_BASE
+    const authArea = document.getElementById('authArea')
+    let currentUser = null
+
+    async function checkAuth() {
+      try {
+        const res = await fetch(`${API_BASE}/api/me`, { credentials: 'include' })
+        if (!res.ok) { setAnonymous(); return null }
+        const data = await res.json()
+        setAuthenticated(data.user)
+        return data.user
+      } catch (e) { setAnonymous(); return null }
+    }
+
+    function setAnonymous() {
+      currentUser = null
+      authArea.innerHTML = `<button id="goAuthBtn" class="btn primary">Sign in / Register</button>`
+      document.getElementById('goAuthBtn').addEventListener('click', () => window.location.href = 'auth.html')
+      const burgerBtn = document.getElementById('burgerBtn')
+      if (burgerBtn) burgerBtn.style.display = 'none'
+    }
+
+    function setAuthenticated(user) {
+      currentUser = user
+      authArea.innerHTML = `<div class="small">Signed in as <strong>${user.email}</strong></div>`
+      const burgerBtn = document.getElementById('burgerBtn')
+      if (burgerBtn) burgerBtn.style.display = ''
+
+      const menu = document.getElementById('burgerMenu')
+      if (menu) {
+        menu.querySelectorAll('.menu-item').forEach(mi => mi.addEventListener('click', async () => {
+          const act = mi.dataset.action
+          if (act === 'logout') { 
+            localStorage.clear()
+            await fetch(`${API_BASE}/api/logout`, { method: 'POST', credentials: 'include' })
+            window.location.href = 'index.html'
+          }
+          else if (act === 'profile') window.location.href = 'profile.html'
+          else if (act === 'about') window.location.href = 'about.html'
+          menu.style.display = 'none'
+        }))
+      }
+    }
+
+    function setupBurgerMenu() {
+      document.addEventListener('click', (e) => { if (!e.target.closest('#burgerWrapper')) document.getElementById('burgerMenu').style.display = 'none' })
+      const b = document.getElementById('burgerBtn'), m = document.getElementById('burgerMenu')
+      if (b && m) b.addEventListener('click', (e) => { e.stopPropagation(); m.style.display = m.style.display === 'none' ? '' : 'none' })
+    }
+
+    setupBurgerMenu()
+
+    checkAuth()
+  </script>
+</body>
+</html>

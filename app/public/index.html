@@ -46,6 +46,23 @@
             margin: 0
         }
 
+        /* Top navigation shared styles */
+        .topnav {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .topnav .brand {
+            font-size: 20px;
+            font-weight: 700;
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .menu-item:hover { background: #f6f6f6; border-radius:6px }
+
         input[type="text"],
         input[type="number"] {
             padding: 8px 10px;
@@ -421,10 +438,18 @@
 
 <body>
     <div class="app">
-        <header>
-            <h1>Trippino</h1>
+        <header class="topnav">
+            <a href="index.html" class="brand" aria-label="Trippino home">Trippino</a>
             <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
                 <div id="authArea"></div>
+                <div id="burgerWrapper" style="position:relative;margin-left:8px">
+                    <button id="burgerBtn" aria-label="Open menu" class="btn ghost">☰</button>
+                    <div id="burgerMenu" style="display:none;position:absolute;right:0;top:40px;background:var(--card);border:1px solid #eee;border-radius:8px;box-shadow:0 6px 18px rgba(12,18,32,0.06);z-index:1000;min-width:160px;padding:6px">
+                        <div class="small menu-item" data-action="profile" style="padding:8px;cursor:pointer">Profile</div>
+                        <div class="small menu-item" data-action="about" style="padding:8px;cursor:pointer">About</div>
+                        <div class="small menu-item" data-action="logout" style="padding:8px;cursor:pointer">Logout</div>
+                    </div>
+                </div>
             </div>
         </header>
 
@@ -541,7 +566,7 @@
 
             // refresh UI
             refreshAll()
-            render()
+            renderHome()
             // update anon banner after state load (in case local trips exist and user is anonymous)
             updateAnonBanner()
         }
@@ -563,11 +588,30 @@
             authArea.innerHTML = `
                 <div style="display:flex;gap:8px;align-items:center">
                     <div class="small">Signed in as <strong>${escapeHtml(user.email)}</strong></div>
-                    <button id="logoutBtn" class="btn ghost">Logout</button>
                 </div>
             `
-            document.getElementById('logoutBtn').addEventListener('click', doLogout)
+            // show burger button when authenticated
+            const burgerBtn = document.getElementById('burgerBtn')
+            if (burgerBtn) burgerBtn.style.display = ''
             updateAnonBanner()
+
+            // attach menu handlers
+            const menu = document.getElementById('burgerMenu')
+            if (menu) {
+                menu.querySelectorAll('.menu-item').forEach(mi => {
+                    mi.addEventListener('click', async (ev) => {
+                        const act = mi.dataset.action
+                        if (act === 'logout') {
+                            await doLogout()
+                        } else if (act === 'profile') {
+                            window.location.href = 'profile.html'
+                        } else if (act === 'about') {
+                            window.location.href = 'about.html'
+                        }
+                        menu.style.display = 'none'
+                    })
+                })
+            }
         }
 
         function updateAnonBanner() {
@@ -599,7 +643,7 @@
                     const err = await res.json().catch(() => ({}))
                     return alert(err.error || 'register failed')
                 }
-                // re-load and sync state after registering
+                    // re-load and sync state after registering
                 await loadAndSyncState()
             } catch (e) { console.error(e); alert('register failed') }
         }
@@ -619,7 +663,7 @@
                     const err = await res.json().catch(() => ({}))
                     return alert(err.error || 'login failed')
                 }
-                // re-load and sync state after login
+                    // re-load and sync state after login
                 await loadAndSyncState()
             } catch (e) { console.error(e); alert('login failed') }
         }
@@ -631,7 +675,7 @@
             checkAuth()
             localStorage.clear()
             appState = { trips: [] }
-            render()
+            renderHome()
         }
 
         // check auth and sync state on load
@@ -753,7 +797,7 @@
             appState.updatedAt = new Date().toISOString()
             save(appState)
             refreshAll()
-            render()
+            renderHome()
             // if an anonymous user just created their first trip, show banner
             updateAnonBanner()
         }
@@ -765,7 +809,7 @@
             appState.updatedAt = new Date().toISOString()
             save(appState)
             refreshAll()
-            render()
+            renderHome()
             // update banner in case trips count dropped to 0
             updateAnonBanner()
         }
@@ -828,6 +872,7 @@
                         if (n !== null) {
                             t.name = n
                             updateTripInStore(t)
+                            renderHome()
                             renderTripsContainer()
                         }
                     })
@@ -910,7 +955,7 @@
         function formatDate(d) { return d.toISOString().slice(0, 10) }
 
         // render function for trip list page
-        function render() {
+        function renderHome() {
             renderTripsContainer()
         }
 
@@ -925,9 +970,33 @@
             newTripStart.value = ''
         })
 
-        // initial render
-        refreshAll()
-        render()
+    // initial render
+    refreshAll()
+    renderHome()
+
+        // burger menu toggle (named function)
+        function setupBurgerMenu() {
+            const burgerBtn = document.getElementById('burgerBtn')
+            const burgerMenu = document.getElementById('burgerMenu')
+            if (!burgerBtn || !burgerMenu) return
+            // hide burger for anonymous by default
+            if (!currentUser) burgerBtn.style.display = 'none'
+
+            burgerBtn.addEventListener('click', (e) => {
+                e.stopPropagation()
+                burgerMenu.style.display = burgerMenu.style.display === 'none' ? '' : 'none'
+            })
+
+            // close when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('#burgerWrapper')) {
+                    burgerMenu.style.display = 'none'
+                }
+            })
+        }
+
+        // initialize burger
+        setupBurgerMenu()
 
     </script>
 </body>

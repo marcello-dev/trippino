@@ -45,6 +45,23 @@
             margin: 0
         }
 
+        /* Top navigation shared styles */
+        .topnav {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .topnav .brand {
+            font-size: 20px;
+            font-weight: 700;
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .menu-item:hover { background: #f6f6f6; border-radius:6px }
+
         input[type="text"],
         input[type="number"] {
             padding: 8px 10px;
@@ -483,11 +500,20 @@
 
 <body>
     <div class="app">
-        <header>
-            <a href="index.html" class="back-link">← Back to trips</a>
-            <h1 id="tripTitle">Trip Details</h1>
+        <header class="topnav">
+            <a href="index.html" class="brand">Trippino</a>
+            <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+                <div id="authArea"></div>
+                <div id="burgerWrapper" style="position:relative;margin-left:8px">
+                    <button id="burgerBtn" aria-label="Open menu" class="btn ghost">☰</button>
+                    <div id="burgerMenu" style="display:none;position:absolute;right:0;top:40px;background:var(--card);border:1px solid #eee;border-radius:8px;box-shadow:0 6px 18px rgba(12,18,32,0.06);z-index:1000;min-width:160px;padding:6px">
+                        <div class="small menu-item" data-action="profile" style="padding:8px;cursor:pointer">Profile</div>
+                        <div class="small menu-item" data-action="about" style="padding:8px;cursor:pointer">About</div>
+                        <div class="small menu-item" data-action="logout" style="padding:8px;cursor:pointer">Logout</div>
+                    </div>
+                </div>
+            </div>
         </header>
-
         <div id="tripContainer"></div>
     </div>
 
@@ -506,6 +532,98 @@
         const MAX_CITY_NAME_LENGTH = 60
         const MAX_DAYS_PER_CITY = 365
         const NAME_SAFE_REGEX = /^[A-Za-z0-9 \-\'\(\)\.,]*$/
+
+        // --- Auth config & helpers ---
+        const authArea = document.getElementById('authArea')
+        const anonBanner = document.getElementById('anonBanner')
+        // currentUser: null = anonymous, otherwise object with email
+        let currentUser = null
+
+        async function checkAuth() {
+            try {
+                const res = await fetch(`${API_BASE}/api/me`, { credentials: 'include' })
+                if (!res.ok) { setAnonymous(); return null }
+                const data = await res.json()
+                setAuthenticated(data.user)
+                return data.user
+            } catch (e) {
+                console.warn('auth check failed', e)
+                setAnonymous()
+                return null
+            }
+        }
+        
+        checkAuth()
+
+        function setAuthenticated(user) {
+            currentUser = user
+            authArea.innerHTML = `
+                <div style="display:flex;gap:8px;align-items:center">
+                    <div class="small">Signed in as <strong>${escapeHtml(user.email)}</strong></div>
+                </div>
+            `
+            // show burger button when authenticated
+            const burgerBtn = document.getElementById('burgerBtn')
+            if (burgerBtn) burgerBtn.style.display = ''
+            updateAnonBanner()
+
+            // attach menu handlers
+            const menu = document.getElementById('burgerMenu')
+            if (menu) {
+                menu.querySelectorAll('.menu-item').forEach(mi => {
+                    mi.addEventListener('click', async (ev) => {
+                        const act = mi.dataset.action
+                        if (act === 'logout') {
+                            await doLogout()
+                            window.location.href = 'index.html'
+                        } else if (act === 'profile') {
+                            window.location.href = 'profile.html'
+                        } else if (act === 'about') {
+                            window.location.href = 'about.html'
+                        }
+                        menu.style.display = 'none'
+                    })
+                })
+            }
+        }
+
+        function updateAnonBanner() {
+            try {
+                // show banner only when anonymous and there are local trips
+                const hasLocalTrips = appState && Array.isArray(appState.trips) && appState.trips.length > 0
+                if (!currentUser && hasLocalTrips) {
+                    anonBanner.style.display = ''
+                } else {
+                    anonBanner.style.display = 'none'
+                }
+            } catch (e) {
+                // ignore
+            }
+        }
+
+        function setAnonymous() {
+            currentUser = null
+            authArea.innerHTML = `
+                <button id="goAuthBtn" class="btn primary">Sign in / Register</button>
+            `
+            document.getElementById('goAuthBtn').addEventListener('click', () => {
+                // open the dedicated auth page
+                window.location.href = 'auth.html'
+            })
+            updateAnonBanner()
+        }
+
+
+
+        async function doLogout() {
+            try {
+                await fetch(`${API_BASE}/api/logout`, { method: 'POST', credentials: 'include' })
+            } catch (e) { console.warn('logout failed', e) }
+            checkAuth()
+            localStorage.clear()
+            appState = { trips: [] }
+            render()
+        }
 
         // Get trip ID from URL
         const urlParams = new URLSearchParams(window.location.search)
@@ -555,7 +673,6 @@
             window.location.href = 'index.html'
         }
 
-        document.getElementById('tripTitle').textContent = trip.name || 'Untitled Trip'
 
         function validateCityName(name) {
             if (!name || !name.trim()) return { ok: false, error: 'City name required' }
@@ -744,6 +861,10 @@
         function render() {
             const container = document.getElementById('tripContainer')
             container.innerHTML = ''
+
+            // fetch info from state
+            const trip = appState.trips.find(t => t.id === tripId)
+            if (!trip) return
 
             // Trip editor card
             const editorCard = document.createElement('div')
@@ -1295,6 +1416,28 @@
         })
 
         render()
+        // burger menu toggle (named function)
+        function setupBurgerMenu() {
+            const burgerBtn = document.getElementById('burgerBtn')
+            const burgerMenu = document.getElementById('burgerMenu')
+            if (!burgerBtn || !burgerMenu) return
+            // hide burger for anonymous by default
+            if (!currentUser) burgerBtn.style.display = 'none'
+
+            burgerBtn.addEventListener('click', (e) => {
+                e.stopPropagation()
+                burgerMenu.style.display = burgerMenu.style.display === 'none' ? '' : 'none'
+            })
+
+            // close when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('#burgerWrapper')) {
+                    burgerMenu.style.display = 'none'
+                }
+            })
+        }
+
+        setupBurgerMenu()
     </script>
 </body>
 
