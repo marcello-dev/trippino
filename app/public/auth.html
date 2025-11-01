@@ -128,6 +128,26 @@
 
     let isLoginMode = true
 
+    // CSRF token management
+    let csrfToken = null
+    async function getCsrfToken() {
+      if (csrfToken) return csrfToken
+      try {
+        const res = await fetch(`${API_BASE}/api/csrf-token`, { credentials: 'include' })
+        if (res.ok) {
+          const data = await res.json()
+          csrfToken = data.csrfToken
+          return csrfToken
+        }
+      } catch (e) {
+        console.error('Failed to get CSRF token', e)
+      }
+      return null
+    }
+
+    // Initialize CSRF token on page load
+    getCsrfToken()
+
     async function checkAuthAndRedirect() {
       try {
         const res = await fetch(`${API_BASE}/api/me`, { credentials: 'include' })
@@ -144,9 +164,13 @@
       err.style.display = 'none'
       msg.textContent = 'Signing in...'
       try {
+        const token = await getCsrfToken()
         const res = await fetch(`${API_BASE}/api/login`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'CSRF-Token': token
+          },
           credentials: 'include',
           body: JSON.stringify({
             email: emailEl.value.trim(),
@@ -197,9 +221,13 @@
       err.style.display = 'none'
       msg.textContent = 'Creating account...'
       try {
+        const token = await getCsrfToken()
         const res = await fetch(`${API_BASE}/api/register`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'CSRF-Token': token
+          },
           credentials: 'include',
           body: JSON.stringify({
             email: email,

@@ -4,6 +4,7 @@ const { v4: uuidv4 } = require('uuid')
 const bcrypt = require('bcryptjs')
 const nodemailer = require('nodemailer')
 const rateLimit = require('express-rate-limit')
+const csrf = require('csurf')
 
 const app = express()
 const PORT = process.env.PORT
@@ -87,6 +88,15 @@ const COOKIE_NAME = 'trippino_sid'
 app.use(express.json())
 app.use(cookieParser())
 
+// --- CSRF Protection ---
+const csrfProtection = csrf({ 
+  cookie: {
+    httpOnly: true,
+    sameSite: 'strict',
+    secure: process.env.NODE_ENV === 'production'
+  }
+})
+
 // --- Rate Limiters ---
 
 // Strict rate limiter for authentication endpoints (login, register)
@@ -147,6 +157,11 @@ app.use('/api', apiLimiter)
 // --- API Health Check ---
 app.get('/api/health', (req, res) => res.json({ ok: true }))
 
+// Get CSRF token endpoint
+app.get('/api/csrf-token', csrfProtection, (req, res) => {
+  res.json({ csrfToken: req.csrfToken() })
+})
+
 // Verify email endpoint
 app.get('/api/verify-email', async (req, res) => {
   try {
@@ -197,7 +212,7 @@ async function getSession(req) {
 }
 
 // login route
-app.post('/api/login', authLimiter, async (req, res) => {
+app.post('/api/login', csrfProtection, authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body || {}
     if (!email || !password) return res.status(400).json({ error: 'email and password required' })
@@ -213,7 +228,7 @@ app.post('/api/login', authLimiter, async (req, res) => {
 })
 
 // register route with email verification
-app.post('/api/register', registerLimiter, async (req, res) => {
+app.post('/api/register', csrfProtection, registerLimiter, async (req, res) => {
   try {
     const { email, password, confirmPassword } = req.body || {}
     if (!email || !password) return res.status(400).json({ error: 'email and password required' })
@@ -251,7 +266,7 @@ app.get('/api/me', async (req, res) => {
 })
 
 // change password
-app.post('/api/change-password', passwordChangeLimiter, async (req, res) => {
+app.post('/api/change-password', csrfProtection, passwordChangeLimiter, async (req, res) => {
   try {
     const s = await getSession(req)
     if (!s) return res.status(401).json({ error: 'not authenticated' })
@@ -290,7 +305,7 @@ app.post('/api/change-password', passwordChangeLimiter, async (req, res) => {
 })
 
 // logout
-app.post('/api/logout', async (req, res) => {
+app.post('/api/logout', csrfProtection, async (req, res) => {
   try {
     const sid = req.cookies[COOKIE_NAME]
     if (sid) await run(`DELETE FROM sessions WHERE sid = ?`, [sid])
@@ -300,7 +315,7 @@ app.post('/api/logout', async (req, res) => {
 })
 
 // save state for authenticated user
-app.post('/api/state', async (req, res) => {
+app.post('/api/state', csrfProtection, async (req, res) => {
   try {
     const s = await getSession(req)
     if (!s) return res.status(401).json({ error: 'not authenticated' })

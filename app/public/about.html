@@ -108,6 +108,27 @@
         const API_BASE = window.APP_CONFIG.API_BASE
         const authArea = document.getElementById('authArea')
         let currentUser = null
+
+        // CSRF token management
+        let csrfToken = null
+        async function getCsrfToken() {
+            if (csrfToken) return csrfToken
+            try {
+                const res = await fetch(`${API_BASE}/api/csrf-token`, { credentials: 'include' })
+                if (res.ok) {
+                    const data = await res.json()
+                    csrfToken = data.csrfToken
+                    return csrfToken
+                }
+            } catch (e) {
+                console.error('Failed to get CSRF token', e)
+            }
+            return null
+        }
+
+        // Initialize CSRF token on page load
+        getCsrfToken()
+
         async function checkAuth() {
             try {
                 const res = await fetch(`${API_BASE}/api/me`, { credentials: 'include' })
@@ -136,8 +157,10 @@
                     const act = mi.dataset.action;
                     if (act === 'logout') {
                         localStorage.clear();
+                        const token = await getCsrfToken();
                         await fetch(`${API_BASE}/api/logout`, {
                             method: 'POST',
+                            headers: { 'CSRF-Token': token },
                             credentials: 'include'
                         });
                         window.location.href = 'index.html'

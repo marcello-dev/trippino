@@ -75,6 +75,26 @@
     const authArea = document.getElementById('authArea')
     let currentUser = null
 
+    // CSRF token management
+    let csrfToken = null
+    async function getCsrfToken() {
+      if (csrfToken) return csrfToken
+      try {
+        const res = await fetch(`${API_BASE}/api/csrf-token`, { credentials: 'include' })
+        if (res.ok) {
+          const data = await res.json()
+          csrfToken = data.csrfToken
+          return csrfToken
+        }
+      } catch (e) {
+        console.error('Failed to get CSRF token', e)
+      }
+      return null
+    }
+
+    // Initialize CSRF token on page load
+    getCsrfToken()
+
     async function checkAuth() {
       try {
         const res = await fetch(`${API_BASE}/api/me`, { credentials: 'include' })
@@ -105,12 +125,17 @@
           const act = mi.dataset.action
           if (act === 'logout') { 
             localStorage.clear()
-            await fetch(`${API_BASE}/api/logout`, { method: 'POST', credentials: 'include' })
+            const token = await getCsrfToken()
+            await fetch(`${API_BASE}/api/logout`, { 
+              method: 'POST', 
+              headers: { 'CSRF-Token': token },
+              credentials: 'include' 
+            })
             window.location.href = 'index.html'
           }
           else if (act === 'profile') window.location.href = 'profile.html'
           else if (act === 'about') window.location.href = 'about.html'
-        else if (act === 'home') window.location.href = 'index.html'
+          else if (act === 'home') window.location.href = 'index.html'
           menu.style.display = 'none'
         }))
       }
@@ -141,9 +166,13 @@
 
     async function changePassword(currentPassword, newPassword) {
       try {
+        const token = await getCsrfToken()
         const res = await fetch(`${API_BASE}/api/change-password`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'CSRF-Token': token
+          },
           credentials: 'include',
           body: JSON.stringify({ currentPassword, newPassword })
         })

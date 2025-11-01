@@ -492,6 +492,26 @@
         // currentUser: null = anonymous, otherwise object with email
         let currentUser = null
 
+        // CSRF token management
+        let csrfToken = null
+        async function getCsrfToken() {
+            if (csrfToken) return csrfToken
+            try {
+                const res = await fetch(`${API_BASE}/api/csrf-token`, { credentials: 'include' })
+                if (res.ok) {
+                    const data = await res.json()
+                    csrfToken = data.csrfToken
+                    return csrfToken
+                }
+            } catch (e) {
+                console.error('Failed to get CSRF token', e)
+            }
+            return null
+        }
+
+        // Initialize CSRF token on page load
+        getCsrfToken()
+
         async function checkAuth() {
             try {
                 const res = await fetch(`${API_BASE}/api/me`, { credentials: 'include' })
@@ -544,7 +564,16 @@
                 // logged in, only local exists -> use local and push to backend
                 appState = localState || { trips: [] }
                 try {
-                    await fetch(`${API_BASE}/api/state`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ state: appState }) })
+                    const token = await getCsrfToken()
+                    await fetch(`${API_BASE}/api/state`, { 
+                        method: 'POST', 
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'CSRF-Token': token
+                        }, 
+                        credentials: 'include', 
+                        body: JSON.stringify({ state: appState }) 
+                    })
                 } catch (e) { console.warn('push local to backend failed', e) }
             } else if ((!localState || !localState.trips || !localState.trips.length) && (backendState.trips && backendState.trips.length)) {
                 console.log('local state empty but backend has trips, using backend state')
@@ -669,7 +698,12 @@
 
         async function doLogout() {
             try {
-                await fetch(`${API_BASE}/api/logout`, { method: 'POST', credentials: 'include' })
+                const token = await getCsrfToken()
+                await fetch(`${API_BASE}/api/logout`, { 
+                    method: 'POST', 
+                    headers: { 'CSRF-Token': token },
+                    credentials: 'include' 
+                })
             } catch (e) { console.warn('logout failed', e) }
             checkAuth()
             localStorage.clear()
@@ -770,7 +804,16 @@
 
         async function saveApi(appState) {
             try {
-                await fetch(`${API_BASE}/api/state`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ state: appState }) })
+                const token = await getCsrfToken()
+                await fetch(`${API_BASE}/api/state`, { 
+                    method: 'POST', 
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'CSRF-Token': token
+                    }, 
+                    credentials: 'include', 
+                    body: JSON.stringify({ state: appState }) 
+                })
             } catch (e) { console.warn('push local to backend failed', e) }
         }
 
