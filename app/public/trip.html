@@ -1013,7 +1013,8 @@
               });
               if (res.ok) {
                 const data = await res.json().catch(() => ({}));
-                trip.start = (data && data.trip && data.trip.start_date) || newVal;
+                trip.start =
+                  (data && data.trip && data.trip.start_date) || newVal;
                 updateTripInStore();
                 render();
               } else if (res.status === 401) {
@@ -1027,17 +1028,24 @@
                 startInput.value = prev;
               } else if (res.status === 404) {
                 const err = await res.json().catch(() => ({}));
-                showClientError(err.error || "Trip not found or you don't have permission to edit it.");
+                showClientError(
+                  err.error ||
+                    "Trip not found or you don't have permission to edit it.",
+                );
                 startInput.value = prev;
               } else {
                 const err = await res.json().catch(() => ({}));
                 console.warn("Failed to update start date in backend:", err);
-                showClientError("Cannot update trip: backend error (read-only mode).");
+                showClientError(
+                  "Cannot update trip: backend error (read-only mode).",
+                );
                 startInput.value = prev;
               }
             } catch (e) {
               console.warn("Network error updating start date:", e);
-              showClientError("Cannot update trip: offline or network error (read-only mode).");
+              showClientError(
+                "Cannot update trip: offline or network error (read-only mode).",
+              );
               startInput.value = prev;
             }
           } else {

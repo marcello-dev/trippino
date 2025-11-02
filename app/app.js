@@ -243,6 +243,9 @@ app.get("/config.js", (req, res) => {
   res.send(`window.APP_CONFIG = { API_BASE: "${API_BASE}" };`);
 });
 
+// --- Register trip routes in separate module ---
+require("./routes/trips")(app, { csrfProtection, getSession, run, get });
+
 async function createSessionForUserId(userId) {
   const sid = uuidv4();
   const createdAt = Date.now();
@@ -453,67 +456,6 @@ app.get("/api/state", async (req, res) => {
   }
 });
 
-// Create a new trip
-app.post("/api/trips", csrfProtection, async (req, res) => {
-  try {
-    const s = await getSession(req);
-    if (!s) return res.status(401).json({ error: "not authenticated" });
-
-    const { name, start_date } = req.body || {};
-    if (!name || !name.trim()) {
-      return res.status(400).json({ error: "trip name required" });
-    }
-
-    // Validate start_date format if provided (should be YYYY-MM-DD)
-    if (start_date && !/^\d{4}-\d{2}-\d{2}$/.test(start_date)) {
-      return res
-        .status(400)
-        .json({ error: "start_date must be in YYYY-MM-DD format" });
-    }
-
-    const result = await run(
-      `INSERT INTO trips(name, start_date, user_id) VALUES(?,?,?)`,
-      [name.trim(), start_date || null, s.user.id],
-    );
-
-    return res.json({ ok: true, id: result.lastID });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({ error: "server error" });
-  }
-});
-
-// Delete a trip (CASCADE will automatically delete all cities)
-app.delete("/api/trips/:id", csrfProtection, async (req, res) => {
-  try {
-    const s = await getSession(req);
-    if (!s) return res.status(401).json({ error: "not authenticated" });
-
-    const tripId = parseInt(req.params.id, 10);
-    if (!tripId || !Number.isInteger(tripId)) {
-      return res.status(400).json({ error: "invalid trip id" });
-    }
-
-    // Verify the trip belongs to the current user before deleting
-    const trip = await get(
-      `SELECT id FROM trips WHERE id = ? AND user_id = ?`,
-      [tripId, s.user.id],
-    );
-
-    if (!trip) {
-      return res.status(404).json({ error: "trip not found or unauthorized" });
-    }
-
-    // Delete the trip (CASCADE will automatically delete all related cities)
-    await run(`DELETE FROM trips WHERE id = ?`, [tripId]);
-
-    return res.json({ ok: true });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({ error: "server error" });
-  }
-});
-
 // Update a trip's name and/or start_date
 app.put("/api/trips/:id", csrfProtection, async (req, res) => {
   try {
@@ -575,6 +517,72 @@ app.put("/api/trips/:id", csrfProtection, async (req, res) => {
       [tripId, s.user.id],
     );
     return res.json({ ok: true, trip: updated });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: "server error" });
+  }
+});
+
+// Create a city in a trip (appended at the end)
+app.post("/api/trips/:id/cities", csrfProtection, async (req, res) => {
+  try {
+    const s = await getSession(req);
+    if (!s) return res.status(401).json({ error: "not authenticated" });
+
+    const tripId = parseInt(req.params.id, 10);
+    if (!tripId || !Number.isInteger(tripId)) {
+      return res.status(400).json({ error: "invalid trip id" });
+    }
+
+    // Verify the trip belongs to the current user
+    const trip = await get(
+      `SELECT id FROM trips WHERE id = ? AND user_id = ?`,
+      [tripId, s.user.id],
+    );
+    if (!trip) {
+      return res.status(404).json({ error: "trip not found or unauthorized" });
+    }
+
+    const { name, nights, notes } = req.body || {};
+    if (!name || !String(name).trim()) {
+      return res.status(400).json({ error: "city name required" });
+    }
+
+    let n =
+      typeof nights === "undefined" || nights === null ? 1 : Number(nights);
+    if (!Number.isFinite(n) || n < 0) {
+      return res
+        .status(400)
+        .json({ error: "nights must be a non-negative number" });
+    }
+    // clamp to a reasonable upper bound
+    if (n > 365) n = 365;
+    n = Math.floor(n);
+
+    // Determine the next sort order (append at the end)
+    const row = await get(
+      `SELECT COALESCE(MAX(sort_order), -1) AS maxo FROM cities WHERE trip_id = ?`,
+      [tripId],
+    );
+    const nextOrder = (row && typeof row.maxo === "number" ? row.maxo : -1) + 1;
+
+    const result = await run(
+      `INSERT INTO cities(name, nights, notes, sort_order, trip_id) VALUES(?,?,?,?,?)`,
+      [
+        String(name).trim(),
+        n,
+        typeof notes === "string" && notes.trim() !== "" ? notes : null,
+        nextOrder,
+        tripId,
+      ],
+    );
+
+    const city = await get(
+      `SELECT id, name, nights, notes, sort_order, trip_id FROM cities WHERE id = ?`,
+      [result.lastID],
+    );
+
+    return res.json({ ok: true, city });
   } catch (e) {
     console.error(e);
     return res.status(500).json({ error: "server error" });

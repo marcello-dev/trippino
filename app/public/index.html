@@ -983,10 +983,7 @@
               );
             }
           } catch (e) {
-            console.warn(
-              "Failed to create trip in backend:",
-              e,
-            );
+            console.warn("Failed to create trip in backend:", e);
             return showClientError(
               "Failed to create trip in backend. readonly mode.",
             );
@@ -1162,21 +1159,30 @@
                     console.warn("Session expired");
                     currentUser = null;
                     checkAuth();
-                    return showClientError("Session expired. Please sign in again.");
+                    return showClientError(
+                      "Session expired. Please sign in again.",
+                    );
                   } else if (res.status === 400) {
                     const err = await res.json().catch(() => ({}));
                     return showClientError(err.error || "Invalid input data.");
                   } else if (res.status === 404) {
                     const err = await res.json().catch(() => ({}));
-                    return showClientError(err.error || "Trip not found or you don't have permission to edit it.");
+                    return showClientError(
+                      err.error ||
+                        "Trip not found or you don't have permission to edit it.",
+                    );
                   } else {
                     const err = await res.json().catch(() => ({}));
                     console.warn("Failed to update trip in backend:", err);
-                    return showClientError("Cannot update trip: backend error (read-only mode).");
+                    return showClientError(
+                      "Cannot update trip: backend error (read-only mode).",
+                    );
                   }
                 } catch (err) {
                   console.warn("Network error updating trip:", err);
-                  return showClientError("Cannot update trip: offline or network error (read-only mode).");
+                  return showClientError(
+                    "Cannot update trip: offline or network error (read-only mode).",
+                  );
                 }
               } else {
                 // Anonymous: update locally
