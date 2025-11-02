@@ -481,6 +481,37 @@ app.post("/api/trips", csrfProtection, async (req, res) => {
   }
 });
 
+// Delete a trip (CASCADE will automatically delete all cities)
+app.delete("/api/trips/:id", csrfProtection, async (req, res) => {
+  try {
+    const s = await getSession(req);
+    if (!s) return res.status(401).json({ error: "not authenticated" });
+    
+    const tripId = parseInt(req.params.id, 10);
+    if (!tripId || !Number.isInteger(tripId)) {
+      return res.status(400).json({ error: "invalid trip id" });
+    }
+    
+    // Verify the trip belongs to the current user before deleting
+    const trip = await get(
+      `SELECT id FROM trips WHERE id = ? AND user_id = ?`,
+      [tripId, s.user.id]
+    );
+    
+    if (!trip) {
+      return res.status(404).json({ error: "trip not found or unauthorized" });
+    }
+    
+    // Delete the trip (CASCADE will automatically delete all related cities)
+    await run(`DELETE FROM trips WHERE id = ?`, [tripId]);
+    
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: "server error" });
+  }
+});
+
 // TomTom proxy - forwards queries to TomTom Search API using server-side key
 app.get("/api/tomtom", async (req, res) => {
   try {

@@ -943,7 +943,7 @@
         
         let tripId = null;
         
-        // If user is logged in, try to create trip in backend first
+        // If user is logged in, try to create trip in backend
         if (currentUser) {
           try {
             const token = await getCsrfToken();
@@ -969,7 +969,7 @@
               currentUser = null;
               checkAuth();
                 return showClientError(
-                    "Session expired. Please sign in again to create trips.",
+                    "Session expired. Please sign in again.",
                 );
             } else if (res.status === 400) {
               // Validation error from backend
@@ -1009,15 +1009,70 @@
         updateAnonBanner();
       }
 
-      function deleteTrip(id) {
+      async function deleteTrip(id) {
         const idx = appState.trips.findIndex((t) => t.id === id);
         if (idx === -1) return;
-        appState.trips.splice(idx, 1);
-        save(appState);
-        refreshAll();
-        renderHome();
-        // update banner in case trips count dropped to 0
-        updateAnonBanner();
+        
+        // If user is logged in, try to delete from backend first
+        if (currentUser) {
+          try {
+            const token = await getCsrfToken();
+            const res = await fetch(`${API_BASE}/api/trips/${id}`, {
+              method: "DELETE",
+              headers: {
+                "CSRF-Token": token,
+              },
+              credentials: "include",
+            });
+            
+            if (res.ok) {
+              // Successfully deleted from backend, now delete from local
+              appState.trips.splice(idx, 1);
+              save(appState);
+              refreshAll();
+              renderHome();
+              updateAnonBanner();
+            } else if (res.status === 401) {
+              // Session expired
+              console.warn("Session expired");
+              currentUser = null;
+              checkAuth();
+              return showClientError("Session expired. Please sign in again.");
+            } else if (res.status === 400) {
+              // Validation error from backend
+              const err = await res.json().catch(() => ({}));
+              console.warn("Validation error deleting trip:", err);
+              return showClientError(err.error || "Invalid trip ID.");
+            } else if (res.status === 404) {
+              // Trip not found or unauthorized
+              const err = await res.json().catch(() => ({}));
+              console.warn("Trip not found or unauthorized:", err);
+              return showClientError(
+                err.error || "Trip not found or you don't have permission to delete it."
+              );
+            } else {
+              // Other backend error - read-only mode
+              const err = await res.json().catch(() => ({}));
+              console.warn("Failed to delete trip from backend:", err);
+              return showClientError(
+                "Cannot delete trip: backend error (read-only mode)."
+              );
+            }
+          } catch (e) {
+            // Network error or offline - read-only mode
+            console.warn("Failed to delete trip from backend (network error):", e);
+            return showClientError(
+              "Cannot delete trip: offline or network error (read-only mode)."
+            );
+          }
+        } else {
+          // Anonymous user - delete locally only
+          appState.trips.splice(idx, 1);
+          save(appState);
+          refreshAll();
+          renderHome();
+          updateAnonBanner();
+        }
       }
 
       function updateTripInStore(t) {
@@ -1064,10 +1119,10 @@
 
           header
             .querySelector('[data-action="del"]')
-            .addEventListener("click", (e) => {
+            .addEventListener("click", async (e) => {
               e.stopPropagation();
               if (confirm("Delete trip?")) {
-                deleteTrip(t.id);
+                await deleteTrip(t.id);
                 renderTripsContainer();
               }
             });
