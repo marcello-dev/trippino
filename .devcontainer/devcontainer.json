@@ -1,18 +1,16 @@
 {
-    "name": "Ubuntu DevContainer",
-    "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
-    "features": {
-        "ghcr.io/devcontainers/features/node:1": {}
-    },
-    "customizations": {
-        "vscode": {
-            "extensions": [
-                "qwtel.sqlite-viewer"
-            ]
-        }
-    },
-    "mounts": [
-        // SSH for Git
-        "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached"
-    ]
+  "name": "Ubuntu DevContainer",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["qwtel.sqlite-viewer"]
+    }
+  },
+  "mounts": [
+    // SSH for Git
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached"
+  ]
 }

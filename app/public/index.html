@@ -1,882 +1,1014 @@
 <!doctype html>
 <html lang="en">
-
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Trippino</title>
     <!-- Inline 1x1 transparent favicon to avoid browser requesting /favicon.ico -->
-    <link rel="icon" type="image/png"
-        href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=">
+    <link
+      rel="icon"
+      type="image/png"
+      href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII="
+    />
     <style>
-        :root {
-            /* warm orange theme */
-            --bg: #f6f8fa;
-            --card: #ffffff;
-            --muted: #8a5a32;
-            /* muted warm brown */
-            --primary: #f97316;
-            /* bright orange */
-            --accent: #ffb380;
-            /* soft peach accent */
-        }
+      :root {
+        /* warm orange theme */
+        --bg: #f6f8fa;
+        --card: #ffffff;
+        --muted: #8a5a32;
+        /* muted warm brown */
+        --primary: #f97316;
+        /* bright orange */
+        --accent: #ffb380;
+        /* soft peach accent */
+      }
 
+      body {
+        font-family:
+          Inter,
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          "Helvetica Neue",
+          Arial;
+        background: var(--bg);
+        margin: 0;
+        padding: 24px;
+        color: #111;
+      }
+
+      .app {
+        max-width: 980px;
+        margin: 0 auto;
+      }
+
+      header {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 18px;
+      }
+
+      h1 {
+        font-size: 20px;
+        margin: 0;
+      }
+
+      /* Top navigation shared styles */
+      .topnav {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+
+      .topnav .brand {
+        font-size: 20px;
+        font-weight: 700;
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .menu-item:hover {
+        background: #f6f6f6;
+        border-radius: 6px;
+      }
+
+      input[type="text"],
+      input[type="number"] {
+        padding: 8px 10px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+      }
+
+      .card {
+        background: var(--card);
+        padding: 14px;
+        border-radius: 12px;
+        box-shadow: 0 6px 18px rgba(12, 18, 32, 0.06);
+        margin-bottom: 12px;
+      }
+
+      .controls {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .cities {
+        margin-top: 12px;
+      }
+
+      .city {
+        display: grid;
+        grid-template-columns: 24px 1fr 160px 250px 80px;
+        gap: 10px;
+        align-items: center;
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px dashed #eee;
+        margin-bottom: 8px;
+      }
+
+      .city .drag-handle {
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #999;
+        cursor: grab;
+        user-select: none;
+      }
+
+      .city .drag-handle svg {
+        width: 16px;
+        height: 16px;
+      }
+
+      .city .name {
+        font-weight: 600;
+      }
+
+      /* calendar styles */
+      .calendar-wrapper {
+        margin-top: 12px;
+      }
+
+      .months {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        gap: 12px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      .month-card {
+        border-radius: 8px;
+        border: 1px solid #eee;
+        padding: 10px;
+        background: var(--card);
+        box-sizing: border-box;
+        width: 100%;
+        /* remove fixed 350px width */
+      }
+
+      .month-header {
+        font-weight: 700;
+        margin-bottom: 6px;
+      }
+
+      .weekday-row {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        font-size: 12px;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      .days-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 0;
+      }
+
+      /* each day cell is identical size so bars are visually contiguous */
+      .day {
+        height: 56px;
+        /* fixed height */
+        border-radius: 0;
+        background: #fff;
+        text-align: right;
+        padding: 6px;
+        font-size: 13px;
+        position: relative;
+        box-sizing: border-box;
+        overflow: visible;
+      }
+
+      .day.blank {
+        background: transparent;
+      }
+
+      /* blue bar styles for in-range days */
+      /* in-range days no longer color the whole cell; we render thin bars instead */
+      .day.in-range {
+        color: inherit;
+      }
+
+      /* round only the ends so consecutive .in-range cells form one contiguous bar */
+      .day.range-start {
+        border-top-left-radius: 20px;
+        border-bottom-left-radius: 20px;
+      }
+
+      .day.range-end {
+        border-top-right-radius: 20px;
+        border-bottom-right-radius: 20px;
+      }
+
+      /* label is absolutely positioned so it won't change cell height */
+      /* thin horizontal bar that represents the city range on a day cell */
+      .range-seg {
+        position: absolute;
+        left: 0px;
+        right: -2px;
+        /* slightly extend to connect with next cell */
+        height: 14px;
+        background: var(--primary);
+        color: #fff;
+        font-size: 12px;
+        line-height: 14px;
+        padding: 0 6px;
+        box-sizing: border-box;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 0;
+        /* no rounding in middle segments */
+        z-index: 1;
+      }
+
+      .range-seg .seg-label {
+        font-size: 11px;
+        color: #fff;
+      }
+
+      .day .date-num {
+        z-index: 2;
+      }
+
+      .range-seg.range-start {
+        border-top-left-radius: 10px;
+        border-bottom-left-radius: 10px;
+      }
+
+      .range-seg.range-end {
+        border-top-right-radius: 10px;
+        border-bottom-right-radius: 10px;
+      }
+
+      .day .date-num {
+        position: absolute;
+        right: 6px;
+        top: 6px;
+        font-size: 12px;
+        color: inherit;
+      }
+
+      .small {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .days-control {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+
+      .days-control button {
+        width: 30px;
+        height: 30px;
+        border: none;
+        cursor: pointer;
+        background: #fff;
+        border-radius: 20px;
+        transition: background-color 0.2s;
+      }
+
+      .days-control button:hover {
+        background: #f0f0f0;
+      }
+
+      .days-control input {
+        width: 60px;
+        text-align: center;
+      }
+
+      .meta {
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .topline {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+        justify-self: end;
+      }
+
+      .btn {
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 0;
+        cursor: pointer;
+      }
+
+      .btn.primary {
+        background: var(--primary);
+        color: white;
+      }
+
+      .btn.ghost {
+        background: transparent;
+        border: 1px solid #ddd;
+      }
+
+      .total {
+        font-weight: 700;
+      }
+
+      footer.small {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 8px;
+      }
+
+      @media (max-width: 720px) {
+        /* GENERAL */
         body {
-            font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-            background: var(--bg);
-            margin: 0;
-            padding: 24px;
-            color: #111
+          overflow-x: hidden;
         }
 
-        .app {
-            max-width: 980px;
-            margin: 0 auto
+        /* --- Trip creation bar (top) --- */
+        /* Keep trip creation inputs on one row on mobile: name (flex) + date (auto) + button */
+        body > .app > div > div[style*="display:flex"] {
+          flex-direction: row;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
         }
 
-        header {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            margin-bottom: 18px
+        /* Trip name grows, date and button keep natural size */
+        body > .app > div > div[style*="display:flex"] input#newTripName {
+          flex: 1 1 auto;
+          min-width: 120px;
+          max-width: none;
+          box-sizing: border-box;
         }
 
-        h1 {
-            font-size: 20px;
-            margin: 0
+        body > .app > div > div[style*="display:flex"] input#newTripStart {
+          flex: 0 0 auto;
+          width: auto;
+          box-sizing: border-box;
         }
 
-        /* Top navigation shared styles */
-        .topnav {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 18px;
+        body > .app > div > div[style*="display:flex"] button#createTripBtn {
+          flex: 0 0 auto;
         }
 
-        .topnav .brand {
-            font-size: 20px;
-            font-weight: 700;
-            color: inherit;
-            text-decoration: none;
-        }
-
-        .menu-item:hover {
-            background: #f6f6f6;
-            border-radius: 6px
-        }
-
-        input[type="text"],
-        input[type="number"] {
-            padding: 8px 10px;
-            border: 1px solid #ddd;
-            border-radius: 6px
-        }
-
-        .card {
-            background: var(--card);
-            padding: 14px;
-            border-radius: 12px;
-            box-shadow: 0 6px 18px rgba(12, 18, 32, 0.06);
-            margin-bottom: 12px
-        }
-
-        .controls {
-            display: flex;
-            gap: 8px;
-            align-items: center
-        }
-
-        .cities {
-            margin-top: 12px
-        }
-
-        .city {
-            display: grid;
-            grid-template-columns: 24px 1fr 160px 250px 80px;
-            gap: 10px;
-            align-items: center;
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px dashed #eee;
-            margin-bottom: 8px;
-        }
-
-        .city .drag-handle {
-            width: 24px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #999;
-            cursor: grab;
-            user-select: none;
-        }
-
-        .city .drag-handle svg {
-            width: 16px;
-            height: 16px
-        }
-
-        .city .name {
-            font-weight: 600
-        }
-
-        /* calendar styles */
-        .calendar-wrapper {
-            margin-top: 12px
-        }
-
-        .months {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-            gap: 12px;
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-        .month-card {
-            border-radius: 8px;
-            border: 1px solid #eee;
-            padding: 10px;
-            background: var(--card);
-            box-sizing: border-box;
-            width: 100%;
-            /* remove fixed 350px width */
-        }
-
-
-        .month-header {
-            font-weight: 700;
-            margin-bottom: 6px
-        }
-
-        .weekday-row {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            font-size: 12px;
-            color: var(--muted);
-            text-align: center
-        }
-
-        .days-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 0
-        }
-
-        /* each day cell is identical size so bars are visually contiguous */
-        .day {
-            height: 56px;
-            /* fixed height */
-            border-radius: 0;
-            background: #fff;
-            text-align: right;
-            padding: 6px;
-            font-size: 13px;
-            position: relative;
-            box-sizing: border-box;
-            overflow: visible;
-        }
-
-        .day.blank {
-            background: transparent
-        }
-
-        /* blue bar styles for in-range days */
-        /* in-range days no longer color the whole cell; we render thin bars instead */
-        .day.in-range {
-            color: inherit
-        }
-
-        /* round only the ends so consecutive .in-range cells form one contiguous bar */
-        .day.range-start {
-            border-top-left-radius: 20px;
-            border-bottom-left-radius: 20px
-        }
-
-        .day.range-end {
-            border-top-right-radius: 20px;
-            border-bottom-right-radius: 20px
-        }
-
-        /* label is absolutely positioned so it won't change cell height */
-        /* thin horizontal bar that represents the city range on a day cell */
-        .range-seg {
-            position: absolute;
-            left: 0px;
-            right: -2px;
-            /* slightly extend to connect with next cell */
-            height: 14px;
-            background: var(--primary);
-            color: #fff;
-            font-size: 12px;
-            line-height: 14px;
-            padding: 0 6px;
-            box-sizing: border-box;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            border-radius: 0;
-            /* no rounding in middle segments */
-            z-index: 1;
-        }
-
-        .range-seg .seg-label {
-            font-size: 11px;
-            color: #fff;
-        }
-
-        .day .date-num {
-            z-index: 2
-        }
-
-        .range-seg.range-start {
-            border-top-left-radius: 10px;
-            border-bottom-left-radius: 10px
-        }
-
-        .range-seg.range-end {
-            border-top-right-radius: 10px;
-            border-bottom-right-radius: 10px
-        }
-
-        .day .date-num {
-            position: absolute;
-            right: 6px;
-            top: 6px;
-            font-size: 12px;
-            color: inherit
-        }
-
-        .small {
-            font-size: 12px;
-            color: var(--muted)
-        }
-
-        .days-control {
-            display: flex;
-            gap: 6px;
-            align-items: center
-        }
-
-        .days-control button {
-            width: 30px;
-            height: 30px;
-            border: none;
-            cursor: pointer;
-            background: #fff;
-            border-radius: 20px;
-            transition: background-color 0.2s;
-        }
-
-        .days-control button:hover {
-            background: #f0f0f0;
-        }
-
-        .days-control input {
-            width: 60px;
-            text-align: center
-        }
-
-        .meta {
-            font-size: 13px;
-            color: var(--muted)
-        }
-
+        /* --- Trip editor header --- */
         .topline {
-            display: flex;
-            justify-content: space-between;
-            align-items: center
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 10px;
         }
 
-        .actions {
+        .topline > div {
+          flex-wrap: wrap;
+          width: 100%;
+        }
+
+        .topline input[type="text"],
+        .topline input[type="date"] {
+          width: 100%;
+          box-sizing: border-box;
+        }
+
+        .topline .actions {
+          width: 100%;
+          justify-content: space-between;
+          flex-wrap: wrap;
+        }
+
+        .topline .actions .btn {
+          flex: 1;
+        }
+
+        /* --- City rows --- */
+        .city {
+          position: relative;
+          display: grid;
+          /* columns: drag | name | days-control | actions */
+          grid-template-columns: 24px minmax(120px, 1fr) auto auto;
+          /* two rows: main row + secondary row for date/stopover */
+          grid-template-rows: auto auto;
+          gap: 8px;
+          padding: 8px;
+          cursor: pointer;
+          align-items: center;
+        }
+
+        .city.active {
+          background: #f6f8fa;
+        }
+
+        /* Place the date/stopover/no-start text on a second full-width row under the main row */
+        .city .date-range,
+        .city .stopover,
+        .city .no-start {
+          grid-column: 2 / -1;
+          grid-row: 2;
+          font-size: 12px;
+          color: var(--muted);
+          margin-top: 4px;
+        }
+
+        /* Hide action buttons by default on mobile to keep single-row layout */
+        .city .actions {
+          display: none;
+        }
+
+        /* Show actions when city is active (appear as an additional row below the city) */
+        .city.active .actions {
+          display: flex;
+        }
+
+        /* Slightly larger action buttons for touch targets on mobile */
+        .city .actions button {
+          padding: 6px 8px;
+          min-width: 36px;
+          height: 36px;
+          border-radius: 6px;
+        }
+
+        /* Smaller padding for mobile cards */
+        .card {
+          padding: 10px;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="app">
+      <header class="topnav">
+        <a href="index.html" class="brand" aria-label="Trippino home"
+          >Trippino</a
+        >
+        <div
+          style="
+            margin-left: auto;
             display: flex;
             gap: 8px;
-            justify-content: flex-end;
-            justify-self: end
-        }
-
-        .btn {
-            padding: 8px 10px;
-            border-radius: 8px;
-            border: 0;
-            cursor: pointer
-        }
-
-        .btn.primary {
-            background: var(--primary);
-            color: white
-        }
-
-        .btn.ghost {
-            background: transparent;
-            border: 1px solid #ddd
-        }
-
-        .total {
-            font-weight: 700
-        }
-
-        footer.small {
-            font-size: 12px;
-            color: var(--muted);
-            margin-top: 8px
-        }
-
-        @media (max-width: 720px) {
-
-            /* GENERAL */
-            body {
-                overflow-x: hidden;
-            }
-
-            /* --- Trip creation bar (top) --- */
-            /* Keep trip creation inputs on one row on mobile: name (flex) + date (auto) + button */
-            body>.app>div>div[style*="display:flex"] {
-                flex-direction: row;
-                align-items: center;
-                gap: 8px;
-                flex-wrap: wrap;
-            }
-
-            /* Trip name grows, date and button keep natural size */
-            body>.app>div>div[style*="display:flex"] input#newTripName {
-                flex: 1 1 auto;
-                min-width: 120px;
-                max-width: none;
-                box-sizing: border-box;
-            }
-
-            body>.app>div>div[style*="display:flex"] input#newTripStart {
-                flex: 0 0 auto;
-                width: auto;
-                box-sizing: border-box;
-            }
-
-            body>.app>div>div[style*="display:flex"] button#createTripBtn {
-                flex: 0 0 auto;
-            }
-
-            /* --- Trip editor header --- */
-            .topline {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 10px;
-            }
-
-            .topline>div {
-                flex-wrap: wrap;
-                width: 100%;
-            }
-
-            .topline input[type="text"],
-            .topline input[type="date"] {
-                width: 100%;
-                box-sizing: border-box;
-            }
-
-            .topline .actions {
-                width: 100%;
-                justify-content: space-between;
-                flex-wrap: wrap;
-            }
-
-            .topline .actions .btn {
-                flex: 1;
-            }
-
-            /* --- City rows --- */
-            .city {
-                position: relative;
-                display: grid;
-                /* columns: drag | name | days-control | actions */
-                grid-template-columns: 24px minmax(120px, 1fr) auto auto;
-                /* two rows: main row + secondary row for date/stopover */
-                grid-template-rows: auto auto;
-                gap: 8px;
-                padding: 8px;
-                cursor: pointer;
-                align-items: center;
-            }
-
-            .city.active {
-                background: #f6f8fa;
-            }
-
-            /* Place the date/stopover/no-start text on a second full-width row under the main row */
-            .city .date-range,
-            .city .stopover,
-            .city .no-start {
-                grid-column: 2 / -1;
-                grid-row: 2;
-                font-size: 12px;
-                color: var(--muted);
-                margin-top: 4px;
-            }
-
-            /* Hide action buttons by default on mobile to keep single-row layout */
-            .city .actions {
+            align-items: center;
+          "
+        >
+          <div id="authArea"></div>
+          <div id="burgerWrapper" style="position: relative; margin-left: 8px">
+            <button id="burgerBtn" aria-label="Open menu" class="btn ghost">
+              ☰
+            </button>
+            <div
+              id="burgerMenu"
+              style="
                 display: none;
-            }
-
-            /* Show actions when city is active (appear as an additional row below the city) */
-            .city.active .actions {
-                display: flex;
-            }
-
-            /* Slightly larger action buttons for touch targets on mobile */
-            .city .actions button {
-                padding: 6px 8px;
-                min-width: 36px;
-                height: 36px;
-                border-radius: 6px;
-            }
-
-            /* Smaller padding for mobile cards */
-            .card {
-                padding: 10px;
-            }
-        }
-    </style>
-</head>
-
-<body>
-    <div class="app">
-        <header class="topnav">
-            <a href="index.html" class="brand" aria-label="Trippino home">Trippino</a>
-            <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
-                <div id="authArea"></div>
-                <div id="burgerWrapper" style="position:relative;margin-left:8px">
-                    <button id="burgerBtn" aria-label="Open menu" class="btn ghost">☰</button>
-                    <div id="burgerMenu"
-                        style="display:none;position:absolute;right:0;top:40px;background:var(--card);border:1px solid #eee;border-radius:8px;box-shadow:0 6px 18px rgba(12,18,32,0.06);z-index:1000;min-width:160px;padding:6px">
-                        <div class="small menu-item" data-action="home" style="padding:8px;cursor:pointer">Home</div>
-                        <div class="small menu-item" data-action="profile" style="padding:8px;cursor:pointer">Profile
-                        </div>
-                        <div class="small menu-item" data-action="about" style="padding:8px;cursor:pointer">About</div>
-                        <div class="small menu-item" data-action="logout" style="padding:8px;cursor:pointer">Logout
-                        </div>
-                    </div>
-                </div>
+                position: absolute;
+                right: 0;
+                top: 40px;
+                background: var(--card);
+                border: 1px solid #eee;
+                border-radius: 8px;
+                box-shadow: 0 6px 18px rgba(12, 18, 32, 0.06);
+                z-index: 1000;
+                min-width: 160px;
+                padding: 6px;
+              "
+            >
+              <div
+                class="small menu-item"
+                data-action="home"
+                style="padding: 8px; cursor: pointer"
+              >
+                Home
+              </div>
+              <div
+                class="small menu-item"
+                data-action="profile"
+                style="padding: 8px; cursor: pointer"
+              >
+                Profile
+              </div>
+              <div
+                class="small menu-item"
+                data-action="about"
+                style="padding: 8px; cursor: pointer"
+              >
+                About
+              </div>
+              <div
+                class="small menu-item"
+                data-action="logout"
+                style="padding: 8px; cursor: pointer"
+              >
+                Logout
+              </div>
             </div>
-        </header>
+          </div>
+        </div>
+      </header>
 
-        <!-- Anonymous user banner (hidden when authenticated or no local trips) -->
-        <div id="anonBanner"
-            style="display:none;margin-bottom:12px;padding:10px;border-radius:8px;background:var(--accent);color:#4a2a12">
-            <strong>Unsaved changes</strong> — Your trips are only stored locally on this device. <a href="auth.html"
-                style="font-weight:700;color:var(--primary);text-decoration:underline;margin-left:8px">Create an account
-                to persist your data</a>
+      <!-- Anonymous user banner (hidden when authenticated or no local trips) -->
+      <div
+        id="anonBanner"
+        style="
+          display: none;
+          margin-bottom: 12px;
+          padding: 10px;
+          border-radius: 8px;
+          background: var(--accent);
+          color: #4a2a12;
+        "
+      >
+        <strong>Unsaved changes</strong> — Your trips are only stored locally on
+        this device.
+        <a
+          href="auth.html"
+          style="
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: underline;
+            margin-left: 8px;
+          "
+          >Create an account to persist your data</a
+        >
+      </div>
+
+      <div>
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+          "
+        >
+          <input
+            id="newTripName"
+            placeholder="Trip name"
+            style="flex: 1; max-width: 150px"
+          />
+          <input id="newTripStart" type="date" />
+          <button id="createTripBtn" class="btn primary">Create trip</button>
         </div>
 
-        <div>
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-                <input id="newTripName" placeholder="Trip name" style="flex:1;max-width:150px" />
-                <input id="newTripStart" type="date" />
-                <button id="createTripBtn" class="btn primary">Create trip</button>
-            </div>
-
-            <div id="tripsContainer"></div>
-            <div id="yearSummary"></div>
-        </div>
-
-    </div>
-
+        <div id="tripsContainer"></div>
+        <div id="yearSummary"></div>
+      </div>
     </div>
     <script src="/config.js"></script>
     <script type="module">
-        import { getCsrfToken } from '/modules/csrf.js'
-        import { getCurrentUser, logout } from '/modules/auth.js'
-        // --- Service Worker registration ---
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js')
-                .then(reg => console.log('Service Worker registered:', reg.scope))
-                .catch(err => console.error('Service Worker registration failed:', err))
+      import { getCsrfToken } from "/modules/csrf.js";
+      import { getCurrentUser, logout } from "/modules/auth.js";
+      // --- Service Worker registration ---
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker
+          .register("/sw.js")
+          .then((reg) => console.log("Service Worker registered:", reg.scope))
+          .catch((err) =>
+            console.error("Service Worker registration failed:", err),
+          );
+      }
+
+      // --- Auth config & helpers ---
+      const API_BASE = window.APP_CONFIG.API_BASE;
+      const authArea = document.getElementById("authArea");
+      const anonBanner = document.getElementById("anonBanner");
+      // currentUser: null = anonymous, otherwise object with email
+      let currentUser = null;
+
+      async function checkAuth() {
+        try {
+          const user = await getCurrentUser();
+          if (!user) {
+            setAnonymous();
+            return null;
+          }
+          setAuthenticated(user);
+          return user;
+        } catch (e) {
+          console.warn("auth check failed", e);
+          setAnonymous();
+          return null;
+        }
+      }
+
+      // fetch saved state from backend for the current user (if any)
+      async function fetchBackendState() {
+        try {
+          const res = await fetch(`${API_BASE}/api/state`, {
+            credentials: "include",
+          });
+          if (!res.ok) return null;
+          const json = await res.json();
+          return json && json.state ? json.state : null;
+        } catch (e) {
+          console.warn("fetch backend state failed", e);
+          return null;
+        }
+      }
+
+      // load local state and, if logged in, fetch backend state and pick the most recent
+      async function loadAndSyncState() {
+        const user = await checkAuth();
+
+        let backendState = null;
+        if (user) backendState = await fetchBackendState();
+
+        const localState = load();
+
+        function tsOf(s) {
+          if (!s) return 0;
+          const t = s.updatedAt || s.updated_at || null;
+          return t ? Date.parse(t) : 0;
         }
 
-        // --- Auth config & helpers ---
-        const API_BASE = window.APP_CONFIG.API_BASE
-        const authArea = document.getElementById('authArea')
-        const anonBanner = document.getElementById('anonBanner')
-        // currentUser: null = anonymous, otherwise object with email
-        let currentUser = null
-
-
-        async function checkAuth() {
-            try {
-                const user = await getCurrentUser()
-                if (!user) { setAnonymous(); return null }
-                setAuthenticated(user)
-                return user
-            } catch (e) {
-                console.warn('auth check failed', e)
-                setAnonymous()
-                return null
-            }
+        // Decide which state to use
+        if (!backendState && !localState) {
+          appState = { trips: [] };
+        } else if (!user) {
+          // not logged in -> use local only
+          appState = localState || { trips: [] };
+        } else if (!backendState) {
+          // logged in, only local exists -> use local and push to backend
+          appState = localState || { trips: [] };
+          try {
+            const token = await getCsrfToken();
+            await fetch(`${API_BASE}/api/state`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "CSRF-Token": token,
+              },
+              credentials: "include",
+              body: JSON.stringify({ state: appState }),
+            });
+          } catch (e) {
+            console.warn("push local to backend failed", e);
+          }
+        } else if (
+          (!localState || !localState.trips || !localState.trips.length) &&
+          backendState.trips &&
+          backendState.trips.length
+        ) {
+          console.log(
+            "local state empty but backend has trips, using backend state",
+          );
+          appState = backendState;
+          save(appState);
+        } else {
+          // both not empty, take backend
+          appState = backendState;
+          save(appState);
         }
 
-        // fetch saved state from backend for the current user (if any)
-        async function fetchBackendState() {
-            try {
-                const res = await fetch(`${API_BASE}/api/state`, { credentials: 'include' })
-                if (!res.ok) return null
-                const json = await res.json()
-                return json && json.state ? json.state : null
-            } catch (e) {
-                console.warn('fetch backend state failed', e)
-                return null
-            }
-        }
+        // normalize
+        if (!appState.trips) appState.trips = [];
 
-        // load local state and, if logged in, fetch backend state and pick the most recent
-        async function loadAndSyncState() {
-            const user = await checkAuth()
+        // ensure updatedAt exists
+        if (!appState.updatedAt) appState.updatedAt = new Date().toISOString();
 
-            let backendState = null
-            if (user) backendState = await fetchBackendState()
+        // sync local store
+        save(appState);
 
-            const localState = load()
+        // refresh UI
+        refreshAll();
+        renderHome();
+        // update anon banner after state load (in case local trips exist and user is anonymous)
+        updateAnonBanner();
+      }
 
-            function tsOf(s) {
-                if (!s) return 0
-                const t = s.updatedAt || s.updated_at || null
-                return t ? Date.parse(t) : 0
-            }
-
-            // Decide which state to use
-            if (!backendState && !localState) {
-                appState = { trips: [] }
-            } else if (!user) {
-                // not logged in -> use local only
-                appState = localState || { trips: [] }
-            } else if (!backendState) {
-                // logged in, only local exists -> use local and push to backend
-                appState = localState || { trips: [] }
-                try {
-                    const token = await getCsrfToken()
-                    await fetch(`${API_BASE}/api/state`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'CSRF-Token': token
-                        },
-                        credentials: 'include',
-                        body: JSON.stringify({ state: appState })
-                    })
-                } catch (e) { console.warn('push local to backend failed', e) }
-            } else if ((!localState || !localState.trips || !localState.trips.length) && (backendState.trips && backendState.trips.length)) {
-                console.log('local state empty but backend has trips, using backend state')
-                appState = backendState
-                save(appState)
-            } else {
-                // both not empty, take backend
-                appState = backendState
-                save(appState)
-            }
-
-            // normalize
-            if (!appState.trips) appState.trips = []
-
-            // ensure updatedAt exists
-            if (!appState.updatedAt) appState.updatedAt = new Date().toISOString()
-
-            // sync local store
-            save(appState)
-
-            // refresh UI
-            refreshAll()
-            renderHome()
-            // update anon banner after state load (in case local trips exist and user is anonymous)
-            updateAnonBanner()
-        }
-
-        function setAnonymous() {
-            currentUser = null
-            authArea.innerHTML = `
+      function setAnonymous() {
+        currentUser = null;
+        authArea.innerHTML = `
                 <button id="goAuthBtn" class="btn primary">Sign in / Register</button>
-            `
-            document.getElementById('goAuthBtn').addEventListener('click', () => {
-                // open the dedicated auth page
-                window.location.href = 'auth.html'
-            })
-            updateAnonBanner()
-        }
-
-        function setAuthenticated(user) {
-            currentUser = user
-            authArea.innerHTML = ''
-            // show burger button when authenticated
-            const burgerBtn = document.getElementById('burgerBtn')
-            if (burgerBtn) burgerBtn.style.display = ''
-            updateAnonBanner()
-
-            // attach menu handlers
-            const menu = document.getElementById('burgerMenu')
-            if (menu) {
-                menu.querySelectorAll('.menu-item').forEach(mi => {
-                    mi.addEventListener('click', async (ev) => {
-                        const act = mi.dataset.action
-                        if (act === 'logout') {
-                            await doLogout()
-                        } else if (act === 'profile') {
-                            window.location.href = 'profile.html'
-                        } else if (act === 'about') {
-                            window.location.href = 'about.html'
-                        } else if (act === 'home') {
-                            window.location.href = 'index.html'
-                        }
-                        menu.style.display = 'none'
-                    })
-                })
-            }
-        }
-
-        function updateAnonBanner() {
-            try {
-                // show banner only when anonymous and there are local trips
-                const hasLocalTrips = appState && Array.isArray(appState.trips) && appState.trips.length > 0
-                if (!currentUser && hasLocalTrips) {
-                    anonBanner.style.display = ''
-                } else {
-                    anonBanner.style.display = 'none'
-                }
-            } catch (e) {
-                // ignore
-            }
-        }
-
-        async function doRegister() {
-            const e = document.getElementById('authEmail').value.trim()
-            const p = document.getElementById('authPass').value
-            if (!e || !p) return alert('email and password required')
-            try {
-                const res = await fetch(`${API_BASE}/api/register`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ email: e, password: p })
-                })
-                if (!res.ok) {
-                    const err = await res.json().catch(() => ({}))
-                    return alert(err.error || 'register failed')
-                }
-                // re-load and sync state after registering
-                await loadAndSyncState()
-            } catch (e) { console.error(e); alert('register failed') }
-        }
-
-        async function doLogin() {
-            const e = document.getElementById('authEmail').value.trim()
-            const p = document.getElementById('authPass').value
-            if (!e || !p) return alert('email and password required')
-            try {
-                const res = await fetch(`${API_BASE}/api/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ email: e, password: p })
-                })
-                if (!res.ok) {
-                    const err = await res.json().catch(() => ({}))
-                    return alert(err.error || 'login failed')
-                }
-                // re-load and sync state after login
-                await loadAndSyncState()
-            } catch (e) { console.error(e); alert('login failed') }
-        }
-
-        async function doLogout() {
-            try {
-                await logout()
-            } catch (e) { console.warn('logout failed', e) }
-            checkAuth()
-            localStorage.clear()
-            appState = { trips: [] }
-            refreshAll()
-            burgerBtn.style.display = 'none'
-        }
-
-        // check auth and sync state on load
-        loadAndSyncState()
-
-        // Close active city when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.city')) {
-                document.querySelectorAll('.city.active').forEach(c =>
-                    c.classList.remove('active')
-                );
-            }
+            `;
+        document.getElementById("goAuthBtn").addEventListener("click", () => {
+          // open the dedicated auth page
+          window.location.href = "auth.html";
         });
+        updateAnonBanner();
+      }
 
-        // App model: { trips: [{id,name,start,cities}], updatedAt }
-        const STORAGE_KEY = 'simpleTripPlanner_v1'
+      function setAuthenticated(user) {
+        currentUser = user;
+        authArea.innerHTML = "";
+        // show burger button when authenticated
+        const burgerBtn = document.getElementById("burgerBtn");
+        if (burgerBtn) burgerBtn.style.display = "";
+        updateAnonBanner();
 
-        // DOM - note: global editor elements removed; per-trip editor creates its own DOM
-        // central container
-        const tripsContainer = document.getElementById('tripsContainer')
-        const createTripBtn = document.getElementById('createTripBtn')
-        const newTripName = document.getElementById('newTripName')
-        const newTripStart = document.getElementById('newTripStart')
-
-        // helpers
-        const uid = () => Math.random().toString(36).slice(2, 9)
-        const tid = () => 't_' + Math.random().toString(36).slice(2, 9)
-
-        const MAX_TRIPS = 50
-        const MAX_CITIES_PER_TRIP = 30
-        const MAX_TRIP_NAME_LENGTH = 80
-        const MAX_CITY_NAME_LENGTH = 60
-        const MAX_DAYS_PER_CITY = 365
-        // Allow letters, numbers, spaces, common punctuation: - ' ( ) , .
-        const NAME_SAFE_REGEX = /^[A-Za-z0-9 \-\'\(\)\.,]*$/
-
-        function validateTripName(name) {
-            if (!name || !name.trim()) return { ok: false, error: 'Trip name required' }
-            if (name.length > MAX_TRIP_NAME_LENGTH) return { ok: false, error: `Trip name too long (max ${MAX_TRIP_NAME_LENGTH} characters)` }
-            if (!NAME_SAFE_REGEX.test(name)) return { ok: false, error: 'Trip name contains invalid characters' }
-            return { ok: true }
+        // attach menu handlers
+        const menu = document.getElementById("burgerMenu");
+        if (menu) {
+          menu.querySelectorAll(".menu-item").forEach((mi) => {
+            mi.addEventListener("click", async (ev) => {
+              const act = mi.dataset.action;
+              if (act === "logout") {
+                await doLogout();
+              } else if (act === "profile") {
+                window.location.href = "profile.html";
+              } else if (act === "about") {
+                window.location.href = "about.html";
+              } else if (act === "home") {
+                window.location.href = "index.html";
+              }
+              menu.style.display = "none";
+            });
+          });
         }
+      }
 
-        function validateCityName(name) {
-            if (!name || !name.trim()) return { ok: false, error: 'City name required' }
-            if (name.length > MAX_CITY_NAME_LENGTH) return { ok: false, error: `City name too long (max ${MAX_CITY_NAME_LENGTH} characters)` }
-            if (!NAME_SAFE_REGEX.test(name)) return { ok: false, error: 'City name contains invalid characters' }
-            return { ok: true }
+      function updateAnonBanner() {
+        try {
+          // show banner only when anonymous and there are local trips
+          const hasLocalTrips =
+            appState &&
+            Array.isArray(appState.trips) &&
+            appState.trips.length > 0;
+          if (!currentUser && hasLocalTrips) {
+            anonBanner.style.display = "";
+          } else {
+            anonBanner.style.display = "none";
+          }
+        } catch (e) {
+          // ignore
         }
+      }
 
-        function validateDays(n) {
-            const v = Number(n) || 0
-            // allow 0 for stopover, otherwise must be non-negative
-            if (!Number.isFinite(v) || v < 0) return { ok: false, error: 'Days must be a non-negative number' }
-            if (v > MAX_DAYS_PER_CITY) return { ok: false, error: `Days per city cannot exceed ${MAX_DAYS_PER_CITY}` }
-            return { ok: true }
+      async function doRegister() {
+        const e = document.getElementById("authEmail").value.trim();
+        const p = document.getElementById("authPass").value;
+        if (!e || !p) return alert("email and password required");
+        try {
+          const res = await fetch(`${API_BASE}/api/register`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ email: e, password: p }),
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            return alert(err.error || "register failed");
+          }
+          // re-load and sync state after registering
+          await loadAndSyncState();
+        } catch (e) {
+          console.error(e);
+          alert("register failed");
         }
+      }
 
-        function showClientError(msg) {
-            // lightweight UX: use alert for now; can be swapped with a toast component
-            try { alert(msg) } catch (e) { console.error(msg) }
+      async function doLogin() {
+        const e = document.getElementById("authEmail").value.trim();
+        const p = document.getElementById("authPass").value;
+        if (!e || !p) return alert("email and password required");
+        try {
+          const res = await fetch(`${API_BASE}/api/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ email: e, password: p }),
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            return alert(err.error || "login failed");
+          }
+          // re-load and sync state after login
+          await loadAndSyncState();
+        } catch (e) {
+          console.error(e);
+          alert("login failed");
         }
+      }
 
-        /* Typeahead / suggestions styles */
-        const styleEl = document.createElement('style')
-        styleEl.textContent = `
+      async function doLogout() {
+        try {
+          await logout();
+        } catch (e) {
+          console.warn("logout failed", e);
+        }
+        checkAuth();
+        localStorage.clear();
+        appState = { trips: [] };
+        refreshAll();
+        burgerBtn.style.display = "none";
+      }
+
+      // check auth and sync state on load
+      loadAndSyncState();
+
+      // Close active city when clicking outside
+      document.addEventListener("click", (e) => {
+        if (!e.target.closest(".city")) {
+          document
+            .querySelectorAll(".city.active")
+            .forEach((c) => c.classList.remove("active"));
+        }
+      });
+
+      // App model: { trips: [{id,name,start,cities}], updatedAt }
+      const STORAGE_KEY = "simpleTripPlanner_v1";
+
+      // DOM - note: global editor elements removed; per-trip editor creates its own DOM
+      // central container
+      const tripsContainer = document.getElementById("tripsContainer");
+      const createTripBtn = document.getElementById("createTripBtn");
+      const newTripName = document.getElementById("newTripName");
+      const newTripStart = document.getElementById("newTripStart");
+
+      // helpers
+      const uid = () => Math.random().toString(36).slice(2, 9);
+      const tid = () => "t_" + Math.random().toString(36).slice(2, 9);
+
+      const MAX_TRIPS = 50;
+      const MAX_CITIES_PER_TRIP = 30;
+      const MAX_TRIP_NAME_LENGTH = 80;
+      const MAX_CITY_NAME_LENGTH = 60;
+      const MAX_DAYS_PER_CITY = 365;
+      // Allow letters, numbers, spaces, common punctuation: - ' ( ) , .
+      const NAME_SAFE_REGEX = /^[A-Za-z0-9 \-\'\(\)\.,]*$/;
+
+      function validateTripName(name) {
+        if (!name || !name.trim())
+          return { ok: false, error: "Trip name required" };
+        if (name.length > MAX_TRIP_NAME_LENGTH)
+          return {
+            ok: false,
+            error: `Trip name too long (max ${MAX_TRIP_NAME_LENGTH} characters)`,
+          };
+        if (!NAME_SAFE_REGEX.test(name))
+          return { ok: false, error: "Trip name contains invalid characters" };
+        return { ok: true };
+      }
+
+      function validateCityName(name) {
+        if (!name || !name.trim())
+          return { ok: false, error: "City name required" };
+        if (name.length > MAX_CITY_NAME_LENGTH)
+          return {
+            ok: false,
+            error: `City name too long (max ${MAX_CITY_NAME_LENGTH} characters)`,
+          };
+        if (!NAME_SAFE_REGEX.test(name))
+          return { ok: false, error: "City name contains invalid characters" };
+        return { ok: true };
+      }
+
+      function validateDays(n) {
+        const v = Number(n) || 0;
+        // allow 0 for stopover, otherwise must be non-negative
+        if (!Number.isFinite(v) || v < 0)
+          return { ok: false, error: "Days must be a non-negative number" };
+        if (v > MAX_DAYS_PER_CITY)
+          return {
+            ok: false,
+            error: `Days per city cannot exceed ${MAX_DAYS_PER_CITY}`,
+          };
+        return { ok: true };
+      }
+
+      function showClientError(msg) {
+        // lightweight UX: use alert for now; can be swapped with a toast component
+        try {
+          alert(msg);
+        } catch (e) {
+          console.error(msg);
+        }
+      }
+
+      /* Typeahead / suggestions styles */
+      const styleEl = document.createElement("style");
+      styleEl.textContent = `
     .tt-popup { position: absolute; background: white; border: 1px solid #eee; box-shadow: 0 6px 18px rgba(12,18,32,0.06); border-radius:6px; z-index:1000; width:260px; }
     .tt-popup .tt-item { padding:8px; cursor:pointer; border-bottom:1px solid #f2f4f6 }
     .tt-popup .tt-item:last-child { border-bottom:0 }
     .tt-popup .tt-item:hover { background:#f6f8fa }
     .tt-input-inline { padding:6px 8px; border:1px solid #ddd; border-radius:6px; width:220px }
-    `
-        document.head.appendChild(styleEl)
+    `;
+      document.head.appendChild(styleEl);
 
-        function load() {
-            const raw = localStorage.getItem(STORAGE_KEY)
-            if (!raw) return { trips: [] }
-            try {
-                return JSON.parse(raw)
-            } catch (e) {
-                console.warn('load failed', e);
-                return {
-                    trips: [],
-                    updatedAt: new Date().toISOString()
-                }
-            }
+      function load() {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return { trips: [] };
+        try {
+          return JSON.parse(raw);
+        } catch (e) {
+          console.warn("load failed", e);
+          return {
+            trips: [],
+            updatedAt: new Date().toISOString(),
+          };
         }
-        function save(appState) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
-            saveApi(appState);
+      }
+      function save(appState) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+        saveApi(appState);
+      }
+
+      async function saveApi(appState) {
+        try {
+          const token = await getCsrfToken();
+          await fetch(`${API_BASE}/api/state`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "CSRF-Token": token,
+            },
+            credentials: "include",
+            body: JSON.stringify({ state: appState }),
+          });
+        } catch (e) {
+          console.warn("push local to backend failed", e);
         }
+      }
 
-        async function saveApi(appState) {
-            try {
-                const token = await getCsrfToken()
-                await fetch(`${API_BASE}/api/state`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'CSRF-Token': token
-                    },
-                    credentials: 'include',
-                    body: JSON.stringify({ state: appState })
-                })
-            } catch (e) { console.warn('push local to backend failed', e) }
+      // app state
+      let appState = load();
+      if (!appState.trips) appState.trips = [];
+
+      function createTrip(name, start) {
+        const tripName = (name || "New trip").trim();
+        // enforce max trips
+        if (appState.trips && appState.trips.length >= MAX_TRIPS) {
+          return showClientError(
+            `Maximum number of trips reached (${MAX_TRIPS}). Delete an existing trip to create a new one.`,
+          );
         }
+        const v = validateTripName(tripName);
+        if (!v.ok) return showClientError(v.error);
 
-        // app state
-        let appState = load()
-        if (!appState.trips) appState.trips = []
+        const t = {
+          id: tid(),
+          name: tripName,
+          start: start || "",
+          cities: [],
+          updatedAt: new Date().toISOString(),
+        };
+        appState.trips.push(t);
+        appState.updatedAt = new Date().toISOString();
+        save(appState);
+        refreshAll();
+        renderHome();
+        // if an anonymous user just created their first trip, show banner
+        updateAnonBanner();
+      }
 
-        function createTrip(name, start) {
-            const tripName = (name || 'New trip').trim()
-            // enforce max trips
-            if (appState.trips && appState.trips.length >= MAX_TRIPS) {
-                return showClientError(`Maximum number of trips reached (${MAX_TRIPS}). Delete an existing trip to create a new one.`)
-            }
-            const v = validateTripName(tripName)
-            if (!v.ok) return showClientError(v.error)
+      function deleteTrip(id) {
+        const idx = appState.trips.findIndex((t) => t.id === id);
+        if (idx === -1) return;
+        appState.trips.splice(idx, 1);
+        appState.updatedAt = new Date().toISOString();
+        save(appState);
+        refreshAll();
+        renderHome();
+        // update banner in case trips count dropped to 0
+        updateAnonBanner();
+      }
 
-            const t = {
-                id: tid(),
-                name: tripName, start: start || '',
-                cities: [],
-                updatedAt: new Date().toISOString()
-            }
-            appState.trips.push(t)
-            appState.updatedAt = new Date().toISOString()
-            save(appState)
-            refreshAll()
-            renderHome()
-            // if an anonymous user just created their first trip, show banner
-            updateAnonBanner()
-        }
+      function updateTripInStore(t) {
+        const idx = appState.trips.findIndex((x) => x.id === t.id);
+        if (idx === -1) return;
+        appState.trips[idx] = t;
+        save(appState);
+        refreshAll();
+      }
 
-        function deleteTrip(id) {
-            const idx = appState.trips.findIndex(t => t.id === id)
-            if (idx === -1) return
-            appState.trips.splice(idx, 1)
-            appState.updatedAt = new Date().toISOString()
-            save(appState)
-            refreshAll()
-            renderHome()
-            // update banner in case trips count dropped to 0
-            updateAnonBanner()
-        }
+      function renderTripsContainer() {
+        // sort by start date desc (most recent first). Empty start goes last.
+        const sorted = [...appState.trips].sort((a, b) => {
+          if (!a.start && !b.start) return 0;
+          if (!a.start) return 1;
+          if (!b.start) return -1;
+          return b.start.localeCompare(a.start);
+        });
+        tripsContainer.innerHTML = "";
+        for (const t of sorted) {
+          const card = document.createElement("div");
+          card.className = "card";
+          card.style.marginBottom = "12px";
+          card.style.cursor = "pointer";
 
-        function updateTripInStore(t) {
-            const idx = appState.trips.findIndex(x => x.id === t.id)
-            if (idx === -1) return
-            appState.trips[idx] = t
-            save(appState)
-            refreshAll()
-        }
-
-        function renderTripsContainer() {
-            // sort by start date desc (most recent first). Empty start goes last.
-            const sorted = [...appState.trips].sort((a, b) => {
-                if (!a.start && !b.start) return 0
-                if (!a.start) return 1
-                if (!b.start) return -1
-                return b.start.localeCompare(a.start)
-            })
-            tripsContainer.innerHTML = ''
-            for (const t of sorted) {
-                const card = document.createElement('div')
-                card.className = 'card'
-                card.style.marginBottom = '12px'
-                card.style.cursor = 'pointer'
-
-                const header = document.createElement('div')
-                header.style.display = 'flex'
-                header.style.justifyContent = 'space-between'
-                header.style.alignItems = 'center'
-                header.innerHTML = `
+          const header = document.createElement("div");
+          header.style.display = "flex";
+          header.style.justifyContent = "space-between";
+          header.style.alignItems = "center";
+          header.innerHTML = `
                 <div>
-                    <strong>${escapeHtml(t.name || 'Untitled')}</strong>
-                    <div class="small" style="color:var(--muted)">${t.start || ''}</div>
-                    <div class="small" style="color:var(--muted)">${t.cities ? t.cities.length : 0} ${(t.cities?.length === 1) ? 'city' : 'cities'}</div>
+                    <strong>${escapeHtml(t.name || "Untitled")}</strong>
+                    <div class="small" style="color:var(--muted)">${t.start || ""}</div>
+                    <div class="small" style="color:var(--muted)">${t.cities ? t.cities.length : 0} ${t.cities?.length === 1 ? "city" : "cities"}</div>
                 </div>
                 <div style="display:flex;gap:8px">
                     <button class="btn ghost" data-action="edit" title="Edit trip name" aria-label="Edit trip name">✎</button>
@@ -885,149 +1017,170 @@
                             <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                     </button>
-                </div>`
+                </div>`;
 
-                header.querySelector('[data-action="del"]').addEventListener('click', (e) => {
-                    e.stopPropagation()
-                    if (confirm('Delete trip?')) {
-                        deleteTrip(t.id)
-                        renderTripsContainer()
-                    }
-                })
+          header
+            .querySelector('[data-action="del"]')
+            .addEventListener("click", (e) => {
+              e.stopPropagation();
+              if (confirm("Delete trip?")) {
+                deleteTrip(t.id);
+                renderTripsContainer();
+              }
+            });
 
-                const editBtn = header.querySelector('[data-action="edit"]')
-                if (editBtn) {
-                    editBtn.addEventListener('click', (e) => {
-                        e.stopPropagation()
-                        const n = prompt('Trip name', t.name || '')
-                        if (n !== null) {
-                            t.name = n
-                            updateTripInStore(t)
-                            renderHome()
-                            renderTripsContainer()
-                        }
-                    })
-                }
+          const editBtn = header.querySelector('[data-action="edit"]');
+          if (editBtn) {
+            editBtn.addEventListener("click", (e) => {
+              e.stopPropagation();
+              const n = prompt("Trip name", t.name || "");
+              if (n !== null) {
+                t.name = n;
+                updateTripInStore(t);
+                renderHome();
+                renderTripsContainer();
+              }
+            });
+          }
 
-                header.addEventListener('click', () => {
-                    window.location.href = `trip.html?id=${t.id}`
-                })
+          header.addEventListener("click", () => {
+            window.location.href = `trip.html?id=${t.id}`;
+          });
 
-                card.appendChild(header)
-                tripsContainer.appendChild(card)
-            }
+          card.appendChild(header);
+          tripsContainer.appendChild(card);
+        }
+      }
+
+      // render once helper
+      function refreshAll() {
+        renderTripsContainer();
+        renderYearSummary();
+      }
+
+      // Render per-year summary of travel days vs days at home.
+      function renderYearSummary() {
+        const container = document.getElementById("yearSummary");
+        if (!container) return;
+        container.innerHTML = "";
+        // gather unique travel dates per year
+        const yearMap = new Map(); // year -> Set of date strings
+        for (const trip of appState.trips || []) {
+          if (!trip.start) continue;
+          const totalDays = (trip.cities || []).reduce(
+            (s, c) => s + Number(c.days || 0),
+            0,
+          );
+          if (totalDays <= 0) continue;
+          const tripStart = new Date(trip.start);
+          for (let i = 0; i < totalDays; i++) {
+            const d = addDays(tripStart, i);
+            const y = d.getFullYear();
+            const key = formatDate(d);
+            if (!yearMap.has(y)) yearMap.set(y, new Set());
+            yearMap.get(y).add(key);
+          }
         }
 
-        // render once helper
-        function refreshAll() {
-            renderTripsContainer()
-            renderYearSummary()
+        if (yearMap.size === 0) {
+          // nothing to show
+          return;
         }
 
-        // Render per-year summary of travel days vs days at home.
-        function renderYearSummary() {
-            const container = document.getElementById('yearSummary')
-            if (!container) return
-            container.innerHTML = ''
-            // gather unique travel dates per year
-            const yearMap = new Map() // year -> Set of date strings
-            for (const trip of (appState.trips || [])) {
-                if (!trip.start) continue
-                const totalDays = (trip.cities || []).reduce((s, c) => s + Number(c.days || 0), 0)
-                if (totalDays <= 0) continue
-                const tripStart = new Date(trip.start)
-                for (let i = 0; i < totalDays; i++) {
-                    const d = addDays(tripStart, i)
-                    const y = d.getFullYear()
-                    const key = formatDate(d)
-                    if (!yearMap.has(y)) yearMap.set(y, new Set())
-                    yearMap.get(y).add(key)
-                }
-            }
+        const card = document.createElement("div");
+        card.className = "card";
+        const header = document.createElement("div");
+        header.style.display = "flex";
+        header.style.justifyContent = "space-between";
+        header.style.alignItems = "center";
+        header.innerHTML = `<div><strong>Year summary</strong><div class="small" style="color:var(--muted)">Travel days vs days at home</div></div>`;
+        card.appendChild(header);
 
-            if (yearMap.size === 0) {
-                // nothing to show
-                return
-            }
+        const body = document.createElement("div");
+        body.style.marginTop = "10px";
 
-            const card = document.createElement('div')
-            card.className = 'card'
-            const header = document.createElement('div')
-            header.style.display = 'flex'
-            header.style.justifyContent = 'space-between'
-            header.style.alignItems = 'center'
-            header.innerHTML = `<div><strong>Year summary</strong><div class="small" style="color:var(--muted)">Travel days vs days at home</div></div>`
-            card.appendChild(header)
-
-            const body = document.createElement('div')
-            body.style.marginTop = '10px'
-
-            const years = Array.from(yearMap.keys()).sort((a, b) => b - a)
-            for (const y of years) {
-                const travelSet = yearMap.get(y) || new Set()
-                const travelDays = travelSet.size
-                const daysInYear = (new Date(y, 11, 31) - new Date(y, 0, 0)) / (24 * 60 * 60 * 1000)
-                // daysInYear computed as difference between Dec 31 and Jan 0 gives 365 or 366
-                const homeDays = Math.max(0, Math.round(daysInYear) - travelDays)
-                const row = document.createElement('div')
-                row.style.display = 'flex'
-                row.style.justifyContent = 'space-between'
-                row.style.alignItems = 'center'
-                row.style.padding = '6px 0'
-                row.innerHTML = `<div><strong>${y}</strong></div><div class="small">Travel: <strong>${travelDays}</strong> days — Home: <strong>${homeDays}</strong> days</div>`
-                body.appendChild(row)
-            }
-
-            card.appendChild(body)
-            container.appendChild(card)
-        }
-        // utility date functions
-        function addDays(d, n) { const t = new Date(d); t.setDate(t.getDate() + n); return t }
-        function formatDate(d) { return d.toISOString().slice(0, 10) }
-
-        // render function for trip list page
-        function renderHome() {
-            renderTripsContainer()
+        const years = Array.from(yearMap.keys()).sort((a, b) => b - a);
+        for (const y of years) {
+          const travelSet = yearMap.get(y) || new Set();
+          const travelDays = travelSet.size;
+          const daysInYear =
+            (new Date(y, 11, 31) - new Date(y, 0, 0)) / (24 * 60 * 60 * 1000);
+          // daysInYear computed as difference between Dec 31 and Jan 0 gives 365 or 366
+          const homeDays = Math.max(0, Math.round(daysInYear) - travelDays);
+          const row = document.createElement("div");
+          row.style.display = "flex";
+          row.style.justifyContent = "space-between";
+          row.style.alignItems = "center";
+          row.style.padding = "6px 0";
+          row.innerHTML = `<div><strong>${y}</strong></div><div class="small">Travel: <strong>${travelDays}</strong> days — Home: <strong>${homeDays}</strong> days</div>`;
+          body.appendChild(row);
         }
 
-        // escape for safety (we control the HTML but keep it safe)
-        function escapeHtml(s) { return String(s).replace(/[&<>"']/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": "&#39;" }[ch] }) }
+        card.appendChild(body);
+        container.appendChild(card);
+      }
+      // utility date functions
+      function addDays(d, n) {
+        const t = new Date(d);
+        t.setDate(t.getDate() + n);
+        return t;
+      }
+      function formatDate(d) {
+        return d.toISOString().slice(0, 10);
+      }
 
-        createTripBtn.addEventListener('click', () => {
-            createTrip(newTripName.value || 'New trip', newTripStart.value || '')
-            newTripName.value = ''
-            newTripStart.value = ''
-        })
+      // render function for trip list page
+      function renderHome() {
+        renderTripsContainer();
+      }
 
-        // initial render
-        refreshAll()
-        renderHome()
+      // escape for safety (we control the HTML but keep it safe)
+      function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, function (ch) {
+          return {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;",
+          }[ch];
+        });
+      }
 
-        // burger menu toggle
-        function setupBurgerMenu() {
-            const burgerBtn = document.getElementById('burgerBtn')
-            const burgerMenu = document.getElementById('burgerMenu')
-            if (!burgerBtn || !burgerMenu) return
-            // hide burger for anonymous by default
-            if (!currentUser) burgerBtn.style.display = 'none'
+      createTripBtn.addEventListener("click", () => {
+        createTrip(newTripName.value || "New trip", newTripStart.value || "");
+        newTripName.value = "";
+        newTripStart.value = "";
+      });
 
-            burgerBtn.addEventListener('click', (e) => {
-                e.stopPropagation()
-                burgerMenu.style.display = burgerMenu.style.display === 'none' ? '' : 'none'
-            })
+      // initial render
+      refreshAll();
+      renderHome();
 
-            // close when clicking outside
-            document.addEventListener('click', (e) => {
-                if (!e.target.closest('#burgerWrapper')) {
-                    burgerMenu.style.display = 'none'
-                }
-            })
-        }
+      // burger menu toggle
+      function setupBurgerMenu() {
+        const burgerBtn = document.getElementById("burgerBtn");
+        const burgerMenu = document.getElementById("burgerMenu");
+        if (!burgerBtn || !burgerMenu) return;
+        // hide burger for anonymous by default
+        if (!currentUser) burgerBtn.style.display = "none";
 
-        // initialize burger
-        setupBurgerMenu()
+        burgerBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          burgerMenu.style.display =
+            burgerMenu.style.display === "none" ? "" : "none";
+        });
 
+        // close when clicking outside
+        document.addEventListener("click", (e) => {
+          if (!e.target.closest("#burgerWrapper")) {
+            burgerMenu.style.display = "none";
+          }
+        });
+      }
+
+      // initialize burger
+      setupBurgerMenu();
     </script>
-</body>
-
+  </body>
 </html>

@@ -1,113 +1,123 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Email Verification — Trippino</title>
+    <style>
+      :root {
+        --bg: #f6f8fa;
+        --card: #fff;
+        --muted: #8a5a32;
+        --primary: #f97316;
+        --accent: #ffb380;
+      }
 
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Email Verification — Trippino</title>
-  <style>
-    :root {
-      --bg: #f6f8fa;
-      --card: #fff;
-      --muted: #8a5a32;
-      --primary: #f97316;
-      --accent: #ffb380
-    }
+      body {
+        font-family:
+          Inter,
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          "Helvetica Neue",
+          Arial;
+        background: var(--bg);
+        margin: 0;
+        padding: 24px;
+        color: #111;
+      }
 
-    body {
-      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-      background: var(--bg);
-      margin: 0;
-      padding: 24px;
-      color: #111
-    }
+      .app {
+        max-width: 480px;
+        margin: 40px auto;
+      }
 
-    .app {
-      max-width: 480px;
-      margin: 40px auto
-    }
+      .card {
+        background: var(--card);
+        padding: 18px;
+        border-radius: 12px;
+        box-shadow: 0 6px 18px rgba(12, 18, 32, 0.06);
+      }
 
-    .card {
-      background: var(--card);
-      padding: 18px;
-      border-radius: 12px;
-      box-shadow: 0 6px 18px rgba(12, 18, 32, 0.06)
-    }
+      h1 {
+        margin: 0 0 12px 0;
+        font-size: 20px;
+      }
 
-    h1 {
-      margin: 0 0 12px 0;
-      font-size: 20px
-    }
+      .message {
+        margin: 12px 0;
+      }
 
-    .message {
-      margin: 12px 0;
-    }
+      .success {
+        color: #16a34a;
+      }
 
-    .success {
-      color: #16a34a
-    }
+      .error {
+        color: #b91c1c;
+      }
 
-    .error {
-      color: #b91c1c
-    }
+      .btn {
+        padding: 8px 12px;
+        border-radius: 8px;
+        border: 0;
+        cursor: pointer;
+        background: var(--primary);
+        color: #fff;
+        text-decoration: none;
+        display: inline-block;
+        margin-top: 12px;
+      }
+    </style>
+  </head>
 
-    .btn {
-      padding: 8px 12px;
-      border-radius: 8px;
-      border: 0;
-      cursor: pointer;
-      background: var(--primary);
-      color: #fff;
-      text-decoration: none;
-      display: inline-block;
-      margin-top: 12px
-    }
-  </style>
-</head>
-
-<body>
-  <div class="app">
-    <div class="card">
-      <h1>Email Verification</h1>
-      <div id="msg" class="message">Verifying your email...</div>
-      <a id="loginBtn" href="/auth.html" class="btn" style="display:none">Go to Login</a>
+  <body>
+    <div class="app">
+      <div class="card">
+        <h1>Email Verification</h1>
+        <div id="msg" class="message">Verifying your email...</div>
+        <a id="loginBtn" href="/auth.html" class="btn" style="display: none"
+          >Go to Login</a
+        >
+      </div>
     </div>
-  </div>
-  <script src="/config.js"></script>
-  <script>
-    const API_BASE = window.APP_CONFIG.API_BASE
-    const msg = document.getElementById('msg')
-    const loginBtn = document.getElementById('loginBtn')
+    <script src="/config.js"></script>
+    <script>
+      const API_BASE = window.APP_CONFIG.API_BASE;
+      const msg = document.getElementById("msg");
+      const loginBtn = document.getElementById("loginBtn");
 
-    async function verifyEmail() {
-      const urlParams = new URLSearchParams(window.location.search)
-      const token = urlParams.get('token')
-      if (!token) {
-        msg.textContent = 'Invalid verification link'
-        msg.className = 'message error'
-        return
-      }
-
-      try {
-        const res = await fetch(`${API_BASE}/api/verify-email?token=${encodeURIComponent(token)}`)
-        const json = await res.json()
-
-        if (res.ok) {
-          msg.textContent = 'Your email has been successfully verified! You can now log in.'
-          msg.className = 'message success'
-          loginBtn.style.display = ''
-        } else {
-          msg.textContent = json.error || 'Verification failed'
-          msg.className = 'message error'
+      async function verifyEmail() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get("token");
+        if (!token) {
+          msg.textContent = "Invalid verification link";
+          msg.className = "message error";
+          return;
         }
-      } catch (e) {
-        msg.textContent = 'Network error'
-        msg.className = 'message error'
+
+        try {
+          const res = await fetch(
+            `${API_BASE}/api/verify-email?token=${encodeURIComponent(token)}`,
+          );
+          const json = await res.json();
+
+          if (res.ok) {
+            msg.textContent =
+              "Your email has been successfully verified! You can now log in.";
+            msg.className = "message success";
+            loginBtn.style.display = "";
+          } else {
+            msg.textContent = json.error || "Verification failed";
+            msg.className = "message error";
+          }
+        } catch (e) {
+          msg.textContent = "Network error";
+          msg.className = "message error";
+        }
       }
-    }
 
-    verifyEmail()
-  </script>
-</body>
-
+      verifyEmail();
+    </script>
+  </body>
 </html>

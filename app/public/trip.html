@@ -1,926 +1,1022 @@
 <!doctype html>
 <html lang="en">
-
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Trip Details - Trippino</title>
-    <link rel="icon" type="image/png"
-        href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <link
+      rel="icon"
+      type="image/png"
+      href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII="
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
     <style>
-        :root {
-            --bg: #f6f8fa;
-            --card: #ffffff;
-            --muted: #8a5a32;
-            --primary: #f97316;
-            --accent: #ffb380;
-        }
+      :root {
+        --bg: #f6f8fa;
+        --card: #ffffff;
+        --muted: #8a5a32;
+        --primary: #f97316;
+        --accent: #ffb380;
+      }
 
+      body {
+        font-family:
+          Inter,
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          "Helvetica Neue",
+          Arial;
+        background: var(--bg);
+        margin: 0;
+        padding: 24px;
+        color: #111;
+      }
+
+      .app {
+        max-width: 980px;
+        margin: 0 auto;
+      }
+
+      header {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 18px;
+      }
+
+      h1 {
+        font-size: 20px;
+        margin: 0;
+      }
+
+      /* Top navigation shared styles */
+      .topnav {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+
+      .topnav .brand {
+        font-size: 20px;
+        font-weight: 700;
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .menu-item:hover {
+        background: #f6f6f6;
+        border-radius: 6px;
+      }
+
+      input[type="text"],
+      input[type="number"] {
+        padding: 8px 10px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+      }
+
+      .card {
+        background: var(--card);
+        padding: 14px;
+        border-radius: 12px;
+        box-shadow: 0 6px 18px rgba(12, 18, 32, 0.06);
+        margin-bottom: 12px;
+      }
+
+      .cities {
+        margin-top: 12px;
+      }
+
+      .city {
+        display: grid;
+        grid-template-columns: 24px 1fr 160px 250px 80px;
+        gap: 10px;
+        align-items: center;
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px dashed #eee;
+        margin-bottom: 8px;
+        cursor: default;
+      }
+
+      .city.active {
+        background: #f6f8fa;
+      }
+
+      .city .expand-arrow {
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #999;
+        transition: transform 0.2s ease;
+        cursor: pointer;
+      }
+
+      .city .expand-arrow:hover {
+        color: var(--primary);
+      }
+
+      .city .expand-arrow svg {
+        width: 16px;
+        height: 16px;
+      }
+
+      .city.active .expand-arrow {
+        transform: rotate(90deg);
+      }
+
+      .city .notes {
+        display: none;
+      }
+
+      .city.active .notes {
+        display: block;
+      }
+
+      .city-edit-actions {
+        display: none;
+        grid-column: 1 / -1;
+        gap: 8px;
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid #eee;
+      }
+
+      .city.active .city-edit-actions {
+        display: flex;
+      }
+
+      .city-edit-actions button {
+        flex: 1;
+        padding: 10px;
+        border: 1px solid #ddd;
+        background: white;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+
+      .city-edit-actions button:hover {
+        background: #f0f0f0;
+      }
+
+      .city-reorder-controls {
+        display: none;
+        grid-column: 1 / -1;
+        gap: 8px;
+        margin-top: 8px;
+      }
+
+      .city.active .city-reorder-controls {
+        display: flex;
+      }
+
+      .city-reorder-controls button {
+        flex: 1;
+        padding: 10px;
+        border: 1px solid #ddd;
+        background: white;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+
+      .city-reorder-controls button:active {
+        background: #f0f0f0;
+      }
+
+      .city-reorder-controls button:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+      }
+
+      .city .name {
+        font-weight: 600;
+      }
+
+      .calendar-wrapper {
+        margin-top: 12px;
+      }
+
+      .map-wrapper {
+        margin-top: 12px;
+      }
+
+      #tripMap {
+        height: 400px;
+        border-radius: 8px;
+        z-index: 1;
+        position: relative;
+      }
+
+      .map-loading {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg);
+        border-radius: 8px;
+        z-index: 10;
+      }
+
+      .map-loading .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #ddd;
+        border-top-color: var(--primary);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      .map-loading .loading-text {
+        margin-top: 12px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .map-error {
+        padding: 40px 20px;
+        text-align: center;
+        color: var(--muted);
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .months {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        gap: 12px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      .month-card {
+        border-radius: 8px;
+        border: 1px solid #eee;
+        padding: 10px;
+        background: var(--card);
+        box-sizing: border-box;
+        width: 100%;
+      }
+
+      .month-header {
+        font-weight: 700;
+        margin-bottom: 6px;
+      }
+
+      .weekday-row {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        font-size: 12px;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      .days-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 0;
+      }
+
+      .day {
+        height: 56px;
+        border-radius: 0;
+        background: #fff;
+        text-align: right;
+        padding: 6px;
+        font-size: 13px;
+        position: relative;
+        box-sizing: border-box;
+        overflow: visible;
+      }
+
+      .day.blank {
+        background: transparent;
+      }
+
+      .day.in-range {
+        color: inherit;
+      }
+
+      .day.range-start {
+        border-top-left-radius: 20px;
+        border-bottom-left-radius: 20px;
+      }
+
+      .day.range-end {
+        border-top-right-radius: 20px;
+        border-bottom-right-radius: 20px;
+      }
+
+      .range-seg {
+        position: absolute;
+        left: 0px;
+        right: -2px;
+        height: 14px;
+        background: var(--primary);
+        color: #fff;
+        font-size: 12px;
+        line-height: 14px;
+        padding: 0 6px;
+        box-sizing: border-box;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 0;
+        z-index: 1;
+      }
+
+      .range-seg .seg-label {
+        font-size: 11px;
+        color: #fff;
+      }
+
+      .day .date-num {
+        z-index: 2;
+      }
+
+      .range-seg.range-start {
+        border-top-left-radius: 10px;
+        border-bottom-left-radius: 10px;
+      }
+
+      .range-seg.range-end {
+        border-top-right-radius: 10px;
+        border-bottom-right-radius: 10px;
+      }
+
+      .day .date-num {
+        position: absolute;
+        right: 6px;
+        top: 6px;
+        font-size: 12px;
+        color: inherit;
+      }
+
+      .small {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .days-control {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+
+      .days-control button {
+        width: 30px;
+        height: 30px;
+        border: none;
+        cursor: pointer;
+        background: #fff;
+        border-radius: 20px;
+        transition: background-color 0.2s;
+      }
+
+      .days-control button:hover {
+        background: #f0f0f0;
+      }
+
+      .meta {
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .topline {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+        justify-self: end;
+      }
+
+      .btn {
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 0;
+        cursor: pointer;
+      }
+
+      .btn.primary {
+        background: var(--primary);
+        color: white;
+      }
+
+      .btn.ghost {
+        background: transparent;
+        border: 1px solid #ddd;
+      }
+
+      .back-link {
+        color: var(--primary);
+        text-decoration: none;
+        font-size: 14px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .back-link:hover {
+        text-decoration: underline;
+      }
+
+      @media (max-width: 720px) {
         body {
-            font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-            background: var(--bg);
-            margin: 0;
-            padding: 24px;
-            color: #111
-        }
-
-        .app {
-            max-width: 980px;
-            margin: 0 auto
-        }
-
-        header {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            margin-bottom: 18px
-        }
-
-        h1 {
-            font-size: 20px;
-            margin: 0
-        }
-
-        /* Top navigation shared styles */
-        .topnav {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 18px;
-        }
-
-        .topnav .brand {
-            font-size: 20px;
-            font-weight: 700;
-            color: inherit;
-            text-decoration: none;
-        }
-
-        .menu-item:hover { background: #f6f6f6; border-radius:6px }
-
-        input[type="text"],
-        input[type="number"] {
-            padding: 8px 10px;
-            border: 1px solid #ddd;
-            border-radius: 6px
-        }
-
-        .card {
-            background: var(--card);
-            padding: 14px;
-            border-radius: 12px;
-            box-shadow: 0 6px 18px rgba(12, 18, 32, 0.06);
-            margin-bottom: 12px
-        }
-
-        .cities {
-            margin-top: 12px
-        }
-
-        .city {
-            display: grid;
-            grid-template-columns: 24px 1fr 160px 250px 80px;
-            gap: 10px;
-            align-items: center;
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px dashed #eee;
-            margin-bottom: 8px;
-            cursor: default;
-        }
-
-        .city.active {
-            background: #f6f8fa;
-        }
-
-        .city .expand-arrow {
-            width: 24px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #999;
-            transition: transform 0.2s ease;
-            cursor: pointer;
-        }
-
-        .city .expand-arrow:hover {
-            color: var(--primary);
-        }
-
-        .city .expand-arrow svg {
-            width: 16px;
-            height: 16px;
-        }
-
-        .city.active .expand-arrow {
-            transform: rotate(90deg);
-        }
-
-        .city .notes {
-            display: none;
-        }
-
-        .city.active .notes {
-            display: block;
-        }
-
-        .city-edit-actions {
-            display: none;
-            grid-column: 1 / -1;
-            gap: 8px;
-            margin-top: 8px;
-            padding-top: 8px;
-            border-top: 1px solid #eee;
-        }
-
-        .city.active .city-edit-actions {
-            display: flex;
-        }
-
-        .city-edit-actions button {
-            flex: 1;
-            padding: 10px;
-            border: 1px solid #ddd;
-            background: white;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-        }
-
-        .city-edit-actions button:hover {
-            background: #f0f0f0;
-        }
-
-        .city-reorder-controls {
-            display: none;
-            grid-column: 1 / -1;
-            gap: 8px;
-            margin-top: 8px;
-        }
-
-        .city.active .city-reorder-controls {
-            display: flex;
-        }
-
-        .city-reorder-controls button {
-            flex: 1;
-            padding: 10px;
-            border: 1px solid #ddd;
-            background: white;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-        }
-
-        .city-reorder-controls button:active {
-            background: #f0f0f0;
-        }
-
-        .city-reorder-controls button:disabled {
-            opacity: 0.3;
-            cursor: not-allowed;
-        }
-
-        .city .name {
-            font-weight: 600
-        }
-
-        .calendar-wrapper {
-            margin-top: 12px
-        }
-
-        .map-wrapper {
-            margin-top: 12px;
-        }
-
-        #tripMap {
-            height: 400px;
-            border-radius: 8px;
-            z-index: 1;
-            position: relative;
-        }
-
-        .map-loading {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: var(--bg);
-            border-radius: 8px;
-            z-index: 10;
-        }
-
-        .map-loading .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid #ddd;
-            border-top-color: var(--primary);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        .map-loading .loading-text {
-            margin-top: 12px;
-            color: var(--muted);
-            font-size: 14px;
-        }
-
-        .map-error {
-            padding: 40px 20px;
-            text-align: center;
-            color: var(--muted);
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .months {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-            gap: 12px;
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-        .month-card {
-            border-radius: 8px;
-            border: 1px solid #eee;
-            padding: 10px;
-            background: var(--card);
-            box-sizing: border-box;
-            width: 100%;
-        }
-
-        .month-header {
-            font-weight: 700;
-            margin-bottom: 6px
-        }
-
-        .weekday-row {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            font-size: 12px;
-            color: var(--muted);
-            text-align: center
-        }
-
-        .days-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 0
-        }
-
-        .day {
-            height: 56px;
-            border-radius: 0;
-            background: #fff;
-            text-align: right;
-            padding: 6px;
-            font-size: 13px;
-            position: relative;
-            box-sizing: border-box;
-            overflow: visible;
-        }
-
-        .day.blank {
-            background: transparent
-        }
-
-        .day.in-range {
-            color: inherit
-        }
-
-        .day.range-start {
-            border-top-left-radius: 20px;
-            border-bottom-left-radius: 20px
-        }
-
-        .day.range-end {
-            border-top-right-radius: 20px;
-            border-bottom-right-radius: 20px
-        }
-
-        .range-seg {
-            position: absolute;
-            left: 0px;
-            right: -2px;
-            height: 14px;
-            background: var(--primary);
-            color: #fff;
-            font-size: 12px;
-            line-height: 14px;
-            padding: 0 6px;
-            box-sizing: border-box;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            border-radius: 0;
-            z-index: 1;
-        }
-
-        .range-seg .seg-label {
-            font-size: 11px;
-            color: #fff;
-        }
-
-        .day .date-num {
-            z-index: 2
-        }
-
-        .range-seg.range-start {
-            border-top-left-radius: 10px;
-            border-bottom-left-radius: 10px
-        }
-
-        .range-seg.range-end {
-            border-top-right-radius: 10px;
-            border-bottom-right-radius: 10px
-        }
-
-        .day .date-num {
-            position: absolute;
-            right: 6px;
-            top: 6px;
-            font-size: 12px;
-            color: inherit
-        }
-
-        .small {
-            font-size: 12px;
-            color: var(--muted)
-        }
-
-        .days-control {
-            display: flex;
-            gap: 6px;
-            align-items: center
-        }
-
-        .days-control button {
-            width: 30px;
-            height: 30px;
-            border: none;
-            cursor: pointer;
-            background: #fff;
-            border-radius: 20px;
-            transition: background-color 0.2s;
-        }
-
-        .days-control button:hover {
-            background: #f0f0f0;
-        }
-
-        .meta {
-            font-size: 13px;
-            color: var(--muted)
+          overflow-x: hidden;
         }
 
         .topline {
-            display: flex;
-            justify-content: space-between;
-            align-items: center
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 10px;
         }
 
-        .actions {
+        .topline > div {
+          flex-wrap: wrap;
+          width: 100%;
+        }
+
+        .topline input[type="text"],
+        .topline input[type="date"] {
+          width: 100%;
+          box-sizing: border-box;
+        }
+
+        .city {
+          position: relative;
+          display: grid;
+          grid-template-columns: 24px minmax(120px, 1fr) auto auto;
+          grid-template-rows: auto auto;
+          gap: 8px;
+          padding: 8px;
+          cursor: default;
+          align-items: center;
+        }
+
+        .city .date-range,
+        .city .stepover,
+        .city .no-start {
+          grid-column: 2 / -1;
+          grid-row: 2;
+          font-size: 12px;
+          color: var(--muted);
+          margin-top: 4px;
+        }
+
+        .city-edit-actions button {
+          padding: 6px 8px;
+          min-width: 36px;
+          height: 36px;
+          border-radius: 6px;
+        }
+
+        .card {
+          padding: 10px;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="app">
+      <header class="topnav">
+        <a href="index.html" class="brand">Trippino</a>
+        <div
+          style="
+            margin-left: auto;
             display: flex;
             gap: 8px;
-            justify-content: flex-end;
-            justify-self: end
-        }
-
-        .btn {
-            padding: 8px 10px;
-            border-radius: 8px;
-            border: 0;
-            cursor: pointer
-        }
-
-        .btn.primary {
-            background: var(--primary);
-            color: white
-        }
-
-        .btn.ghost {
-            background: transparent;
-            border: 1px solid #ddd
-        }
-
-        .back-link {
-            color: var(--primary);
-            text-decoration: none;
-            font-size: 14px;
-            display: inline-flex;
             align-items: center;
-            gap: 4px;
-        }
-
-        .back-link:hover {
-            text-decoration: underline;
-        }
-
-        @media (max-width: 720px) {
-            body {
-                overflow-x: hidden;
-            }
-
-            .topline {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 10px;
-            }
-
-            .topline>div {
-                flex-wrap: wrap;
-                width: 100%;
-            }
-
-            .topline input[type="text"],
-            .topline input[type="date"] {
-                width: 100%;
-                box-sizing: border-box;
-            }
-
-            .city {
-                position: relative;
-                display: grid;
-                grid-template-columns: 24px minmax(120px, 1fr) auto auto;
-                grid-template-rows: auto auto;
-                gap: 8px;
-                padding: 8px;
-                cursor: default;
-                align-items: center;
-            }
-
-            .city .date-range,
-            .city .stepover,
-            .city .no-start {
-                grid-column: 2 / -1;
-                grid-row: 2;
-                font-size: 12px;
-                color: var(--muted);
-                margin-top: 4px;
-            }
-
-            .city-edit-actions button {
-                padding: 6px 8px;
-                min-width: 36px;
-                height: 36px;
-                border-radius: 6px;
-            }
-
-            .card {
-                padding: 10px;
-            }
-        }
-    </style>
-</head>
-
-<body>
-    <div class="app">
-        <header class="topnav">
-            <a href="index.html" class="brand">Trippino</a>
-            <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
-                <div id="authArea"></div>
-                <div id="burgerWrapper" style="position:relative;margin-left:8px">
-                    <button id="burgerBtn" aria-label="Open menu" class="btn ghost">☰</button>
-                    <div id="burgerMenu" style="display:none;position:absolute;right:0;top:40px;background:var(--card);border:1px solid #eee;border-radius:8px;box-shadow:0 6px 18px rgba(12,18,32,0.06);z-index:1000;min-width:160px;padding:6px">
-                        <div class="small menu-item" data-action="home" style="padding:8px;cursor:pointer">Home</div>
-                        <div class="small menu-item" data-action="profile" style="padding:8px;cursor:pointer">Profile</div>
-                        <div class="small menu-item" data-action="about" style="padding:8px;cursor:pointer">About</div>
-                        <div class="small menu-item" data-action="logout" style="padding:8px;cursor:pointer">Logout</div>
-                    </div>
-                </div>
+          "
+        >
+          <div id="authArea"></div>
+          <div id="burgerWrapper" style="position: relative; margin-left: 8px">
+            <button id="burgerBtn" aria-label="Open menu" class="btn ghost">
+              ☰
+            </button>
+            <div
+              id="burgerMenu"
+              style="
+                display: none;
+                position: absolute;
+                right: 0;
+                top: 40px;
+                background: var(--card);
+                border: 1px solid #eee;
+                border-radius: 8px;
+                box-shadow: 0 6px 18px rgba(12, 18, 32, 0.06);
+                z-index: 1000;
+                min-width: 160px;
+                padding: 6px;
+              "
+            >
+              <div
+                class="small menu-item"
+                data-action="home"
+                style="padding: 8px; cursor: pointer"
+              >
+                Home
+              </div>
+              <div
+                class="small menu-item"
+                data-action="profile"
+                style="padding: 8px; cursor: pointer"
+              >
+                Profile
+              </div>
+              <div
+                class="small menu-item"
+                data-action="about"
+                style="padding: 8px; cursor: pointer"
+              >
+                About
+              </div>
+              <div
+                class="small menu-item"
+                data-action="logout"
+                style="padding: 8px; cursor: pointer"
+              >
+                Logout
+              </div>
             </div>
-        </header>
-        <div id="tripContainer"></div>
+          </div>
+        </div>
+      </header>
+      <div id="tripContainer"></div>
     </div>
 
     <script src="/config.js"></script>
     <script type="module">
-        import { getCsrfToken } from '/modules/csrf.js'
-        import { getCurrentUser, logout } from '/modules/auth.js'
-        // --- Service Worker registration ---
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js')
-                .then(reg => console.log('Service Worker registered:', reg.scope))
-                .catch(err => console.error('Service Worker registration failed:', err))
+      import { getCsrfToken } from "/modules/csrf.js";
+      import { getCurrentUser, logout } from "/modules/auth.js";
+      // --- Service Worker registration ---
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker
+          .register("/sw.js")
+          .then((reg) => console.log("Service Worker registered:", reg.scope))
+          .catch((err) =>
+            console.error("Service Worker registration failed:", err),
+          );
+      }
+
+      const API_BASE = window.APP_CONFIG.API_BASE;
+      const STORAGE_KEY = "simpleTripPlanner_v1";
+      const MAX_CITIES_PER_TRIP = 30;
+      const MAX_CITY_NAME_LENGTH = 60;
+      const MAX_DAYS_PER_CITY = 365;
+      const NAME_SAFE_REGEX = /^[A-Za-z0-9 \-\'\(\)\.,]*$/;
+
+      // --- Auth config & helpers ---
+      const authArea = document.getElementById("authArea");
+      const anonBanner = document.getElementById("anonBanner");
+      // currentUser: null = anonymous, otherwise object with email
+      let currentUser = null;
+
+      async function checkAuth() {
+        try {
+          const user = await getCurrentUser();
+          if (!user) {
+            setAnonymous();
+            return null;
+          }
+          setAuthenticated(user);
+          return user;
+        } catch (e) {
+          console.warn("auth check failed", e);
+          setAnonymous();
+          return null;
         }
+      }
+      // Kick off initial auth check
+      checkAuth();
 
-        const API_BASE = window.APP_CONFIG.API_BASE
-        const STORAGE_KEY = 'simpleTripPlanner_v1'
-        const MAX_CITIES_PER_TRIP = 30
-        const MAX_CITY_NAME_LENGTH = 60
-        const MAX_DAYS_PER_CITY = 365
-        const NAME_SAFE_REGEX = /^[A-Za-z0-9 \-\'\(\)\.,]*$/
+      function setAuthenticated(user) {
+        currentUser = user;
+        authArea.innerHTML = "";
+        // show burger button when authenticated
+        const burgerBtn = document.getElementById("burgerBtn");
+        if (burgerBtn) burgerBtn.style.display = "";
+        updateAnonBanner();
 
-        // --- Auth config & helpers ---
-        const authArea = document.getElementById('authArea')
-        const anonBanner = document.getElementById('anonBanner')
-        // currentUser: null = anonymous, otherwise object with email
-        let currentUser = null
-
-        async function checkAuth() {
-            try {
-                const user = await getCurrentUser()
-                if (!user) { setAnonymous(); return null }
-                setAuthenticated(user)
-                return user
-            } catch (e) {
-                console.warn('auth check failed', e)
-                setAnonymous()
-                return null
-            }
+        // attach menu handlers
+        const menu = document.getElementById("burgerMenu");
+        if (menu) {
+          menu.querySelectorAll(".menu-item").forEach((mi) => {
+            mi.addEventListener("click", async (ev) => {
+              const act = mi.dataset.action;
+              if (act === "logout") {
+                await doLogout();
+                window.location.href = "index.html";
+              } else if (act === "profile") {
+                window.location.href = "profile.html";
+              } else if (act === "about") {
+                window.location.href = "about.html";
+              } else if (act === "home") {
+                window.location.href = "index.html";
+              }
+              menu.style.display = "none";
+            });
+          });
         }
-        // Kick off initial auth check
-        checkAuth()
+      }
 
-        function setAuthenticated(user) {
-            currentUser = user
-            authArea.innerHTML = ''
-            // show burger button when authenticated
-            const burgerBtn = document.getElementById('burgerBtn')
-            if (burgerBtn) burgerBtn.style.display = ''
-            updateAnonBanner()
-
-            // attach menu handlers
-            const menu = document.getElementById('burgerMenu')
-            if (menu) {
-                menu.querySelectorAll('.menu-item').forEach(mi => {
-                    mi.addEventListener('click', async (ev) => {
-                        const act = mi.dataset.action
-                        if (act === 'logout') {
-                            await doLogout()
-                            window.location.href = 'index.html'
-                        } else if (act === 'profile') {
-                            window.location.href = 'profile.html'
-                        } else if (act === 'about') {
-                            window.location.href = 'about.html'
-                        } else if (act === 'home') {
-                            window.location.href = 'index.html'
-                        }
-                        menu.style.display = 'none'
-                    })
-                })
-            }
+      function updateAnonBanner() {
+        try {
+          // show banner only when anonymous and there are local trips
+          const hasLocalTrips =
+            appState &&
+            Array.isArray(appState.trips) &&
+            appState.trips.length > 0;
+          if (!currentUser && hasLocalTrips) {
+            anonBanner.style.display = "";
+          } else {
+            anonBanner.style.display = "none";
+          }
+        } catch (e) {
+          // ignore
         }
+      }
 
-        function updateAnonBanner() {
-            try {
-                // show banner only when anonymous and there are local trips
-                const hasLocalTrips = appState && Array.isArray(appState.trips) && appState.trips.length > 0
-                if (!currentUser && hasLocalTrips) {
-                    anonBanner.style.display = ''
-                } else {
-                    anonBanner.style.display = 'none'
-                }
-            } catch (e) {
-                // ignore
-            }
-        }
-
-        function setAnonymous() {
-            currentUser = null
-            authArea.innerHTML = `
+      function setAnonymous() {
+        currentUser = null;
+        authArea.innerHTML = `
                 <button id="goAuthBtn" class="btn primary">Sign in / Register</button>
-            `
-            document.getElementById('goAuthBtn').addEventListener('click', () => {
-                // open the dedicated auth page
-                window.location.href = 'auth.html'
-            })
-            updateAnonBanner()
+            `;
+        document.getElementById("goAuthBtn").addEventListener("click", () => {
+          // open the dedicated auth page
+          window.location.href = "auth.html";
+        });
+        updateAnonBanner();
+      }
+
+      async function doLogout() {
+        try {
+          await logout();
+        } catch (e) {
+          console.warn("logout failed", e);
         }
+        checkAuth();
+        localStorage.clear();
+        appState = { trips: [] };
+        render();
+      }
 
+      // Get trip ID from URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const tripId = urlParams.get("id");
 
+      if (!tripId) {
+        window.location.href = "index.html";
+      }
 
-        async function doLogout() {
-            try {
-                await logout()
-            } catch (e) { console.warn('logout failed', e) }
-            checkAuth()
-            localStorage.clear()
-            appState = { trips: [] }
-            render()
+      const uid = () => Math.random().toString(36).slice(2, 9);
+
+      function load() {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return { trips: [] };
+        try {
+          return JSON.parse(raw);
+        } catch (e) {
+          console.warn("load failed", e);
+          return { trips: [], updatedAt: new Date().toISOString() };
         }
+      }
 
-        // Get trip ID from URL
-        const urlParams = new URLSearchParams(window.location.search)
-        const tripId = urlParams.get('id')
+      function save(appState) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+        saveApi(appState);
+      }
 
-        if (!tripId) {
-            window.location.href = 'index.html'
+      async function saveApi(appState) {
+        try {
+          const token = await getCsrfToken();
+          await fetch(`${API_BASE}/api/state`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "CSRF-Token": token,
+            },
+            credentials: "include",
+            body: JSON.stringify({ state: appState }),
+          });
+        } catch (e) {
+          console.warn("push local to backend failed", e);
         }
+      }
 
-        const uid = () => Math.random().toString(36).slice(2, 9)
+      let appState = load();
+      if (!appState.trips) appState.trips = [];
 
-        function load() {
-            const raw = localStorage.getItem(STORAGE_KEY)
-            if (!raw) return { trips: [] }
-            try {
-                return JSON.parse(raw)
-            } catch (e) {
-                console.warn('load failed', e)
-                return { trips: [], updatedAt: new Date().toISOString() }
-            }
+      const trip = appState.trips.find((t) => t.id === tripId);
+      if (!trip) {
+        alert("Trip not found");
+        window.location.href = "index.html";
+      }
+
+      function validateCityName(name) {
+        if (!name || !name.trim())
+          return { ok: false, error: "City name required" };
+        if (name.length > MAX_CITY_NAME_LENGTH)
+          return {
+            ok: false,
+            error: `City name too long (max ${MAX_CITY_NAME_LENGTH} characters)`,
+          };
+        if (!NAME_SAFE_REGEX.test(name))
+          return { ok: false, error: "City name contains invalid characters" };
+        return { ok: true };
+      }
+
+      function validateDays(n) {
+        const v = Number(n) || 0;
+        if (!Number.isFinite(v) || v < 0)
+          return { ok: false, error: "Days must be a non-negative number" };
+        if (v > MAX_DAYS_PER_CITY)
+          return {
+            ok: false,
+            error: `Days per city cannot exceed ${MAX_DAYS_PER_CITY}`,
+          };
+        return { ok: true };
+      }
+
+      function showClientError(msg) {
+        try {
+          alert(msg);
+        } catch (e) {
+          console.error(msg);
         }
+      }
 
-        function save(appState) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(appState))
-            saveApi(appState)
-        }
+      function updateDays(cityId, newDays) {
+        const c = trip.cities.find((x) => x.id === cityId);
+        if (!c) return;
+        c.days = Math.max(0, Number(newDays));
+        c.updatedAt = new Date().toISOString();
+        updateTripInStore();
+        render();
+      }
 
-        async function saveApi(appState) {
-            try {
-                const token = await getCsrfToken()
-                await fetch(`${API_BASE}/api/state`, {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'CSRF-Token': token
-                    },
-                    credentials: 'include',
-                    body: JSON.stringify({ state: appState })
-                })
-            } catch (e) {
-                console.warn('push local to backend failed', e)
-            }
-        }
+      function removeCityFromTrip(cityId) {
+        trip.cities = trip.cities.filter((c) => c.id !== cityId);
+        trip.updatedAt = new Date().toISOString();
+        updateTripInStore();
+        render();
+      }
 
-        let appState = load()
-        if (!appState.trips) appState.trips = []
+      function updateTripInStore() {
+        const idx = appState.trips.findIndex((x) => x.id === trip.id);
+        if (idx === -1) return;
+        appState.trips[idx] = trip;
+        save(appState);
+      }
 
-        const trip = appState.trips.find(t => t.id === tripId)
-        if (!trip) {
-            alert('Trip not found')
-            window.location.href = 'index.html'
-        }
+      function addDays(d, n) {
+        const t = new Date(d);
+        t.setDate(t.getDate() + n);
+        return t;
+      }
 
+      function formatDate(d) {
+        return d.toISOString().slice(0, 10);
+      }
 
-        function validateCityName(name) {
-            if (!name || !name.trim()) return { ok: false, error: 'City name required' }
-            if (name.length > MAX_CITY_NAME_LENGTH) return { ok: false, error: `City name too long (max ${MAX_CITY_NAME_LENGTH} characters)` }
-            if (!NAME_SAFE_REGEX.test(name)) return { ok: false, error: 'City name contains invalid characters' }
-            return { ok: true }
-        }
+      function weekdayName(d) {
+        return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d.getDay()];
+      }
 
-        function validateDays(n) {
-            const v = Number(n) || 0
-            if (!Number.isFinite(v) || v < 0) return { ok: false, error: 'Days must be a non-negative number' }
-            if (v > MAX_DAYS_PER_CITY) return { ok: false, error: `Days per city cannot exceed ${MAX_DAYS_PER_CITY}` }
-            return { ok: true }
-        }
+      function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, function (ch) {
+          return {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;",
+          }[ch];
+        });
+      }
 
-        function showClientError(msg) {
-            try {
-                alert(msg)
-            } catch (e) {
-                console.error(msg)
-            }
-        }
-
-        function updateDays(cityId, newDays) {
-            const c = trip.cities.find(x => x.id === cityId)
-            if (!c) return
-            c.days = Math.max(0, Number(newDays))
-            c.updatedAt = new Date().toISOString()
-            updateTripInStore()
-            render()
-        }
-
-        function removeCityFromTrip(cityId) {
-            trip.cities = trip.cities.filter(c => c.id !== cityId)
-            trip.updatedAt = new Date().toISOString()
-            updateTripInStore()
-            render()
-        }
-
-        function updateTripInStore() {
-            const idx = appState.trips.findIndex(x => x.id === trip.id)
-            if (idx === -1) return
-            appState.trips[idx] = trip
-            save(appState)
-        }
-
-        function addDays(d, n) {
-            const t = new Date(d)
-            t.setDate(t.getDate() + n)
-            return t
-        }
-
-        function formatDate(d) {
-            return d.toISOString().slice(0, 10)
-        }
-
-        function weekdayName(d) {
-            return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()]
-        }
-
-        function escapeHtml(s) {
-            return String(s).replace(/[&<>"']/g, function(ch) {
-                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": "&#39;" }[ch]
-            })
-        }
-
-        // Typeahead styles
-        const styleEl = document.createElement('style')
-        styleEl.textContent = `
+      // Typeahead styles
+      const styleEl = document.createElement("style");
+      styleEl.textContent = `
             .tt-popup { position: absolute; background: white; border: 1px solid #eee; box-shadow: 0 6px 18px rgba(12,18,32,0.06); border-radius:6px; z-index:1000; width:260px; }
             .tt-popup .tt-item { padding:8px; cursor:pointer; border-bottom:1px solid #f2f4f6 }
             .tt-popup .tt-item:last-child { border-bottom:0 }
             .tt-popup .tt-item:hover { background:#f6f8fa }
             .tt-input-inline { padding:6px 8px; border:1px solid #ddd; border-radius:6px; width:220px }
-        `
-        document.head.appendChild(styleEl)
+        `;
+      document.head.appendChild(styleEl);
 
-        function createCitySearchPopup(anchorEl, onSelect, initialValue = '') {
-            const popup = document.createElement('div')
-            popup.className = 'tt-popup'
-            popup.style.minWidth = '260px'
-            popup.style.padding = '8px'
+      function createCitySearchPopup(anchorEl, onSelect, initialValue = "") {
+        const popup = document.createElement("div");
+        popup.className = "tt-popup";
+        popup.style.minWidth = "260px";
+        popup.style.padding = "8px";
 
-            const input = document.createElement('input')
-            input.className = 'tt-input-inline'
-            input.value = initialValue || ''
-            popup.appendChild(input)
+        const input = document.createElement("input");
+        input.className = "tt-input-inline";
+        input.value = initialValue || "";
+        popup.appendChild(input);
 
-            const list = document.createElement('div')
-            list.style.maxHeight = '260px'
-            list.style.overflow = 'auto'
-            list.style.marginTop = '6px'
-            popup.appendChild(list)
+        const list = document.createElement("div");
+        list.style.maxHeight = "260px";
+        list.style.overflow = "auto";
+        list.style.marginTop = "6px";
+        popup.appendChild(list);
 
-            document.body.appendChild(popup)
-            const rect = anchorEl.getBoundingClientRect()
-            popup.style.position = 'absolute'
-            popup.style.left = `${rect.left}px`
-            popup.style.top = `${rect.bottom + window.scrollY + 6}px`
+        document.body.appendChild(popup);
+        const rect = anchorEl.getBoundingClientRect();
+        popup.style.position = "absolute";
+        popup.style.left = `${rect.left}px`;
+        popup.style.top = `${rect.bottom + window.scrollY + 6}px`;
 
-            let debounceTimer = null
+        let debounceTimer = null;
 
-            async function doQuery(q) {
-                if (!q) {
-                    renderList([])
-                    return
-                }
-                try {
-                    const url = `${API_BASE}/api/tomtom?q=${encodeURIComponent(q)}&limit=6&typeahead=true`
-                    const res = await fetch(url, { credentials: 'include' })
-                    if (!res.ok) {
-                        renderList([])
-                        return
-                    }
-                    const json = await res.json()
-                    const suggestions = (json.results || []).map(r => ({
-                        name: `${r.address.freeformAddress}, ${r.address.countryCode || ''}`.trim()
-                    }))
-                    renderList(suggestions)
-                } catch (e) {
-                    console.warn('TomTom proxy query failed', e)
-                    renderList([])
-                }
+        async function doQuery(q) {
+          if (!q) {
+            renderList([]);
+            return;
+          }
+          try {
+            const url = `${API_BASE}/api/tomtom?q=${encodeURIComponent(q)}&limit=6&typeahead=true`;
+            const res = await fetch(url, { credentials: "include" });
+            if (!res.ok) {
+              renderList([]);
+              return;
             }
-
-            function renderList(items) {
-                list.innerHTML = ''
-                if (!items.length) {
-                    const none = document.createElement('div')
-                    none.className = 'tt-item'
-                    none.textContent = 'No suggestions'
-                    list.appendChild(none)
-                    return
-                }
-                for (const it of items) {
-                    const el = document.createElement('div')
-                    el.className = 'tt-item'
-                    el.textContent = it.name || 'Unknown'
-                    el.addEventListener('click', () => {
-                        cleanup()
-                        onSelect(it)
-                    })
-                    list.appendChild(el)
-                }
-            }
-
-            function cleanup() {
-                if (debounceTimer) clearTimeout(debounceTimer)
-                if (popup && popup.parentNode) popup.parentNode.removeChild(popup)
-                document.removeEventListener('mousedown', docMouse)
-            }
-
-            function docMouse(e) {
-                if (!popup.contains(e.target) && !anchorEl.contains(e.target)) {
-                    cleanup()
-                    onSelect(null)
-                }
-            }
-
-            input.addEventListener('input', (ev) => {
-                const q = ev.target.value.trim()
-                if (debounceTimer) clearTimeout(debounceTimer)
-                debounceTimer = setTimeout(() => doQuery(q), 300)
-            })
-
-            input.addEventListener('keydown', (ev) => {
-                if (ev.key === 'Enter') {
-                    const first = list.querySelector('.tt-item')
-                    if (first) first.click()
-                } else if (ev.key === 'Escape') {
-                    cleanup()
-                    onSelect(null)
-                }
-            })
-
-            document.addEventListener('mousedown', docMouse)
-
-            if (input.value && input.value.length >= 2) {
-                doQuery(input.value)
-            }
-
-            input.focus()
-            return popup
+            const json = await res.json();
+            const suggestions = (json.results || []).map((r) => ({
+              name: `${r.address.freeformAddress}, ${r.address.countryCode || ""}`.trim(),
+            }));
+            renderList(suggestions);
+          } catch (e) {
+            console.warn("TomTom proxy query failed", e);
+            renderList([]);
+          }
         }
 
-        function render() {
-            const container = document.getElementById('tripContainer')
-            container.innerHTML = ''
+        function renderList(items) {
+          list.innerHTML = "";
+          if (!items.length) {
+            const none = document.createElement("div");
+            none.className = "tt-item";
+            none.textContent = "No suggestions";
+            list.appendChild(none);
+            return;
+          }
+          for (const it of items) {
+            const el = document.createElement("div");
+            el.className = "tt-item";
+            el.textContent = it.name || "Unknown";
+            el.addEventListener("click", () => {
+              cleanup();
+              onSelect(it);
+            });
+            list.appendChild(el);
+          }
+        }
 
-            // fetch info from state
-            const trip = appState.trips.find(t => t.id === tripId)
-            if (!trip) return
+        function cleanup() {
+          if (debounceTimer) clearTimeout(debounceTimer);
+          if (popup && popup.parentNode) popup.parentNode.removeChild(popup);
+          document.removeEventListener("mousedown", docMouse);
+        }
 
-            // Trip editor card
-            const editorCard = document.createElement('div')
-            editorCard.className = 'card'
+        function docMouse(e) {
+          if (!popup.contains(e.target) && !anchorEl.contains(e.target)) {
+            cleanup();
+            onSelect(null);
+          }
+        }
 
-            const topline = document.createElement('div')
-            topline.className = 'topline'
-            topline.innerHTML = `
+        input.addEventListener("input", (ev) => {
+          const q = ev.target.value.trim();
+          if (debounceTimer) clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => doQuery(q), 300);
+        });
+
+        input.addEventListener("keydown", (ev) => {
+          if (ev.key === "Enter") {
+            const first = list.querySelector(".tt-item");
+            if (first) first.click();
+          } else if (ev.key === "Escape") {
+            cleanup();
+            onSelect(null);
+          }
+        });
+
+        document.addEventListener("mousedown", docMouse);
+
+        if (input.value && input.value.length >= 2) {
+          doQuery(input.value);
+        }
+
+        input.focus();
+        return popup;
+      }
+
+      function render() {
+        const container = document.getElementById("tripContainer");
+        container.innerHTML = "";
+
+        // fetch info from state
+        const trip = appState.trips.find((t) => t.id === tripId);
+        if (!trip) return;
+
+        // Trip editor card
+        const editorCard = document.createElement("div");
+        editorCard.className = "card";
+
+        const topline = document.createElement("div");
+        topline.className = "topline";
+        topline.innerHTML = `
                 <div style="display:flex;gap:8px;align-items:center">
                     <div class="small" style="color:var(--muted)">Start date</div>
-                    <input class="trip-start" type="date" value="${escapeHtml(trip.start || '')}" />
+                    <input class="trip-start" type="date" value="${escapeHtml(trip.start || "")}" />
                 </div>
-            `
-            editorCard.appendChild(topline)
+            `;
+        editorCard.appendChild(topline);
 
-            const citiesContainer = document.createElement('div')
-            citiesContainer.className = 'cities'
-            editorCard.appendChild(citiesContainer)
+        const citiesContainer = document.createElement("div");
+        citiesContainer.className = "cities";
+        editorCard.appendChild(citiesContainer);
 
-            const metaRow = document.createElement('div')
-            metaRow.style.display = 'flex'
-            metaRow.style.justifyContent = 'space-between'
-            metaRow.style.alignItems = 'center'
-            metaRow.style.marginTop = '12px'
-            metaRow.innerHTML = `<div class="meta">Total nights: <span class="total-days">0</span></div>`
-            editorCard.appendChild(metaRow)
+        const metaRow = document.createElement("div");
+        metaRow.style.display = "flex";
+        metaRow.style.justifyContent = "space-between";
+        metaRow.style.alignItems = "center";
+        metaRow.style.marginTop = "12px";
+        metaRow.innerHTML = `<div class="meta">Total nights: <span class="total-days">0</span></div>`;
+        editorCard.appendChild(metaRow);
 
-            const startInput = topline.querySelector('.trip-start')
-            startInput.addEventListener('change', () => {
-                trip.start = startInput.value
-                updateTripInStore()
-                render()
-            })
+        const startInput = topline.querySelector(".trip-start");
+        startInput.addEventListener("change", () => {
+          trip.start = startInput.value;
+          updateTripInStore();
+          render();
+        });
 
-            renderCitiesList(citiesContainer)
+        renderCitiesList(citiesContainer);
 
-            const total = trip.cities.reduce((s, c) => s + Number(c.days), 0)
-            const totalDaysEl = editorCard.querySelector('.total-days')
-            if (totalDaysEl) totalDaysEl.textContent = total
+        const total = trip.cities.reduce((s, c) => s + Number(c.days), 0);
+        const totalDaysEl = editorCard.querySelector(".total-days");
+        if (totalDaysEl) totalDaysEl.textContent = total;
 
-            container.appendChild(editorCard)
+        container.appendChild(editorCard);
 
-            // Calendar card
-            const calCard = document.createElement('div')
-            calCard.className = 'card calendar-wrapper'
-            renderTripCalendar(calCard)
-            container.appendChild(calCard)
+        // Calendar card
+        const calCard = document.createElement("div");
+        calCard.className = "card calendar-wrapper";
+        renderTripCalendar(calCard);
+        container.appendChild(calCard);
 
-            // Map card
-            const mapCard = document.createElement('div')
-            mapCard.className = 'card map-wrapper'
-            mapCard.innerHTML = `
+        // Map card
+        const mapCard = document.createElement("div");
+        mapCard.className = "card map-wrapper";
+        mapCard.innerHTML = `
                 <h3 style="margin:0 0 8px 0">Route map</h3>
                 <div id="tripMap">
                     <div class="map-loading">
@@ -928,35 +1024,37 @@
                         <div class="loading-text">Loading map...</div>
                     </div>
                 </div>
-            `
-            container.appendChild(mapCard)
-            
-            // Render map after DOM is ready
-            setTimeout(() => renderTripMap(), 100)
-        }
+            `;
+        container.appendChild(mapCard);
 
-        function renderCitiesList(citiesContainer) {
-            citiesContainer.innerHTML = ''
-            let dayCursor = 1
+        // Render map after DOM is ready
+        setTimeout(() => renderTripMap(), 100);
+      }
 
-            for (let i = 0; i < trip.cities.length; i++) {
-                const c = trip.cities[i]
-                const start = dayCursor
-                const end = dayCursor + Number(c.days)
-                const cityRow = document.createElement('div')
-                cityRow.className = 'city'
-                cityRow.dataset.id = c.id
+      function renderCitiesList(citiesContainer) {
+        citiesContainer.innerHTML = "";
+        let dayCursor = 1;
 
-                let dateHtml = ''
-                if (!trip.start) {
-                    dateHtml = '<div class="small no-start" style="color:var(--muted)">No start date</div>'
-                } else if (Number(c.days) === 0) {
-                    dateHtml = '<div class="small stepover" style="font-weight:600;color:var(--muted)">Stepover</div>'
-                } else {
-                    dateHtml = `<div class="small date-range">${formatDate(addDays(new Date(trip.start), start - 1))} (${weekdayName(addDays(new Date(trip.start), start - 1))}) → ${formatDate(addDays(new Date(trip.start), end - 1))} (${weekdayName(addDays(new Date(trip.start), end - 1))})</div>`
-                }
+        for (let i = 0; i < trip.cities.length; i++) {
+          const c = trip.cities[i];
+          const start = dayCursor;
+          const end = dayCursor + Number(c.days);
+          const cityRow = document.createElement("div");
+          cityRow.className = "city";
+          cityRow.dataset.id = c.id;
 
-                cityRow.innerHTML = `
+          let dateHtml = "";
+          if (!trip.start) {
+            dateHtml =
+              '<div class="small no-start" style="color:var(--muted)">No start date</div>';
+          } else if (Number(c.days) === 0) {
+            dateHtml =
+              '<div class="small stepover" style="font-weight:600;color:var(--muted)">Stepover</div>';
+          } else {
+            dateHtml = `<div class="small date-range">${formatDate(addDays(new Date(trip.start), start - 1))} (${weekdayName(addDays(new Date(trip.start), start - 1))}) → ${formatDate(addDays(new Date(trip.start), end - 1))} (${weekdayName(addDays(new Date(trip.start), end - 1))})</div>`;
+          }
+
+          cityRow.innerHTML = `
                     <div class="expand-arrow" role="button" aria-label="Expand city">
                         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -964,7 +1062,7 @@
                     </div>
                     <div>
                         <div class="name">
-                            ${escapeHtml(c.name || 'Unnamed city')}
+                            ${escapeHtml(c.name || "Unnamed city")}
                         </div>
                     </div>
                     <div class="days-control">
@@ -997,452 +1095,542 @@
                         </button>
                     </div>
                     <div class="notes" style="grid-column:1 / -1;margin-top:8px">
-                        <textarea class="city-notes" placeholder="Notes about this city..." style="width:100%;min-height:72px;border:1px solid #eee;padding:8px;border-radius:8px;box-sizing:border-box">${escapeHtml(c.notes || '')}</textarea>
+                        <textarea class="city-notes" placeholder="Notes about this city..." style="width:100%;min-height:72px;border:1px solid #eee;padding:8px;border-radius:8px;box-sizing:border-box">${escapeHtml(c.notes || "")}</textarea>
                         <div style="text-align:right;margin-top:6px">
                             <button data-action="save-note" class="btn primary">Save note</button>
                         </div>
                     </div>
-                `
+                `;
 
-                cityRow.querySelector('[data-action="dec"]').addEventListener('click', (e) => {
-                    e.stopPropagation()
-                    c.days = Math.max(0, Number(c.days) - 1)
-                    updateDays(c.id, c.days)
-                })
+          cityRow
+            .querySelector('[data-action="dec"]')
+            .addEventListener("click", (e) => {
+              e.stopPropagation();
+              c.days = Math.max(0, Number(c.days) - 1);
+              updateDays(c.id, c.days);
+            });
 
-                cityRow.querySelector('[data-action="inc"]').addEventListener('click', (e) => {
-                    e.stopPropagation()
-                    c.days = Math.max(0, Number(c.days) + 1)
-                    updateDays(c.id, c.days)
-                })
+          cityRow
+            .querySelector('[data-action="inc"]')
+            .addEventListener("click", (e) => {
+              e.stopPropagation();
+              c.days = Math.max(0, Number(c.days) + 1);
+              updateDays(c.id, c.days);
+            });
 
-                cityRow.querySelector('[data-action="remove"]').addEventListener('click', (e) => {
-                    e.stopPropagation()
-                    removeCityFromTrip(c.id)
-                })
+          cityRow
+            .querySelector('[data-action="remove"]')
+            .addEventListener("click", (e) => {
+              e.stopPropagation();
+              removeCityFromTrip(c.id);
+            });
 
-                cityRow.querySelector('[data-action="rename"]').addEventListener('click', (ev) => {
-                    ev.stopPropagation()
-                    const renameBtn = ev.currentTarget
-                    createCitySearchPopup(renameBtn, async (sel) => {
-                        if (!sel) return
-                        const name = (sel.name || '').trim()
-                        const vname = validateCityName(name)
-                        if (!vname.ok) return showClientError(vname.error)
-                        c.name = name
-                        if (sel.position) {
-                            c.lat = sel.position.lat
-                            c.lon = sel.position.lon
-                        }
-                        c.updatedAt = new Date().toISOString()
-                        updateTripInStore()
-                        render()
-                    }, c.name)
-                })
+          cityRow
+            .querySelector('[data-action="rename"]')
+            .addEventListener("click", (ev) => {
+              ev.stopPropagation();
+              const renameBtn = ev.currentTarget;
+              createCitySearchPopup(
+                renameBtn,
+                async (sel) => {
+                  if (!sel) return;
+                  const name = (sel.name || "").trim();
+                  const vname = validateCityName(name);
+                  if (!vname.ok) return showClientError(vname.error);
+                  c.name = name;
+                  if (sel.position) {
+                    c.lat = sel.position.lat;
+                    c.lon = sel.position.lon;
+                  }
+                  c.updatedAt = new Date().toISOString();
+                  updateTripInStore();
+                  render();
+                },
+                c.name,
+              );
+            });
 
-                // Move up/down buttons
-                const moveUpBtn = cityRow.querySelector('[data-action="move-up"]')
-                const moveDownBtn = cityRow.querySelector('[data-action="move-down"]')
+          // Move up/down buttons
+          const moveUpBtn = cityRow.querySelector('[data-action="move-up"]');
+          const moveDownBtn = cityRow.querySelector(
+            '[data-action="move-down"]',
+          );
 
-                // Disable buttons if at the edges
-                if (i === 0) moveUpBtn.disabled = true
-                if (i === trip.cities.length - 1) moveDownBtn.disabled = true
+          // Disable buttons if at the edges
+          if (i === 0) moveUpBtn.disabled = true;
+          if (i === trip.cities.length - 1) moveDownBtn.disabled = true;
 
-                moveUpBtn.addEventListener('click', (e) => {
-                    e.stopPropagation()
-                    if (i === 0) return
-                    
-                    // Swap with previous city
-                    const temp = trip.cities[i]
-                    trip.cities[i] = trip.cities[i - 1]
-                    trip.cities[i - 1] = temp
-                    
-                    trip.updatedAt = new Date().toISOString()
-                    updateTripInStore()
-                    render()
-                })
+          moveUpBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (i === 0) return;
 
-                moveDownBtn.addEventListener('click', (e) => {
-                    e.stopPropagation()
-                    if (i === trip.cities.length - 1) return
-                    
-                    // Swap with next city
-                    const temp = trip.cities[i]
-                    trip.cities[i] = trip.cities[i + 1]
-                    trip.cities[i + 1] = temp
-                    
-                    trip.updatedAt = new Date().toISOString()
-                    updateTripInStore()
-                    render()
-                })
+            // Swap with previous city
+            const temp = trip.cities[i];
+            trip.cities[i] = trip.cities[i - 1];
+            trip.cities[i - 1] = temp;
 
-                // Click handling to expand/collapse - only on arrow
-                const expandArrow = cityRow.querySelector('.expand-arrow')
-                expandArrow.addEventListener('click', (e) => {
-                    e.stopPropagation()
+            trip.updatedAt = new Date().toISOString();
+            updateTripInStore();
+            render();
+          });
 
-                    citiesContainer.querySelectorAll('.city.active').forEach(c => {
-                        if (c !== cityRow) c.classList.remove('active')
-                    })
+          moveDownBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (i === trip.cities.length - 1) return;
 
-                    cityRow.classList.toggle('active')
-                })
+            // Swap with next city
+            const temp = trip.cities[i];
+            trip.cities[i] = trip.cities[i + 1];
+            trip.cities[i + 1] = temp;
 
-                const notesTa = cityRow.querySelector('.city-notes')
-                const saveNoteBtn = cityRow.querySelector('[data-action="save-note"]')
+            trip.updatedAt = new Date().toISOString();
+            updateTripInStore();
+            render();
+          });
 
-                if (notesTa) {
-                    // Auto-save on blur
-                    notesTa.addEventListener('blur', () => {
-                        c.notes = notesTa.value
-                        c.updatedAt = new Date().toISOString()
-                        updateTripInStore()
-                    })
-                }
+          // Click handling to expand/collapse - only on arrow
+          const expandArrow = cityRow.querySelector(".expand-arrow");
+          expandArrow.addEventListener("click", (e) => {
+            e.stopPropagation();
 
-                if (saveNoteBtn) {
-                    saveNoteBtn.addEventListener('click', (ev) => {
-                        ev.stopPropagation()
-                        if (notesTa) {
-                            c.notes = notesTa.value
-                            c.updatedAt = new Date().toISOString()
-                            updateTripInStore()
-                            render()
-                        }
-                    })
-                }
+            citiesContainer.querySelectorAll(".city.active").forEach((c) => {
+              if (c !== cityRow) c.classList.remove("active");
+            });
 
-                // Drag and drop
-                citiesContainer.appendChild(cityRow)
-                dayCursor = end
-            }
+            cityRow.classList.toggle("active");
+          });
 
-            // Add city button
-            const bottomAddBtn = document.createElement('div')
-            bottomAddBtn.style.textAlign = 'center'
-            bottomAddBtn.style.marginTop = '12px'
-            bottomAddBtn.innerHTML = '<button class="btn ghost" style="width:100%">+ Add city</button>'
-            bottomAddBtn.querySelector('button').addEventListener('click', (e) => {
-                e.stopPropagation()
-                createCitySearchPopup(e.target, async (sel) => {
-                    if (!sel) return
-                    const name = (sel.name || '').trim()
-                    const v = validateCityName(name)
-                    if (!v.ok) return showClientError(v.error)
-                    if (trip.cities && trip.cities.length >= MAX_CITIES_PER_TRIP) return showClientError(`Maximum cities per trip reached (${MAX_CITIES_PER_TRIP}).`)
-                    const newCity = {
-                        id: uid(),
-                        name: name,
-                        days: 1,
-                        updatedAt: new Date().toISOString()
-                    }
-                    trip.cities.push(newCity)
-                    updateTripInStore()
-                    render()
-                })
-            })
-            citiesContainer.appendChild(bottomAddBtn)
+          const notesTa = cityRow.querySelector(".city-notes");
+          const saveNoteBtn = cityRow.querySelector(
+            '[data-action="save-note"]',
+          );
+
+          if (notesTa) {
+            // Auto-save on blur
+            notesTa.addEventListener("blur", () => {
+              c.notes = notesTa.value;
+              c.updatedAt = new Date().toISOString();
+              updateTripInStore();
+            });
+          }
+
+          if (saveNoteBtn) {
+            saveNoteBtn.addEventListener("click", (ev) => {
+              ev.stopPropagation();
+              if (notesTa) {
+                c.notes = notesTa.value;
+                c.updatedAt = new Date().toISOString();
+                updateTripInStore();
+                render();
+              }
+            });
+          }
+
+          // Drag and drop
+          citiesContainer.appendChild(cityRow);
+          dayCursor = end;
         }
 
-        function renderTripCalendar(container) {
-            container.innerHTML = '<h3 style="margin:0 0 8px 0">Calendar view</h3>'
-            const hint = document.createElement('div')
-            hint.className = 'small'
-            hint.textContent = 'Set a trip start date to see the calendar.'
-            container.appendChild(hint)
-            const months = document.createElement('div')
-            months.className = 'months'
-            container.appendChild(months)
+        // Add city button
+        const bottomAddBtn = document.createElement("div");
+        bottomAddBtn.style.textAlign = "center";
+        bottomAddBtn.style.marginTop = "12px";
+        bottomAddBtn.innerHTML =
+          '<button class="btn ghost" style="width:100%">+ Add city</button>';
+        bottomAddBtn.querySelector("button").addEventListener("click", (e) => {
+          e.stopPropagation();
+          createCitySearchPopup(e.target, async (sel) => {
+            if (!sel) return;
+            const name = (sel.name || "").trim();
+            const v = validateCityName(name);
+            if (!v.ok) return showClientError(v.error);
+            if (trip.cities && trip.cities.length >= MAX_CITIES_PER_TRIP)
+              return showClientError(
+                `Maximum cities per trip reached (${MAX_CITIES_PER_TRIP}).`,
+              );
+            const newCity = {
+              id: uid(),
+              name: name,
+              days: 1,
+              updatedAt: new Date().toISOString(),
+            };
+            trip.cities.push(newCity);
+            updateTripInStore();
+            render();
+          });
+        });
+        citiesContainer.appendChild(bottomAddBtn);
+      }
 
-            if (!trip.start || trip.cities.length === 0) {
-                hint.style.display = 'block'
-                return
-            }
-            hint.style.display = 'none'
+      function renderTripCalendar(container) {
+        container.innerHTML = '<h3 style="margin:0 0 8px 0">Calendar view</h3>';
+        const hint = document.createElement("div");
+        hint.className = "small";
+        hint.textContent = "Set a trip start date to see the calendar.";
+        container.appendChild(hint);
+        const months = document.createElement("div");
+        months.className = "months";
+        container.appendChild(months);
 
-            let cur = 1
-            const cityRanges = []
-            for (const c of trip.cities) {
-                const s = cur
-                const e = cur + Number(c.days)
-                if (Number(c.days) > 0) {
-                    cityRanges.push({ id: c.id, name: c.name || 'Unnamed', start: s, end: e })
-                }
-                cur = e
-            }
+        if (!trip.start || trip.cities.length === 0) {
+          hint.style.display = "block";
+          return;
+        }
+        hint.style.display = "none";
 
-            const tripStart = new Date(trip.start)
-            const totalDays = cityRanges.length ? cityRanges[cityRanges.length - 1].end : 0
-            if (totalDays <= 0) return
-
-            const tripFirstDate = addDays(tripStart, 0)
-            const tripLastDate = addDays(tripStart, totalDays - 1)
-            const shownMonths = []
-            const m = new Date(tripFirstDate.getFullYear(), tripFirstDate.getMonth(), 1)
-            while (m <= tripLastDate) {
-                shownMonths.push(new Date(m))
-                m.setMonth(m.getMonth() + 1)
-            }
-
-            const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-            for (const monthStart of shownMonths) {
-                const monthCard = document.createElement('div')
-                monthCard.className = 'month-card'
-                const monthLabel = monthStart.toLocaleString(undefined, { month: 'long', year: 'numeric' })
-                const header = document.createElement('div')
-                header.className = 'month-header'
-                header.textContent = monthLabel
-                monthCard.appendChild(header)
-
-                const wk = document.createElement('div')
-                wk.className = 'weekday-row'
-                wk.innerHTML = weekdays.map(w => `<div>${w}</div>`).join('')
-                monthCard.appendChild(wk)
-
-                const daysGrid = document.createElement('div')
-                daysGrid.className = 'days-grid'
-                const firstOfMonth = new Date(monthStart.getFullYear(), monthStart.getMonth(), 1)
-                let weekday = firstOfMonth.getDay()
-                let blanks = (weekday === 0) ? 6 : (weekday - 1)
-
-                for (let i = 0; i < blanks; i++) {
-                    const b = document.createElement('div')
-                    b.className = 'day blank'
-                    daysGrid.appendChild(b)
-                }
-
-                const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate()
-                for (let d = 1; d <= daysInMonth; d++) {
-                    const date = new Date(monthStart.getFullYear(), monthStart.getMonth(), d)
-                    const msPerDay = 24 * 60 * 60 * 1000
-                    const absDay = Math.floor((Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) - Date.UTC(tripStart.getFullYear(), tripStart.getMonth(), tripStart.getDate())) / msPerDay) + 1
-                    const dayEl = document.createElement('div')
-                    dayEl.className = 'day'
-                    dayEl.innerHTML = `<div class="date-num">${d}</div>`
-
-                    if (absDay >= 1 && absDay <= totalDays) {
-                        const matches = cityRanges.filter(r => absDay >= r.start && absDay <= r.end)
-                        if (matches.length) {
-                            dayEl.classList.add('in-range')
-                            const topBase = 26
-                            const step = 16
-                            for (const cr of matches) {
-                                const seg = document.createElement('div')
-                                seg.className = 'range-seg'
-                                const idxAll = cityRanges.findIndex(r => r.id === cr.id)
-                                const layer = idxAll % 2
-                                seg.style.top = `${topBase + layer * step}px`
-                                if (absDay === cr.start) seg.classList.add('range-start')
-                                if (absDay === cr.end) seg.classList.add('range-end')
-                                if (absDay === cr.start) {
-                                    const segLabel = document.createElement('div')
-                                    segLabel.className = 'seg-label'
-                                    segLabel.textContent = cr.name
-                                    seg.appendChild(segLabel)
-                                }
-                                dayEl.appendChild(seg)
-                            }
-                        }
-                    } else {
-                        dayEl.classList.add('blank')
-                    }
-                    daysGrid.appendChild(dayEl)
-                }
-                monthCard.appendChild(daysGrid)
-                months.appendChild(monthCard)
-            }
+        let cur = 1;
+        const cityRanges = [];
+        for (const c of trip.cities) {
+          const s = cur;
+          const e = cur + Number(c.days);
+          if (Number(c.days) > 0) {
+            cityRanges.push({
+              id: c.id,
+              name: c.name || "Unnamed",
+              start: s,
+              end: e,
+            });
+          }
+          cur = e;
         }
 
-        let tripMap = null
+        const tripStart = new Date(trip.start);
+        const totalDays = cityRanges.length
+          ? cityRanges[cityRanges.length - 1].end
+          : 0;
+        if (totalDays <= 0) return;
 
-        async function renderTripMap() {
-            const mapEl = document.getElementById('tripMap')
-            if (!mapEl) return
-
-            const MAP_TIMEOUT = 15000 // 15 seconds timeout
-
-            try {
-                // Set timeout for the entire map loading process
-                const timeoutPromise = new Promise((_, reject) => {
-                    setTimeout(() => reject(new Error('Map loading timeout')), MAP_TIMEOUT)
-                })
-
-                await Promise.race([
-                    (async () => {
-                        // Get cities with coordinates
-                        const citiesWithCoords = []
-                        for (const city of trip.cities) {
-                            if (!city.name || city.name.trim() === '' || Number(city.days) === 0) continue
-                            
-                            try {
-                                // Use Nominatim geocoding API with timeout
-                                const controller = new AbortController()
-                                const fetchTimeout = setTimeout(() => controller.abort(), 5000)
-                                
-                                const response = await fetch(
-                                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city.name)}&limit=1`,
-                                    { signal: controller.signal }
-                                )
-                                clearTimeout(fetchTimeout)
-                                
-                                const data = await response.json()
-                                
-                                if (data && data.length > 0) {
-                                    citiesWithCoords.push({
-                                        name: city.name,
-                                        days: Number(city.days),
-                                        lat: parseFloat(data[0].lat),
-                                        lon: parseFloat(data[0].lon)
-                                    })
-                                }
-                            } catch (err) {
-                                console.error(`Failed to geocode ${city.name}:`, err)
-                            }
-                        }
-
-                        if (citiesWithCoords.length === 0) {
-                            mapEl.innerHTML = '<div class="map-error">Add cities to see the route map</div>'
-                            return
-                        }
-
-                        // Initialize map
-                        if (tripMap) {
-                            tripMap.remove()
-                        }
-
-                        // Clear loading state
-                        mapEl.innerHTML = ''
-
-                        tripMap = L.map('tripMap', {
-                            zoomControl: true,
-                            scrollWheelZoom: false
-                        })
-
-                        // Add OpenStreetMap tiles with error handling
-                        const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                            attribution: '© OpenStreetMap contributors',
-                            maxZoom: 19
-                        })
-
-                        tileLayer.on('tileerror', (error) => {
-                            console.error('Tile loading error:', error)
-                        })
-
-                        tileLayer.addTo(tripMap)
-
-                        // Calculate bounds to fit all cities
-                        const bounds = L.latLngBounds(citiesWithCoords.map(c => [c.lat, c.lon]))
-                        tripMap.fitBounds(bounds, { padding: [50, 50] })
-
-                        // Add markers with day count
-                        citiesWithCoords.forEach((city, index) => {
-                            const marker = L.marker([city.lat, city.lon]).addTo(tripMap)
-                            
-                            // Custom icon with day count
-                            const dayIcon = L.divIcon({
-                                className: 'custom-marker',
-                                html: `<div style="background:#f97316;color:white;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3)">${city.days}</div>`,
-                                iconSize: [32, 32],
-                                iconAnchor: [16, 16]
-                            })
-                            
-                            marker.setIcon(dayIcon)
-                            marker.bindPopup(`<strong>${city.name}</strong><br>${city.days} day${city.days !== 1 ? 's' : ''}`)
-                        })
-
-                        // Draw curved arrows between consecutive cities
-                        for (let i = 0; i < citiesWithCoords.length - 1; i++) {
-                            const from = citiesWithCoords[i]
-                            const to = citiesWithCoords[i + 1]
-                            
-                            // Calculate control point for curve (offset perpendicular to the line)
-                            const midLat = (from.lat + to.lat) / 2
-                            const midLon = (from.lon + to.lon) / 2
-                            
-                            // Offset perpendicular to create curve
-                            const dx = to.lon - from.lon
-                            const dy = to.lat - from.lat
-                            const dist = Math.sqrt(dx * dx + dy * dy)
-                            const curvature = dist * 0.2 // 20% offset for curve
-                            
-                            const controlLat = midLat + (-dx / dist) * curvature
-                            const controlLon = midLon + (dy / dist) * curvature
-                            
-                            // Create curved path using quadratic bezier approximation
-                            const points = []
-                            for (let t = 0; t <= 1; t += 0.05) {
-                                const lat = (1 - t) * (1 - t) * from.lat + 2 * (1 - t) * t * controlLat + t * t * to.lat
-                                const lon = (1 - t) * (1 - t) * from.lon + 2 * (1 - t) * t * controlLon + t * t * to.lon
-                                points.push([lat, lon])
-                            }
-                            
-                            // Draw curved line
-                            const curve = L.polyline(points, {
-                                color: '#f97316',
-                                weight: 3,
-                                opacity: 0.7,
-                                dashArray: '10, 5'
-                            }).addTo(tripMap)
-                            
-                            // Add arrow at the end
-                            const arrowEnd = points[points.length - 1]
-                            const arrowStart = points[points.length - 3] || points[points.length - 2]
-                            const angle = Math.atan2(arrowEnd[0] - arrowStart[0], arrowEnd[1] - arrowStart[1]) * 180 / Math.PI
-                            
-                            const arrowIcon = L.divIcon({
-                                className: 'arrow-marker',
-                                html: `<div style="transform:rotate(${angle}deg);width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:12px solid #f97316;opacity:0.7"></div>`,
-                                iconSize: [12, 12],
-                                iconAnchor: [6, 0]
-                            })
-                            
-                            L.marker(arrowEnd, { icon: arrowIcon }).addTo(tripMap)
-                        }
-                    })(),
-                    timeoutPromise
-                ])
-            } catch (error) {
-                console.error('Failed to render map:', error)
-                mapEl.innerHTML = '<div class="map-error">Failed to load route map. Please try refreshing later.</div>'
-                if (tripMap) {
-                    tripMap.remove()
-                    tripMap = null
-                }
-            }
+        const tripFirstDate = addDays(tripStart, 0);
+        const tripLastDate = addDays(tripStart, totalDays - 1);
+        const shownMonths = [];
+        const m = new Date(
+          tripFirstDate.getFullYear(),
+          tripFirstDate.getMonth(),
+          1,
+        );
+        while (m <= tripLastDate) {
+          shownMonths.push(new Date(m));
+          m.setMonth(m.getMonth() + 1);
         }
 
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.city')) {
-                document.querySelectorAll('.city.active').forEach(c =>
-                    c.classList.remove('active')
+        const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+        for (const monthStart of shownMonths) {
+          const monthCard = document.createElement("div");
+          monthCard.className = "month-card";
+          const monthLabel = monthStart.toLocaleString(undefined, {
+            month: "long",
+            year: "numeric",
+          });
+          const header = document.createElement("div");
+          header.className = "month-header";
+          header.textContent = monthLabel;
+          monthCard.appendChild(header);
+
+          const wk = document.createElement("div");
+          wk.className = "weekday-row";
+          wk.innerHTML = weekdays.map((w) => `<div>${w}</div>`).join("");
+          monthCard.appendChild(wk);
+
+          const daysGrid = document.createElement("div");
+          daysGrid.className = "days-grid";
+          const firstOfMonth = new Date(
+            monthStart.getFullYear(),
+            monthStart.getMonth(),
+            1,
+          );
+          let weekday = firstOfMonth.getDay();
+          let blanks = weekday === 0 ? 6 : weekday - 1;
+
+          for (let i = 0; i < blanks; i++) {
+            const b = document.createElement("div");
+            b.className = "day blank";
+            daysGrid.appendChild(b);
+          }
+
+          const daysInMonth = new Date(
+            monthStart.getFullYear(),
+            monthStart.getMonth() + 1,
+            0,
+          ).getDate();
+          for (let d = 1; d <= daysInMonth; d++) {
+            const date = new Date(
+              monthStart.getFullYear(),
+              monthStart.getMonth(),
+              d,
+            );
+            const msPerDay = 24 * 60 * 60 * 1000;
+            const absDay =
+              Math.floor(
+                (Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) -
+                  Date.UTC(
+                    tripStart.getFullYear(),
+                    tripStart.getMonth(),
+                    tripStart.getDate(),
+                  )) /
+                  msPerDay,
+              ) + 1;
+            const dayEl = document.createElement("div");
+            dayEl.className = "day";
+            dayEl.innerHTML = `<div class="date-num">${d}</div>`;
+
+            if (absDay >= 1 && absDay <= totalDays) {
+              const matches = cityRanges.filter(
+                (r) => absDay >= r.start && absDay <= r.end,
+              );
+              if (matches.length) {
+                dayEl.classList.add("in-range");
+                const topBase = 26;
+                const step = 16;
+                for (const cr of matches) {
+                  const seg = document.createElement("div");
+                  seg.className = "range-seg";
+                  const idxAll = cityRanges.findIndex((r) => r.id === cr.id);
+                  const layer = idxAll % 2;
+                  seg.style.top = `${topBase + layer * step}px`;
+                  if (absDay === cr.start) seg.classList.add("range-start");
+                  if (absDay === cr.end) seg.classList.add("range-end");
+                  if (absDay === cr.start) {
+                    const segLabel = document.createElement("div");
+                    segLabel.className = "seg-label";
+                    segLabel.textContent = cr.name;
+                    seg.appendChild(segLabel);
+                  }
+                  dayEl.appendChild(seg);
+                }
+              }
+            } else {
+              dayEl.classList.add("blank");
+            }
+            daysGrid.appendChild(dayEl);
+          }
+          monthCard.appendChild(daysGrid);
+          months.appendChild(monthCard);
+        }
+      }
+
+      let tripMap = null;
+
+      async function renderTripMap() {
+        const mapEl = document.getElementById("tripMap");
+        if (!mapEl) return;
+
+        const MAP_TIMEOUT = 15000; // 15 seconds timeout
+
+        try {
+          // Set timeout for the entire map loading process
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(
+              () => reject(new Error("Map loading timeout")),
+              MAP_TIMEOUT,
+            );
+          });
+
+          await Promise.race([
+            (async () => {
+              // Get cities with coordinates
+              const citiesWithCoords = [];
+              for (const city of trip.cities) {
+                if (
+                  !city.name ||
+                  city.name.trim() === "" ||
+                  Number(city.days) === 0
                 )
-            }
-        })
+                  continue;
 
-        render()
-        // burger menu toggle (named function)
-        function setupBurgerMenu() {
-            const burgerBtn = document.getElementById('burgerBtn')
-            const burgerMenu = document.getElementById('burgerMenu')
-            if (!burgerBtn || !burgerMenu) return
-            // hide burger for anonymous by default
-            if (!currentUser) burgerBtn.style.display = 'none'
+                try {
+                  // Use Nominatim geocoding API with timeout
+                  const controller = new AbortController();
+                  const fetchTimeout = setTimeout(
+                    () => controller.abort(),
+                    5000,
+                  );
 
-            burgerBtn.addEventListener('click', (e) => {
-                e.stopPropagation()
-                burgerMenu.style.display = burgerMenu.style.display === 'none' ? '' : 'none'
-            })
+                  const response = await fetch(
+                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city.name)}&limit=1`,
+                    { signal: controller.signal },
+                  );
+                  clearTimeout(fetchTimeout);
 
-            // close when clicking outside
-            document.addEventListener('click', (e) => {
-                if (!e.target.closest('#burgerWrapper')) {
-                    burgerMenu.style.display = 'none'
+                  const data = await response.json();
+
+                  if (data && data.length > 0) {
+                    citiesWithCoords.push({
+                      name: city.name,
+                      days: Number(city.days),
+                      lat: parseFloat(data[0].lat),
+                      lon: parseFloat(data[0].lon),
+                    });
+                  }
+                } catch (err) {
+                  console.error(`Failed to geocode ${city.name}:`, err);
                 }
-            })
+              }
+
+              if (citiesWithCoords.length === 0) {
+                mapEl.innerHTML =
+                  '<div class="map-error">Add cities to see the route map</div>';
+                return;
+              }
+
+              // Initialize map
+              if (tripMap) {
+                tripMap.remove();
+              }
+
+              // Clear loading state
+              mapEl.innerHTML = "";
+
+              tripMap = L.map("tripMap", {
+                zoomControl: true,
+                scrollWheelZoom: false,
+              });
+
+              // Add OpenStreetMap tiles with error handling
+              const tileLayer = L.tileLayer(
+                "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                {
+                  attribution: "© OpenStreetMap contributors",
+                  maxZoom: 19,
+                },
+              );
+
+              tileLayer.on("tileerror", (error) => {
+                console.error("Tile loading error:", error);
+              });
+
+              tileLayer.addTo(tripMap);
+
+              // Calculate bounds to fit all cities
+              const bounds = L.latLngBounds(
+                citiesWithCoords.map((c) => [c.lat, c.lon]),
+              );
+              tripMap.fitBounds(bounds, { padding: [50, 50] });
+
+              // Add markers with day count
+              citiesWithCoords.forEach((city, index) => {
+                const marker = L.marker([city.lat, city.lon]).addTo(tripMap);
+
+                // Custom icon with day count
+                const dayIcon = L.divIcon({
+                  className: "custom-marker",
+                  html: `<div style="background:#f97316;color:white;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3)">${city.days}</div>`,
+                  iconSize: [32, 32],
+                  iconAnchor: [16, 16],
+                });
+
+                marker.setIcon(dayIcon);
+                marker.bindPopup(
+                  `<strong>${city.name}</strong><br>${city.days} day${city.days !== 1 ? "s" : ""}`,
+                );
+              });
+
+              // Draw curved arrows between consecutive cities
+              for (let i = 0; i < citiesWithCoords.length - 1; i++) {
+                const from = citiesWithCoords[i];
+                const to = citiesWithCoords[i + 1];
+
+                // Calculate control point for curve (offset perpendicular to the line)
+                const midLat = (from.lat + to.lat) / 2;
+                const midLon = (from.lon + to.lon) / 2;
+
+                // Offset perpendicular to create curve
+                const dx = to.lon - from.lon;
+                const dy = to.lat - from.lat;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const curvature = dist * 0.2; // 20% offset for curve
+
+                const controlLat = midLat + (-dx / dist) * curvature;
+                const controlLon = midLon + (dy / dist) * curvature;
+
+                // Create curved path using quadratic bezier approximation
+                const points = [];
+                for (let t = 0; t <= 1; t += 0.05) {
+                  const lat =
+                    (1 - t) * (1 - t) * from.lat +
+                    2 * (1 - t) * t * controlLat +
+                    t * t * to.lat;
+                  const lon =
+                    (1 - t) * (1 - t) * from.lon +
+                    2 * (1 - t) * t * controlLon +
+                    t * t * to.lon;
+                  points.push([lat, lon]);
+                }
+
+                // Draw curved line
+                const curve = L.polyline(points, {
+                  color: "#f97316",
+                  weight: 3,
+                  opacity: 0.7,
+                  dashArray: "10, 5",
+                }).addTo(tripMap);
+
+                // Add arrow at the end
+                const arrowEnd = points[points.length - 1];
+                const arrowStart =
+                  points[points.length - 3] || points[points.length - 2];
+                const angle =
+                  (Math.atan2(
+                    arrowEnd[0] - arrowStart[0],
+                    arrowEnd[1] - arrowStart[1],
+                  ) *
+                    180) /
+                  Math.PI;
+
+                const arrowIcon = L.divIcon({
+                  className: "arrow-marker",
+                  html: `<div style="transform:rotate(${angle}deg);width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:12px solid #f97316;opacity:0.7"></div>`,
+                  iconSize: [12, 12],
+                  iconAnchor: [6, 0],
+                });
+
+                L.marker(arrowEnd, { icon: arrowIcon }).addTo(tripMap);
+              }
+            })(),
+            timeoutPromise,
+          ]);
+        } catch (error) {
+          console.error("Failed to render map:", error);
+          mapEl.innerHTML =
+            '<div class="map-error">Failed to load route map. Please try refreshing later.</div>';
+          if (tripMap) {
+            tripMap.remove();
+            tripMap = null;
+          }
         }
+      }
 
-        setupBurgerMenu()
+      document.addEventListener("click", (e) => {
+        if (!e.target.closest(".city")) {
+          document
+            .querySelectorAll(".city.active")
+            .forEach((c) => c.classList.remove("active"));
+        }
+      });
+
+      render();
+      // burger menu toggle (named function)
+      function setupBurgerMenu() {
+        const burgerBtn = document.getElementById("burgerBtn");
+        const burgerMenu = document.getElementById("burgerMenu");
+        if (!burgerBtn || !burgerMenu) return;
+        // hide burger for anonymous by default
+        if (!currentUser) burgerBtn.style.display = "none";
+
+        burgerBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          burgerMenu.style.display =
+            burgerMenu.style.display === "none" ? "" : "none";
+        });
+
+        // close when clicking outside
+        document.addEventListener("click", (e) => {
+          if (!e.target.closest("#burgerWrapper")) {
+            burgerMenu.style.display = "none";
+          }
+        });
+      }
+
+      setupBurgerMenu();
     </script>
-</body>
-
+  </body>
 </html>

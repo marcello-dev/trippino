@@ -15,5 +15,8 @@
     "nodemailer": "^7.0.10",
     "sqlite3": "^5.1.6",
     "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "prettier": "3.6.2"
   }
 }
