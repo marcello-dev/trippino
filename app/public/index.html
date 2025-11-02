@@ -628,12 +628,6 @@
 
         const localState = load();
 
-        function tsOf(s) {
-          if (!s) return 0;
-          const t = s.updatedAt || s.updated_at || null;
-          return t ? Date.parse(t) : 0;
-        }
-
         // Decide which state to use
         if (!backendState && !localState) {
           appState = { trips: [] };
@@ -675,9 +669,6 @@
 
         // normalize
         if (!appState.trips) appState.trips = [];
-
-        // ensure updatedAt exists
-        if (!appState.updatedAt) appState.updatedAt = new Date().toISOString();
 
         // sync local store
         save(appState);
@@ -818,7 +809,7 @@
         }
       });
 
-      // App model: { trips: [{id,name,start,cities}], updatedAt }
+      // App model: { trips: [{id,name,start,cities}] }
       const STORAGE_KEY = "simpleTripPlanner_v1";
 
       // DOM - note: global editor elements removed; per-trip editor creates its own DOM
@@ -908,7 +899,6 @@
           console.warn("load failed", e);
           return {
             trips: [],
-            updatedAt: new Date().toISOString(),
           };
         }
       }
@@ -954,10 +944,8 @@
           name: tripName,
           start: start || "",
           cities: [],
-          updatedAt: new Date().toISOString(),
         };
         appState.trips.push(t);
-        appState.updatedAt = new Date().toISOString();
         save(appState);
         refreshAll();
         renderHome();
@@ -969,7 +957,6 @@
         const idx = appState.trips.findIndex((t) => t.id === id);
         if (idx === -1) return;
         appState.trips.splice(idx, 1);
-        appState.updatedAt = new Date().toISOString();
         save(appState);
         refreshAll();
         renderHome();

@@ -722,7 +722,7 @@
           return JSON.parse(raw);
         } catch (e) {
           console.warn("load failed", e);
-          return { trips: [], updatedAt: new Date().toISOString() };
+          return { trips: [] };
         }
       }
 
@@ -794,14 +794,12 @@
         const c = trip.cities.find((x) => x.id === cityId);
         if (!c) return;
         c.days = Math.max(0, Number(newDays));
-        c.updatedAt = new Date().toISOString();
         updateTripInStore();
         render();
       }
 
       function removeCityFromTrip(cityId) {
         trip.cities = trip.cities.filter((c) => c.id !== cityId);
-        trip.updatedAt = new Date().toISOString();
         updateTripInStore();
         render();
       }
@@ -1142,7 +1140,6 @@
                     c.lat = sel.position.lat;
                     c.lon = sel.position.lon;
                   }
-                  c.updatedAt = new Date().toISOString();
                   updateTripInStore();
                   render();
                 },
@@ -1169,7 +1166,6 @@
             trip.cities[i] = trip.cities[i - 1];
             trip.cities[i - 1] = temp;
 
-            trip.updatedAt = new Date().toISOString();
             updateTripInStore();
             render();
           });
@@ -1183,7 +1179,6 @@
             trip.cities[i] = trip.cities[i + 1];
             trip.cities[i + 1] = temp;
 
-            trip.updatedAt = new Date().toISOString();
             updateTripInStore();
             render();
           });
@@ -1209,7 +1204,6 @@
             // Auto-save on blur
             notesTa.addEventListener("blur", () => {
               c.notes = notesTa.value;
-              c.updatedAt = new Date().toISOString();
               updateTripInStore();
             });
           }
@@ -1219,7 +1213,6 @@
               ev.stopPropagation();
               if (notesTa) {
                 c.notes = notesTa.value;
-                c.updatedAt = new Date().toISOString();
                 updateTripInStore();
                 render();
               }
@@ -1252,7 +1245,6 @@
               id: uid(),
               name: name,
               days: 1,
-              updatedAt: new Date().toISOString(),
             };
             trip.cities.push(newCity);
             updateTripInStore();
