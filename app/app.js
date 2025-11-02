@@ -453,6 +453,34 @@ app.get("/api/state", async (req, res) => {
   }
 });
 
+// Create a new trip
+app.post("/api/trips", csrfProtection, async (req, res) => {
+  try {
+    const s = await getSession(req);
+    if (!s) return res.status(401).json({ error: "not authenticated" });
+    
+    const { name, start_date } = req.body || {};
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: "trip name required" });
+    }
+    
+    // Validate start_date format if provided (should be YYYY-MM-DD)
+    if (start_date && !/^\d{4}-\d{2}-\d{2}$/.test(start_date)) {
+      return res.status(400).json({ error: "start_date must be in YYYY-MM-DD format" });
+    }
+    
+    const result = await run(
+      `INSERT INTO trips(name, start_date, user_id) VALUES(?,?,?)`,
+      [name.trim(), start_date || null, s.user.id]
+    );
+    
+    return res.json({ ok: true, id: result.lastID });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: "server error" });
+  }
+});
+
 // TomTom proxy - forwards queries to TomTom Search API using server-side key
 app.get("/api/tomtom", async (req, res) => {
   try {
