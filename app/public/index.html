@@ -619,7 +619,7 @@
         }
       }
 
-      // load local state and, if logged in, fetch backend state and pick the most recent
+      // load local state and, if logged in, fetch backend state
       async function loadAndSyncState() {
         const user = await checkAuth();
 
@@ -938,7 +938,7 @@
         }
         const v = validateTripName(tripName);
         if (!v.ok) return showClientError(v.error);
-
+        
         const t = {
           id: tid(),
           name: tripName,
