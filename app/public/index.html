@@ -984,11 +984,11 @@
             }
           } catch (e) {
             console.warn(
-              "Failed to create trip in backend, using local storage:",
+              "Failed to create trip in backend:",
               e,
             );
             return showClientError(
-              err.error || "Failed to create trip in backend. readonly mode.",
+              "Failed to create trip in backend. readonly mode.",
             );
           }
         }
