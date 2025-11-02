@@ -995,10 +995,57 @@
         editorCard.appendChild(metaRow);
 
         const startInput = topline.querySelector(".trip-start");
-        startInput.addEventListener("change", () => {
-          trip.start = startInput.value;
-          updateTripInStore();
-          render();
+        startInput.addEventListener("change", async () => {
+          const prev = trip.start || "";
+          const newVal = startInput.value || "";
+          // If logged in, attempt backend update first
+          if (currentUser) {
+            try {
+              const token = await getCsrfToken();
+              const res = await fetch(`${API_BASE}/api/trips/${trip.id}`, {
+                method: "PUT",
+                headers: {
+                  "Content-Type": "application/json",
+                  "CSRF-Token": token,
+                },
+                credentials: "include",
+                body: JSON.stringify({ start_date: newVal || null }),
+              });
+              if (res.ok) {
+                const data = await res.json().catch(() => ({}));
+                trip.start = (data && data.trip && data.trip.start_date) || newVal;
+                updateTripInStore();
+                render();
+              } else if (res.status === 401) {
+                currentUser = null;
+                checkAuth();
+                showClientError("Session expired. Please sign in again.");
+                startInput.value = prev;
+              } else if (res.status === 400) {
+                const err = await res.json().catch(() => ({}));
+                showClientError(err.error || "Invalid start date.");
+                startInput.value = prev;
+              } else if (res.status === 404) {
+                const err = await res.json().catch(() => ({}));
+                showClientError(err.error || "Trip not found or you don't have permission to edit it.");
+                startInput.value = prev;
+              } else {
+                const err = await res.json().catch(() => ({}));
+                console.warn("Failed to update start date in backend:", err);
+                showClientError("Cannot update trip: backend error (read-only mode).");
+                startInput.value = prev;
+              }
+            } catch (e) {
+              console.warn("Network error updating start date:", e);
+              showClientError("Cannot update trip: offline or network error (read-only mode).");
+              startInput.value = prev;
+            }
+          } else {
+            // Anonymous: update locally
+            trip.start = newVal;
+            updateTripInStore();
+            render();
+          }
         });
 
         renderCitiesList(citiesContainer);

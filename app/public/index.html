@@ -1132,10 +1132,54 @@
 
           const editBtn = header.querySelector('[data-action="edit"]');
           if (editBtn) {
-            editBtn.addEventListener("click", (e) => {
+            editBtn.addEventListener("click", async (e) => {
               e.stopPropagation();
               const n = prompt("Trip name", t.name || "");
-              if (n !== null) {
+              if (n === null) return;
+              const v = validateTripName(n);
+              if (!v.ok) return showClientError(v.error);
+
+              if (currentUser) {
+                try {
+                  const token = await getCsrfToken();
+                  const res = await fetch(`${API_BASE}/api/trips/${t.id}`, {
+                    method: "PUT",
+                    headers: {
+                      "Content-Type": "application/json",
+                      "CSRF-Token": token,
+                    },
+                    credentials: "include",
+                    body: JSON.stringify({ name: n }),
+                  });
+
+                  if (res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    t.name = (data && data.trip && data.trip.name) || n;
+                    updateTripInStore(t);
+                    renderHome();
+                    renderTripsContainer();
+                  } else if (res.status === 401) {
+                    console.warn("Session expired");
+                    currentUser = null;
+                    checkAuth();
+                    return showClientError("Session expired. Please sign in again.");
+                  } else if (res.status === 400) {
+                    const err = await res.json().catch(() => ({}));
+                    return showClientError(err.error || "Invalid input data.");
+                  } else if (res.status === 404) {
+                    const err = await res.json().catch(() => ({}));
+                    return showClientError(err.error || "Trip not found or you don't have permission to edit it.");
+                  } else {
+                    const err = await res.json().catch(() => ({}));
+                    console.warn("Failed to update trip in backend:", err);
+                    return showClientError("Cannot update trip: backend error (read-only mode).");
+                  }
+                } catch (err) {
+                  console.warn("Network error updating trip:", err);
+                  return showClientError("Cannot update trip: offline or network error (read-only mode).");
+                }
+              } else {
+                // Anonymous: update locally
                 t.name = n;
                 updateTripInStore(t);
                 renderHome();
