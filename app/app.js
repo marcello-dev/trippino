@@ -458,22 +458,24 @@ app.post("/api/trips", csrfProtection, async (req, res) => {
   try {
     const s = await getSession(req);
     if (!s) return res.status(401).json({ error: "not authenticated" });
-    
+
     const { name, start_date } = req.body || {};
     if (!name || !name.trim()) {
       return res.status(400).json({ error: "trip name required" });
     }
-    
+
     // Validate start_date format if provided (should be YYYY-MM-DD)
     if (start_date && !/^\d{4}-\d{2}-\d{2}$/.test(start_date)) {
-      return res.status(400).json({ error: "start_date must be in YYYY-MM-DD format" });
+      return res
+        .status(400)
+        .json({ error: "start_date must be in YYYY-MM-DD format" });
     }
-    
+
     const result = await run(
       `INSERT INTO trips(name, start_date, user_id) VALUES(?,?,?)`,
-      [name.trim(), start_date || null, s.user.id]
+      [name.trim(), start_date || null, s.user.id],
     );
-    
+
     return res.json({ ok: true, id: result.lastID });
   } catch (e) {
     console.error(e);
@@ -486,25 +488,25 @@ app.delete("/api/trips/:id", csrfProtection, async (req, res) => {
   try {
     const s = await getSession(req);
     if (!s) return res.status(401).json({ error: "not authenticated" });
-    
+
     const tripId = parseInt(req.params.id, 10);
     if (!tripId || !Number.isInteger(tripId)) {
       return res.status(400).json({ error: "invalid trip id" });
     }
-    
+
     // Verify the trip belongs to the current user before deleting
     const trip = await get(
       `SELECT id FROM trips WHERE id = ? AND user_id = ?`,
-      [tripId, s.user.id]
+      [tripId, s.user.id],
     );
-    
+
     if (!trip) {
       return res.status(404).json({ error: "trip not found or unauthorized" });
     }
-    
+
     // Delete the trip (CASCADE will automatically delete all related cities)
     await run(`DELETE FROM trips WHERE id = ?`, [tripId]);
-    
+
     return res.json({ ok: true });
   } catch (e) {
     console.error(e);

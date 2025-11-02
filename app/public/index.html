@@ -940,9 +940,9 @@
         }
         const v = validateTripName(tripName);
         if (!v.ok) return showClientError(v.error);
-        
+
         let tripId = null;
-        
+
         // If user is logged in, try to create trip in backend
         if (currentUser) {
           try {
@@ -959,7 +959,7 @@
                 start_date: start || null,
               }),
             });
-            
+
             if (res.ok) {
               const data = await res.json();
               tripId = data.id; // Use backend-generated ID
@@ -968,16 +968,12 @@
               console.warn("Session expired");
               currentUser = null;
               checkAuth();
-                return showClientError(
-                    "Session expired. Please sign in again.",
-                );
+              return showClientError("Session expired. Please sign in again.");
             } else if (res.status === 400) {
               // Validation error from backend
               const err = await res.json().catch(() => ({}));
               console.warn("Validation error creating trip in backend:", err);
-              return showClientError(
-                err.error || "Invalid input data.",
-              );
+              return showClientError(err.error || "Invalid input data.");
             } else {
               // Other error, return error message and switch to readonly mode
               const err = await res.json().catch(() => ({}));
@@ -987,13 +983,16 @@
               );
             }
           } catch (e) {
-            console.warn("Failed to create trip in backend, using local storage:", e);
+            console.warn(
+              "Failed to create trip in backend, using local storage:",
+              e,
+            );
             return showClientError(
-                err.error || "Failed to create trip in backend. readonly mode.",
-              );
+              err.error || "Failed to create trip in backend. readonly mode.",
+            );
           }
         }
-        
+
         // Create trip object with backend ID if available, otherwise generate local ID
         const t = {
           id: tripId || tid(appState.trips),
@@ -1012,7 +1011,7 @@
       async function deleteTrip(id) {
         const idx = appState.trips.findIndex((t) => t.id === id);
         if (idx === -1) return;
-        
+
         // If user is logged in, try to delete from backend first
         if (currentUser) {
           try {
@@ -1024,7 +1023,7 @@
               },
               credentials: "include",
             });
-            
+
             if (res.ok) {
               // Successfully deleted from backend, now delete from local
               appState.trips.splice(idx, 1);
@@ -1048,21 +1047,25 @@
               const err = await res.json().catch(() => ({}));
               console.warn("Trip not found or unauthorized:", err);
               return showClientError(
-                err.error || "Trip not found or you don't have permission to delete it."
+                err.error ||
+                  "Trip not found or you don't have permission to delete it.",
               );
             } else {
               // Other backend error - read-only mode
               const err = await res.json().catch(() => ({}));
               console.warn("Failed to delete trip from backend:", err);
               return showClientError(
-                "Cannot delete trip: backend error (read-only mode)."
+                "Cannot delete trip: backend error (read-only mode).",
               );
             }
           } catch (e) {
             // Network error or offline - read-only mode
-            console.warn("Failed to delete trip from backend (network error):", e);
+            console.warn(
+              "Failed to delete trip from backend (network error):",
+              e,
+            );
             return showClientError(
-              "Cannot delete trip: offline or network error (read-only mode)."
+              "Cannot delete trip: offline or network error (read-only mode).",
             );
           }
         } else {
@@ -1246,7 +1249,10 @@
       }
 
       createTripBtn.addEventListener("click", async () => {
-        await createTrip(newTripName.value || "New trip", newTripStart.value || "");
+        await createTrip(
+          newTripName.value || "New trip",
+          newTripStart.value || "",
+        );
         newTripName.value = "";
         newTripStart.value = "";
       });

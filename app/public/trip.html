@@ -751,7 +751,9 @@
       let appState = load();
       if (!appState.trips) appState.trips = [];
 
-      const trip = appState.trips.find((t) => t.id === tripId || t.id === Number(tripId));
+      const trip = appState.trips.find(
+        (t) => t.id === tripId || t.id === Number(tripId),
+      );
       if (!trip) {
         alert("Trip not found");
         window.location.href = "index.html";
@@ -961,7 +963,9 @@
         container.innerHTML = "";
 
         // fetch info from state
-        const trip = appState.trips.find((t) => t.id === tripId || t.id === Number(tripId));
+        const trip = appState.trips.find(
+          (t) => t.id === tripId || t.id === Number(tripId),
+        );
         if (!trip) return;
 
         // Trip editor card
