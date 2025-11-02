@@ -90,8 +90,6 @@ db.serialize(() => {
   db.run(
     `CREATE TABLE IF NOT EXISTS states (user_id INTEGER PRIMARY KEY, state TEXT)`,
   );
-
-  // New tables for trips and cities
   db.run(`CREATE TABLE IF NOT EXISTS trips (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
