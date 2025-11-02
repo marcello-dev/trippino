@@ -993,8 +993,6 @@
         // escape for safety (we control the HTML but keep it safe)
         function escapeHtml(s) { return String(s).replace(/[&<>"']/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": "&#39;" }[ch] }) }
 
-        // top-level interactions are handled per-trip now
-
         createTripBtn.addEventListener('click', () => {
             createTrip(newTripName.value || 'New trip', newTripStart.value || '')
             newTripName.value = ''
@@ -1005,7 +1003,7 @@
         refreshAll()
         renderHome()
 
-        // burger menu toggle (named function)
+        // burger menu toggle
         function setupBurgerMenu() {
             const burgerBtn = document.getElementById('burgerBtn')
             const burgerMenu = document.getElementById('burgerMenu')
