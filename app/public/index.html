@@ -821,7 +821,9 @@
 
       // helpers
       const uid = () => Math.random().toString(36).slice(2, 9);
-      const tid = () => "t_" + Math.random().toString(36).slice(2, 9);
+      const tid = (trips) => {
+        return trips.length + 1;
+      };
 
       const MAX_TRIPS = 50;
       const MAX_CITIES_PER_TRIP = 30;
@@ -928,7 +930,7 @@
       let appState = load();
       if (!appState.trips) appState.trips = [];
 
-      function createTrip(name, start) {
+      async function createTrip(name, start) {
         const tripName = (name || "New trip").trim();
         // enforce max trips
         if (appState.trips && appState.trips.length >= MAX_TRIPS) {
@@ -938,9 +940,63 @@
         }
         const v = validateTripName(tripName);
         if (!v.ok) return showClientError(v.error);
-
+        
+        let tripId = null;
+        
+        // If user is logged in, try to create trip in backend first
+        if (currentUser) {
+          try {
+            const token = await getCsrfToken();
+            const res = await fetch(`${API_BASE}/api/trips`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "CSRF-Token": token,
+              },
+              credentials: "include",
+              body: JSON.stringify({
+                name: tripName,
+                start_date: start || null,
+              }),
+            });
+            
+            if (res.ok) {
+              const data = await res.json();
+              tripId = data.id; // Use backend-generated ID
+            } else if (res.status === 401) {
+              // User session expired, ask to reauthenticate
+              console.warn("Session expired");
+              currentUser = null;
+              checkAuth();
+                return showClientError(
+                    "Session expired. Please sign in again to create trips.",
+                );
+            } else if (res.status === 400) {
+              // Validation error from backend
+              const err = await res.json().catch(() => ({}));
+              console.warn("Validation error creating trip in backend:", err);
+              return showClientError(
+                err.error || "Invalid input data.",
+              );
+            } else {
+              // Other error, return error message and switch to readonly mode
+              const err = await res.json().catch(() => ({}));
+              console.warn("Failed to create trip in backend:", err);
+              return showClientError(
+                err.error || "Failed to create trip in backend. readonly mode.",
+              );
+            }
+          } catch (e) {
+            console.warn("Failed to create trip in backend, using local storage:", e);
+            return showClientError(
+                err.error || "Failed to create trip in backend. readonly mode.",
+              );
+          }
+        }
+        
+        // Create trip object with backend ID if available, otherwise generate local ID
         const t = {
-          id: tid(),
+          id: tripId || tid(appState.trips),
           name: tripName,
           start: start || "",
           cities: [],
@@ -1134,8 +1190,8 @@
         });
       }
 
-      createTripBtn.addEventListener("click", () => {
-        createTrip(newTripName.value || "New trip", newTripStart.value || "");
+      createTripBtn.addEventListener("click", async () => {
+        await createTrip(newTripName.value || "New trip", newTripStart.value || "");
         newTripName.value = "";
         newTripStart.value = "";
       });
