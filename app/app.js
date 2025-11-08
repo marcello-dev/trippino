@@ -455,6 +455,61 @@ app.post("/api/state", csrfProtection, async (req, res) => {
   }
 });
 
+// Save state for the first time login into database tables
+app.post("/api/state/firstlogin", csrfProtection, async (req, res) => {
+  try {
+    const s = await getSession(req);
+    if (!s) return res.status(401).json({ error: "not authenticated" });
+    const userId = s.user.id;
+    const state = req.body && req.body.state;
+    if (typeof state === "undefined")
+      return res.status(400).json({ error: "state missing in body" });
+    // Save state for first time login into trips and cities tables
+    const trips = state.trips || [];
+    for (const trip of trips) {
+      const result = await run(
+        `INSERT INTO trips(name, start_date, user_id) VALUES(?,?,?)`,
+        [trip.name, trip.start_date || null, userId],
+      );
+      const tripId = result.lastID;
+      const cities = trip.cities || [];
+      let sort_order = 0;
+      for (const city of cities) {
+        await run(
+          `INSERT INTO cities(name, nights, notes, sort_order, trip_id) VALUES(?,?,?,?,?)`,
+          [
+            city.name,
+            city.nights || 0,
+            city.notes,
+            sort_order,
+            tripId,
+          ],
+        );
+        sort_order += 1;
+      }
+    }
+    // return state with new Ids
+    const newState = {
+      trips: trips.map(trip => ({
+        id: trip.id,
+        name: trip.name,
+        start_date: trip.start_date,
+        cities: trip.cities.map(city => ({
+          id: city.id,
+          name: city.name,
+          nights: city.nights,
+          notes: city.notes,
+          sort_order: city.sort_order,
+        })),
+      })),
+    };
+    return res.json({ ok: true, state: newState });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: "server error" });
+  }
+});
+
 // get saved state for authenticated user
 app.get("/api/state", async (req, res) => {
   try {
