@@ -543,28 +543,17 @@ app.post("/api/trips/:id/cities", csrfProtection, async (req, res) => {
       return res.status(404).json({ error: "trip not found or unauthorized" });
     }
 
-    const { name, nights, notes } = req.body || {};
+    const { name, nights, notes, sortOrder } = req.body || {};
     if (!name || !String(name).trim()) {
       return res.status(400).json({ error: "city name required" });
     }
 
-    let n =
-      typeof nights === "undefined" || nights === null ? 1 : Number(nights);
+    let n = typeof nights === "undefined" || nights === null ? 1 : Number(nights);
     if (!Number.isFinite(n) || n < 0) {
       return res
         .status(400)
         .json({ error: "nights must be a non-negative number" });
     }
-    // clamp to a reasonable upper bound
-    if (n > 365) n = 365;
-    n = Math.floor(n);
-
-    // Determine the next sort order (append at the end)
-    const row = await get(
-      `SELECT COALESCE(MAX(sort_order), -1) AS maxo FROM cities WHERE trip_id = ?`,
-      [tripId],
-    );
-    const nextOrder = (row && typeof row.maxo === "number" ? row.maxo : -1) + 1;
 
     const result = await run(
       `INSERT INTO cities(name, nights, notes, sort_order, trip_id) VALUES(?,?,?,?,?)`,
@@ -572,7 +561,7 @@ app.post("/api/trips/:id/cities", csrfProtection, async (req, res) => {
         String(name).trim(),
         n,
         typeof notes === "string" && notes.trim() !== "" ? notes : null,
-        nextOrder,
+        sortOrder,
         tripId,
       ],
     );
