@@ -706,6 +706,60 @@ app.put("/api/trips/:tripId/cities/:cityId", csrfProtection, async (req, res) =>
   }
 });
 
+// Update cities order in a trip. The sortOrder is provided in the body as an array of objects with city ID and sortOrder.
+app.put("/api/trips/:tripId/cities", csrfProtection, async (req, res) => {
+  try {
+    const s = await getSession(req);
+    if (!s) return res.status(401).json({ error: "not authenticated" });
+
+    const tripId = parseInt(req.params.tripId, 10);
+    if (!tripId || !Number.isInteger(tripId)) {
+      return res.status(400).json({ error: "invalid trip id" });
+    }
+
+    // Verify the trip belongs to the current user
+    const trip = await get(
+      `SELECT id FROM trips WHERE id = ? AND user_id = ?`,
+      [tripId, s.user.id],
+    );
+    if (!trip) {
+      return res.status(404).json({ error: "trip not found or unauthorized" });
+    }
+
+    const { sortOrder } = req.body || {};
+    if (!Array.isArray(sortOrder)) {
+      return res.status(400).json({ error: "invalid sortOrder format" });
+    }
+
+    // Update each city's sort order
+    for (const { id, sortOrder } of sortOrder) {
+      const cityId = parseInt(id, 10);
+      if (!cityId || !Number.isInteger(cityId)) {
+        return res.status(400).json({ error: "invalid city id" });
+      }
+
+      // Verify the city belongs to the trip
+      const city = await get(
+        `SELECT id FROM cities WHERE id = ? AND trip_id = ?`,
+        [cityId, tripId],
+      );
+      if (!city) {
+        return res.status(404).json({ error: "city not found or unauthorized" });
+      }
+
+      await run(
+        `UPDATE cities SET sort_order = ? WHERE id = ?`,
+        [sortOrder, cityId],
+      );
+    }
+
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: "server error" });
+  }
+});
+
 // TomTom proxy - forwards queries to TomTom Search API using server-side key
 app.get("/api/tomtom", async (req, res) => {
   try {
