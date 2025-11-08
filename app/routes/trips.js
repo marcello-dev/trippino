@@ -1,7 +1,7 @@
 // Trip routes module
 // Exports a function that registers trip endpoints on the provided app
 
-module.exports = function registerTripRoutes(app, deps) {
+function registerTripRoutes(app, deps) {
   const { csrfProtection, getSession, run, get } = deps;
 
   // Create a new trip
@@ -129,3 +129,5 @@ module.exports = function registerTripRoutes(app, deps) {
     }
   });
 };
+
+export default { registerTripRoutes };
