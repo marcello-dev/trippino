@@ -801,9 +801,86 @@
       }
 
       function removeCityFromTrip(cityId) {
-        trip.cities = trip.cities.filter((c) => c.id !== cityId);
-        updateTripInStore();
-        render();
+        // If user is logged in, try to delete from backend first
+        if (currentUser) {
+          (async () => {
+            try {
+              const token = await getCsrfToken();
+              const deleteRes = await fetch(`${API_BASE}/api/trips/${trip.id}/cities/${cityId}`, {
+                method: "DELETE",
+                headers: {
+                  "CSRF-Token": token,
+                },
+                credentials: "include",
+              });
+              
+              if (deleteRes.ok) {
+                // Successfully deleted from backend, now delete from local
+                trip.cities = trip.cities.filter((c) => c.id !== cityId);
+                
+                // Update sort order in backend for remaining cities
+                try {
+                  const updateRes = await fetch(`${API_BASE}/api/trips/${trip.id}/cities`, {
+                    method: "PUT",
+                    headers: {
+                      "Content-Type": "application/json",
+                      "CSRF-Token": token,
+                    },
+                    credentials: "include",
+                    body: JSON.stringify({
+                      sortOrder: trip.cities.map((c, index) => ({ id: c.id, index: index }))
+                    }),
+                  });
+                  
+                  if (!updateRes.ok) {
+                    console.warn("Failed to update sort order after delete, but city was deleted");
+                  }
+                } catch (e) {
+                  console.warn("Failed to update sort order after delete:", e);
+                }
+                
+                updateTripInStore();
+                render();
+              } else if (deleteRes.status === 401) {
+                // Session expired
+                console.warn("Session expired");
+                currentUser = null;
+                checkAuth();
+                return showClientError("Session expired. Please sign in again.");
+              } else if (deleteRes.status === 400) {
+                // Validation error from backend
+                const err = await deleteRes.json().catch(() => ({}));
+                console.warn("Validation error deleting city:", err);
+                return showClientError(err.error || "Invalid city ID.");
+              } else if (deleteRes.status === 404) {
+                // City not found or unauthorized
+                const err = await deleteRes.json().catch(() => ({}));
+                console.warn("City not found or unauthorized:", err);
+                return showClientError(
+                  err.error || "City not found or you don't have permission to delete it."
+                );
+              } else {
+                // Other backend error - read-only mode
+                const err = await deleteRes.json().catch(() => ({}));
+                console.warn("Failed to delete city from backend:", err);
+                return showClientError(
+                  "Cannot delete city: backend error (read-only mode)."
+                );
+              }
+            } catch (e) {
+              // Network error or offline - read-only mode
+              console.warn("Failed to delete city from backend (network error):", e);
+              return showClientError(
+                "Cannot delete city: offline or network error (read-only mode)."
+              );
+            }
+          })();
+        } else {
+          // Anonymous user - delete locally only
+          trip.cities = trip.cities.filter((c) => c.id !== cityId);
+          updateTripInStore();
+          render();
+        }
       }
 
       function updateTripInStore() {
