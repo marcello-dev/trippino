@@ -568,6 +568,7 @@ app.delete("/api/trips/:id/cities/:cityId", csrfProtection, async (req, res) => 
 
 // Create a city in a trip (appended at the end)
 app.post("/api/trips/:id/cities", csrfProtection, async (req, res) => {
+  console.log("Creating city with data:", req.body);
   try {
     const s = await getSession(req);
     if (!s) return res.status(401).json({ error: "not authenticated" });
@@ -586,13 +587,12 @@ app.post("/api/trips/:id/cities", csrfProtection, async (req, res) => {
       return res.status(404).json({ error: "trip not found or unauthorized" });
     }
 
-    const { name, nights, notes, sortOrder } = req.body || {};
+    const { name, nights, notes } = req.body || {};
     if (!name || !String(name).trim()) {
       return res.status(400).json({ error: "city name required" });
     }
 
-    let n =
-      typeof nights === "undefined" || nights === null ? 1 : Number(nights);
+    let n = typeof nights === "undefined" || nights === null ? 1 : Number(nights);
     if (!Number.isFinite(n) || n < 0) {
       return res
         .status(400)
@@ -600,12 +600,11 @@ app.post("/api/trips/:id/cities", csrfProtection, async (req, res) => {
     }
 
     const result = await run(
-      `INSERT INTO cities(name, nights, notes, sort_order, trip_id) VALUES(?,?,?,?,?)`,
+      `INSERT INTO cities(name, nights, notes, trip_id) VALUES(?,?,?,?)`,
       [
         String(name).trim(),
         n,
         typeof notes === "string" && notes.trim() !== "" ? notes : null,
-        sortOrder,
         tripId,
       ],
     );
@@ -614,8 +613,9 @@ app.post("/api/trips/:id/cities", csrfProtection, async (req, res) => {
       `SELECT id, name, nights, notes, sort_order, trip_id FROM cities WHERE id = ?`,
       [result.lastID],
     );
-
-    return res.json({ ok: true, city });
+    // Return 201 Created status
+    res.status(201);
+    return res.json(city);
   } catch (e) {
     console.error(e);
     return res.status(500).json({ error: "server error" });
@@ -709,6 +709,7 @@ app.put("/api/trips/:tripId/cities/:cityId", csrfProtection, async (req, res) =>
 // Update cities order in a trip. The sortOrder is provided in the body as an array of objects with city ID and sortOrder.
 app.put("/api/trips/:tripId/cities", csrfProtection, async (req, res) => {
   try {
+    console.log("Reordering cities with data:", req.body);
     const s = await getSession(req);
     if (!s) return res.status(401).json({ error: "not authenticated" });
 
@@ -726,13 +727,13 @@ app.put("/api/trips/:tripId/cities", csrfProtection, async (req, res) => {
       return res.status(404).json({ error: "trip not found or unauthorized" });
     }
 
-    const { sortOrder } = req.body || {};
+    const sortOrder = req.body.sortOrder || [];
     if (!Array.isArray(sortOrder)) {
       return res.status(400).json({ error: "invalid sortOrder format" });
     }
 
     // Update each city's sort order
-    for (const { id, sortOrder } of sortOrder) {
+    for (const { id, index } of sortOrder) {
       const cityId = parseInt(id, 10);
       if (!cityId || !Number.isInteger(cityId)) {
         return res.status(400).json({ error: "invalid city id" });
@@ -749,7 +750,7 @@ app.put("/api/trips/:tripId/cities", csrfProtection, async (req, res) => {
 
       await run(
         `UPDATE cities SET sort_order = ? WHERE id = ?`,
-        [sortOrder, cityId],
+        [index, cityId],
       );
     }
 

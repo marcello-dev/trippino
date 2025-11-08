@@ -1305,7 +1305,7 @@
             if (currentUser) {
               try {
                 const token = await getCsrfToken();
-                const res = await fetch(`${API_BASE}/api/trips/${trip.id}/cities`, {
+                const createRes = await fetch(`${API_BASE}/api/trips/${trip.id}/cities`, {
                   method: "POST",
                   headers: {
                     "Content-Type": "application/json",
@@ -1315,45 +1315,55 @@
                   body: JSON.stringify({
                     name: name,
                     nights: 1,
-                    notes: "",
-                    sortOrder: trip.cities.length,
+                    notes: ""
                   }),
                 });
-                
-                if (res.ok) {
-                  const data = await res.json();
+                if (createRes.status === 201) {
+                  const data = await createRes.json();
                   // Use backend data to create local city with server-generated ID
                   const newCity = {
-                    id: data.city.id,
-                    name: data.city.name,
-                    days: data.city.nights, // Note: backend uses 'nights', frontend uses 'days'
-                    notes: data.city.notes || "",
+                    id: data.id,
+                    name: data.name,
+                    days: data.nights, // Note: backend uses 'nights', frontend uses 'days'
+                    notes: data.notes || "",
                     updatedAt: new Date().toISOString(),
                   };
                   trip.cities.push(newCity);
+                  // Update sort order in backend
+                  const updateRes = await fetch(`${API_BASE}/api/trips/${trip.id}/cities`, {
+                    method: "PUT",
+                    headers: {
+                      "Content-Type": "application/json",
+                      "CSRF-Token": token,
+                    },
+                    credentials: "include",
+                    body: JSON.stringify({
+                      sortOrder: trip.cities.map((c, index) => ({ id: c.id, index: index }))
+                    }),
+                  });
                   updateTripInStore();
                   render();
-                } else if (res.status === 401) {
+                } else if (createRes.status === 401) {
                   // Session expired
                   console.warn("Session expired");
                   currentUser = null;
                   checkAuth();
                   return showClientError("Session expired. Please sign in again.");
-                } else if (res.status === 400) {
+                } else if (createRes.status === 400) {
                   // Validation error from backend
-                  const err = await res.json().catch(() => ({}));
+                  const err = await createRes.json().catch(() => ({}));
                   console.warn("Validation error creating city:", err);
                   return showClientError(err.error || "Invalid city data.");
-                } else if (res.status === 404) {
+                } else if (createRes.status === 404) {
                   // Trip not found or unauthorized
-                  const err = await res.json().catch(() => ({}));
+                  const err = await createRes.json().catch(() => ({}));
                   console.warn("Trip not found or unauthorized:", err);
                   return showClientError(
                     err.error || "Trip not found or you don't have permission to edit it."
                   );
                 } else {
                   // Other backend error - read-only mode
-                  const err = await res.json().catch(() => ({}));
+                  const err = await createRes.json().catch(() => ({}));
                   console.warn("Failed to create city in backend:", err);
                   return showClientError(
                     "Cannot add city: backend error (read-only mode)."
