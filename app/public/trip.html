@@ -1389,30 +1389,112 @@
           if (i === 0) moveUpBtn.disabled = true;
           if (i === trip.cities.length - 1) moveDownBtn.disabled = true;
 
-          moveUpBtn.addEventListener("click", (e) => {
+          moveUpBtn.addEventListener("click", async (e) => {
             e.stopPropagation();
             if (i === 0) return;
 
-            // Swap with previous city
-            const temp = trip.cities[i];
-            trip.cities[i] = trip.cities[i - 1];
-            trip.cities[i - 1] = temp;
+            // Prepare new order without mutating yet
+            const newOrder = trip.cities.slice();
+            const temp = newOrder[i];
+            newOrder[i] = newOrder[i - 1];
+            newOrder[i - 1] = temp;
 
-            updateTripInStore();
-            render();
+            if (currentUser) {
+              try {
+                const token = await getCsrfToken();
+                const res = await fetch(`${API_BASE}/api/trips/${trip.id}/cities`, {
+                  method: "PUT",
+                  headers: {
+                    "Content-Type": "application/json",
+                    "CSRF-Token": token,
+                  },
+                  credentials: "include",
+                  body: JSON.stringify({
+                    sortOrder: newOrder.map((c, index) => ({ id: c.id, index }))
+                  }),
+                });
+                if (res.ok) {
+                  trip.cities = newOrder;
+                  updateTripInStore();
+                  render();
+                } else if (res.status === 401) {
+                  currentUser = null;
+                  checkAuth();
+                  showClientError("Session expired. Please sign in again.");
+                } else if (res.status === 400) {
+                  const err = await res.json().catch(() => ({}));
+                  showClientError(err.error || "Invalid sort order update.");
+                } else if (res.status === 404) {
+                  const err = await res.json().catch(() => ({}));
+                  showClientError(err.error || "City or trip not found/unauthorized.");
+                } else {
+                  const err = await res.json().catch(() => ({}));
+                  console.warn("Failed to reorder cities:", err);
+                  showClientError("Cannot reorder: backend error (read-only mode).");
+                }
+              } catch (err) {
+                console.warn("Network error reordering cities:", err);
+                showClientError("Cannot reorder: offline or network error (read-only mode).");
+              }
+            } else {
+              // Anonymous: apply locally
+              trip.cities = newOrder;
+              updateTripInStore();
+              render();
+            }
           });
 
-          moveDownBtn.addEventListener("click", (e) => {
+          moveDownBtn.addEventListener("click", async (e) => {
             e.stopPropagation();
             if (i === trip.cities.length - 1) return;
 
-            // Swap with next city
-            const temp = trip.cities[i];
-            trip.cities[i] = trip.cities[i + 1];
-            trip.cities[i + 1] = temp;
+            const newOrder = trip.cities.slice();
+            const temp = newOrder[i];
+            newOrder[i] = newOrder[i + 1];
+            newOrder[i + 1] = temp;
 
-            updateTripInStore();
-            render();
+            if (currentUser) {
+              try {
+                const token = await getCsrfToken();
+                const res = await fetch(`${API_BASE}/api/trips/${trip.id}/cities`, {
+                  method: "PUT",
+                  headers: {
+                    "Content-Type": "application/json",
+                    "CSRF-Token": token,
+                  },
+                  credentials: "include",
+                  body: JSON.stringify({
+                    sortOrder: newOrder.map((c, index) => ({ id: c.id, index }))
+                  }),
+                });
+                if (res.ok) {
+                  trip.cities = newOrder;
+                  updateTripInStore();
+                  render();
+                } else if (res.status === 401) {
+                  currentUser = null;
+                  checkAuth();
+                  showClientError("Session expired. Please sign in again.");
+                } else if (res.status === 400) {
+                  const err = await res.json().catch(() => ({}));
+                  showClientError(err.error || "Invalid sort order update.");
+                } else if (res.status === 404) {
+                  const err = await res.json().catch(() => ({}));
+                  showClientError(err.error || "City or trip not found/unauthorized.");
+                } else {
+                  const err = await res.json().catch(() => ({}));
+                  console.warn("Failed to reorder cities:", err);
+                  showClientError("Cannot reorder: backend error (read-only mode).");
+                }
+              } catch (err) {
+                console.warn("Network error reordering cities:", err);
+                showClientError("Cannot reorder: offline or network error (read-only mode).");
+              }
+            } else {
+              trip.cities = newOrder;
+              updateTripInStore();
+              render();
+            }
           });
 
           // Click handling to expand/collapse - only on arrow
