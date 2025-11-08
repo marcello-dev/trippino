@@ -189,7 +189,7 @@ const passwordChangeLimiter = rateLimit({
 // General API rate limiter (prevent abuse of all endpoints)
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // 100 requests per window
+  max: 1000,
   message: { error: "Too many requests, please slow down" },
   standardHeaders: true,
   legacyHeaders: false,
@@ -533,8 +533,15 @@ app.get("/api/state", async (req, res) => {
       trips: trips.map(trip => ({
         id: trip.id,
         name: trip.name,
-        start_date: trip.start_date,
-        cities: cities.filter(city => city.trip_id === trip.id),
+        start: trip.start_date,
+        // map city.nights to city.days
+        cities: cities.filter(city => city.trip_id === trip.id).map(city => ({
+          id: city.id,
+          name: city.name,
+          days: city.nights,
+          notes: city.notes,
+          sort_order: city.sort_order,
+        })),
       })),
     };
     return res.json({ state });

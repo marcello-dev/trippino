@@ -952,6 +952,8 @@
         }
         const v = validateTripName(tripName);
         if (!v.ok) return showClientError(v.error);
+        // validate start date and return error if empty
+        if (!start) return showClientError("Start date is required");
 
         let tripId = null;
 
