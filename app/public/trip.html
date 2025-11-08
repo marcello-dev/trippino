@@ -792,12 +792,106 @@
         }
       }
 
-      function updateDays(cityId, newDays) {
-        const c = trip.cities.find((x) => x.id === cityId);
-        if (!c) return;
-        c.days = Math.max(0, Number(newDays));
-        updateTripInStore();
+      // Server-first city update helper. Accepts partial fields: { name?, days?, notes? }.
+      async function updateCity(cityId, changes) {
+        const c = trip.cities.find((x) => x.id === cityId || x.id === Number(cityId));
+        if (!c) return false;
+
+        // Validate fields client-side when provided
+        if (typeof changes.name !== "undefined") {
+          const v = validateCityName(String(changes.name));
+          if (!v.ok) {
+            showClientError(v.error);
+            return false;
+          }
+        }
+        if (typeof changes.days !== "undefined") {
+          const v = validateDays(changes.days);
+          if (!v.ok) {
+            showClientError(v.error);
+            return false;
+          }
+        }
+
+        // Anonymous users: update locally only
+        if (!currentUser) {
+          if (typeof changes.name !== "undefined") c.name = String(changes.name);
+          if (typeof changes.days !== "undefined") c.days = Math.max(0, Number(changes.days));
+          if (typeof changes.notes !== "undefined") c.notes = String(changes.notes || "");
+          updateTripInStore();
+          render();
+          return true;
+        }
+
+        // Authenticated: call backend first
+        const prev = { name: c.name, days: Number(c.days), notes: c.notes };
+        try {
+          const token = await getCsrfToken();
+          const payload = {};
+          if (typeof changes.name !== "undefined") payload.name = String(changes.name);
+          if (typeof changes.days !== "undefined") payload.nights = Math.max(0, Number(changes.days));
+          if (typeof changes.notes !== "undefined") payload.notes = String(changes.notes || "");
+
+          if (Object.keys(payload).length === 0) return false;
+
+          const res = await fetch(`${API_BASE}/api/trips/${trip.id}/cities/${c.id}`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              "CSRF-Token": token,
+            },
+            credentials: "include",
+            body: JSON.stringify(payload),
+          });
+
+          if (res.ok) {
+            const data = await res.json().catch(() => ({}));
+            const uc = data && data.city ? data.city : null;
+            if (uc) {
+              c.name = uc.name;
+              c.days = Number(uc.nights);
+              c.notes = uc.notes || "";
+            } else {
+              if (typeof changes.name !== "undefined") c.name = String(changes.name);
+              if (typeof changes.days !== "undefined") c.days = Math.max(0, Number(changes.days));
+              if (typeof changes.notes !== "undefined") c.notes = String(changes.notes || "");
+            }
+            updateTripInStore();
+            render();
+            return true;
+          } else if (res.status === 401) {
+            currentUser = null;
+            checkAuth();
+            showClientError("Session expired. Please sign in again.");
+          } else if (res.status === 400) {
+            const err = await res.json().catch(() => ({}));
+            showClientError(err.error || "Invalid city update.");
+          } else if (res.status === 404) {
+            const err = await res.json().catch(() => ({}));
+            showClientError(
+              err.error || "City not found or you don't have permission to edit it.",
+            );
+          } else {
+            const err = await res.json().catch(() => ({}));
+            console.warn("Failed to update city in backend:", err);
+            showClientError("Cannot update city: backend error (read-only mode).");
+          }
+        } catch (e) {
+          console.warn("Network error updating city:", e);
+          showClientError("Cannot update city: offline or network error (read-only mode).");
+        }
+
+        // Revert local changes if any accidental UI edits happened
+        c.name = prev.name;
+        c.days = prev.days;
+        c.notes = prev.notes;
         render();
+        return false;
+      }
+
+      function updateDays(cityId, newDays) {
+        // Delegate to updateCity with server-first pattern
+        updateCity(cityId, { days: Math.max(0, Number(newDays)) });
       }
 
       function removeCityFromTrip(cityId) {
@@ -1240,16 +1334,16 @@
             .querySelector('[data-action="dec"]')
             .addEventListener("click", (e) => {
               e.stopPropagation();
-              c.days = Math.max(0, Number(c.days) - 1);
-              updateDays(c.id, c.days);
+              const newDays = Math.max(0, Number(c.days) - 1);
+              updateDays(c.id, newDays);
             });
 
           cityRow
             .querySelector('[data-action="inc"]')
             .addEventListener("click", (e) => {
               e.stopPropagation();
-              c.days = Math.max(0, Number(c.days) + 1);
-              updateDays(c.id, c.days);
+              const newDays = Math.max(0, Number(c.days) + 1);
+              updateDays(c.id, newDays);
             });
 
           cityRow
@@ -1271,13 +1365,15 @@
                   const name = (sel.name || "").trim();
                   const vname = validateCityName(name);
                   if (!vname.ok) return showClientError(vname.error);
-                  c.name = name;
-                  if (sel.position) {
+                  // Server-first update for name
+                  const ok = await updateCity(c.id, { name });
+                  if (ok && sel.position) {
+                    // Enrich with coordinates locally (not persisted on backend)
                     c.lat = sel.position.lat;
                     c.lon = sel.position.lon;
+                    updateTripInStore();
+                    render();
                   }
-                  updateTripInStore();
-                  render();
                 },
                 c.name,
               );
@@ -1337,20 +1433,28 @@
           );
 
           if (notesTa) {
-            // Auto-save on blur
-            notesTa.addEventListener("blur", () => {
-              c.notes = notesTa.value;
-              updateTripInStore();
+            // Auto-save on blur: server-first when authenticated
+            notesTa.addEventListener("blur", async () => {
+              const newNotes = notesTa.value;
+              const ok = await updateCity(c.id, { notes: newNotes });
+              if (!ok) {
+                // Revert textarea value to stored state on failure
+                const cc = trip.cities.find((x) => x.id === c.id || x.id === Number(c.id));
+                if (cc) notesTa.value = cc.notes || "";
+              }
             });
           }
 
           if (saveNoteBtn) {
-            saveNoteBtn.addEventListener("click", (ev) => {
+            saveNoteBtn.addEventListener("click", async (ev) => {
               ev.stopPropagation();
               if (notesTa) {
-                c.notes = notesTa.value;
-                updateTripInStore();
-                render();
+                const newNotes = notesTa.value;
+                const ok = await updateCity(c.id, { notes: newNotes });
+                if (!ok) {
+                  const cc = trip.cities.find((x) => x.id === c.id || x.id === Number(c.id));
+                  if (cc) notesTa.value = cc.notes || "";
+                }
               }
             });
           }
