@@ -523,6 +523,49 @@ app.put("/api/trips/:id", csrfProtection, async (req, res) => {
   }
 });
 
+// Delete a city in a trip
+app.delete("/api/trips/:id/cities/:cityId", csrfProtection, async (req, res) => {
+  try {
+    const s = await getSession(req);
+    if (!s) return res.status(401).json({ error: "not authenticated" });
+
+    const tripId = parseInt(req.params.id, 10);
+    if (!tripId || !Number.isInteger(tripId)) {
+      return res.status(400).json({ error: "invalid trip id" });
+    }
+
+    // Verify the trip belongs to the current user
+    const trip = await get(
+      `SELECT id FROM trips WHERE id = ? AND user_id = ?`,
+      [tripId, s.user.id],
+    );
+    if (!trip) {
+      return res.status(404).json({ error: "trip not found or unauthorized" });
+    }
+
+    const cityId = parseInt(req.params.cityId, 10);
+    if (!cityId || !Number.isInteger(cityId)) {
+      return res.status(400).json({ error: "invalid city id" });
+    }
+
+    // Verify the city belongs to the trip
+    const city = await get(
+      `SELECT id, name, nights, notes, sort_order, trip_id FROM cities WHERE id = ? AND trip_id = ?`,
+      [cityId, tripId],
+    );
+    if (!city) {
+      return res.status(404).json({ error: "city not found or unauthorized" });
+    }
+
+    await run(`DELETE FROM cities WHERE id = ?`, [cityId]);
+
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: "server error" });
+  }
+});
+
 // Create a city in a trip (appended at the end)
 app.post("/api/trips/:id/cities", csrfProtection, async (req, res) => {
   try {
@@ -548,7 +591,8 @@ app.post("/api/trips/:id/cities", csrfProtection, async (req, res) => {
       return res.status(400).json({ error: "city name required" });
     }
 
-    let n = typeof nights === "undefined" || nights === null ? 1 : Number(nights);
+    let n =
+      typeof nights === "undefined" || nights === null ? 1 : Number(nights);
     if (!Number.isFinite(n) || n < 0) {
       return res
         .status(400)
