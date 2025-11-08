@@ -268,4 +268,4 @@ function registerCityRoutes(app, deps) {
   );
 }
 
-export default { registerCityRoutes };
+module.exports = registerCityRoutes;

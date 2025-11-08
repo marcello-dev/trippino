@@ -244,13 +244,13 @@ app.get("/config.js", (req, res) => {
 });
 
 // --- Register trip and city routes in separate modules ---
-require("./routes/trips").default.registerTripRoutes(app, { 
+require("./routes/trips")(app, { 
   csrfProtection, 
   getSession, 
   run, 
   get 
 });
-require("./routes/cities").default.registerCityRoutes(app, {
+require("./routes/cities")(app, {
   csrfProtection,
   getSession,
   run,

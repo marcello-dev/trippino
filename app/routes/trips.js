@@ -128,6 +128,6 @@ function registerTripRoutes(app, deps) {
       return res.status(500).json({ error: "server error" });
     }
   });
-};
+}
 
-export default { registerTripRoutes };
+module.exports = registerTripRoutes;
