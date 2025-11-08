@@ -1300,14 +1300,84 @@
               return showClientError(
                 `Maximum cities per trip reached (${MAX_CITIES_PER_TRIP}).`,
               );
-            const newCity = {
-              id: uid(),
-              name: name,
-              days: 1,
-            };
-            trip.cities.push(newCity);
-            updateTripInStore();
-            render();
+            
+            // If user is logged in, try to create city in backend first
+            if (currentUser) {
+              try {
+                const token = await getCsrfToken();
+                const res = await fetch(`${API_BASE}/api/trips/${trip.id}/cities`, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    "CSRF-Token": token,
+                  },
+                  credentials: "include",
+                  body: JSON.stringify({
+                    name: name,
+                    nights: 1,
+                    notes: "",
+                    sortOrder: trip.cities.length,
+                  }),
+                });
+                
+                if (res.ok) {
+                  const data = await res.json();
+                  // Use backend data to create local city with server-generated ID
+                  const newCity = {
+                    id: data.city.id,
+                    name: data.city.name,
+                    days: data.city.nights, // Note: backend uses 'nights', frontend uses 'days'
+                    notes: data.city.notes || "",
+                    updatedAt: new Date().toISOString(),
+                  };
+                  trip.cities.push(newCity);
+                  updateTripInStore();
+                  render();
+                } else if (res.status === 401) {
+                  // Session expired
+                  console.warn("Session expired");
+                  currentUser = null;
+                  checkAuth();
+                  return showClientError("Session expired. Please sign in again.");
+                } else if (res.status === 400) {
+                  // Validation error from backend
+                  const err = await res.json().catch(() => ({}));
+                  console.warn("Validation error creating city:", err);
+                  return showClientError(err.error || "Invalid city data.");
+                } else if (res.status === 404) {
+                  // Trip not found or unauthorized
+                  const err = await res.json().catch(() => ({}));
+                  console.warn("Trip not found or unauthorized:", err);
+                  return showClientError(
+                    err.error || "Trip not found or you don't have permission to edit it."
+                  );
+                } else {
+                  // Other backend error - read-only mode
+                  const err = await res.json().catch(() => ({}));
+                  console.warn("Failed to create city in backend:", err);
+                  return showClientError(
+                    "Cannot add city: backend error (read-only mode)."
+                  );
+                }
+              } catch (e) {
+                // Network error or offline - read-only mode
+                console.warn("Failed to create city in backend (network error):", e);
+                return showClientError(
+                  "Cannot add city: offline or network error (read-only mode)."
+                );
+              }
+            } else {
+              // Anonymous user - create locally only
+              const newCity = {
+                id: uid(),
+                name: name,
+                days: 1,
+                updatedAt: new Date().toISOString(),
+              };
+              trip.cities.push(newCity);
+              updateTripInStore();
+              render();
+            }
           });
         });
         citiesContainer.appendChild(bottomAddBtn);
