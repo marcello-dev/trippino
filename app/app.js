@@ -462,6 +462,7 @@ app.post("/api/state/firstlogin", csrfProtection, async (req, res) => {
     if (!s) return res.status(401).json({ error: "not authenticated" });
     const userId = s.user.id;
     const state = req.body && req.body.state;
+    console.log("first login: saving state", state);
     if (typeof state === "undefined")
       return res.status(400).json({ error: "state missing in body" });
     // Save state for first time login into trips and cities tables
@@ -510,21 +511,33 @@ app.post("/api/state/firstlogin", csrfProtection, async (req, res) => {
   }
 });
 
-// get saved state for authenticated user
+// Checks if user has trips, if yes will build a state from trips and cities tables and return it
 app.get("/api/state", async (req, res) => {
   try {
     const s = await getSession(req);
     if (!s) return res.status(401).json({ error: "not authenticated" });
     const userId = s.user.id;
-    const row = await get(`SELECT state FROM states WHERE user_id = ?`, [
-      userId,
-    ]);
-    if (!row) return res.json({ state: null });
-    try {
-      return res.json({ state: JSON.parse(row.state) });
-    } catch (e) {
-      return res.json({ state: null });
-    }
+    
+    const trips = await all(
+      `SELECT id, name, start_date FROM trips WHERE user_id = ?`,
+      [userId],
+    );
+    if (!trips || trips.length === 0) return res.json({ state: null });
+
+    const cities = await all(
+      `SELECT id, name, nights, notes, sort_order, trip_id FROM cities WHERE trip_id IN (${trips.map(() => "?").join(", ")})`,
+      trips.map(trip => trip.id),
+    );
+
+    const state = {
+      trips: trips.map(trip => ({
+        id: trip.id,
+        name: trip.name,
+        start_date: trip.start_date,
+        cities: cities.filter(city => city.trip_id === trip.id),
+      })),
+    };
+    return res.json({ state });
   } catch (e) {
     console.error(e);
     return res.status(500).json({ error: "server error" });

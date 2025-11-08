@@ -642,7 +642,7 @@
           try {
             const token = await getCsrfToken();
             // persist local state to backend and save it as local
-
+            console.log("first login: persisting local state to backend");
             const response = await fetch(`${API_BASE}/api/state/firstlogin`, {
               method: "POST",
               headers: {
@@ -652,10 +652,13 @@
               credentials: "include",
               body: JSON.stringify({ state: appState }),
             });
+            
             if (response.ok) {
               const json = await response.json();
               appState = json.state;
               save(appState);
+            } else {
+              console.warn("first login: failed to persist local state", response);
             }
 
           } catch (e) {
