@@ -2,6 +2,7 @@
   "name": "trippino-backend",
   "version": "0.2.0",
   "private": true,
+  "type": "module",
   "main": "app/app.js",
   "scripts": {
     "start": "bash -c 'set -a; source app/.env; set +a; node app/app.js'"

@@ -130,4 +130,4 @@ function registerTripRoutes(app, deps) {
   });
 }
 
-module.exports = registerTripRoutes;
+export default registerTripRoutes;

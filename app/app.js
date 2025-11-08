@@ -1,10 +1,10 @@
-const express = require("express");
-const cookieParser = require("cookie-parser");
-const { v4: uuidv4 } = require("uuid");
-const bcrypt = require("bcryptjs");
-const nodemailer = require("nodemailer");
-const rateLimit = require("express-rate-limit");
-const csrf = require("csurf");
+import express from "express";
+import cookieParser from "cookie-parser";
+import { v4 as uuidv4 } from "uuid";
+import bcrypt from "bcryptjs";
+import nodemailer from "nodemailer";
+import rateLimit from "express-rate-limit";
+import csrf from "csurf";
 
 const app = express();
 const PORT = process.env.PORT;
@@ -40,8 +40,14 @@ async function sendVerificationEmail(email, token) {
   });
 }
 
-const path = require("path");
-const sqlite3 = require("sqlite3");
+import path from "path";
+import sqlite3 from "sqlite3";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 const DATABASE_URL =
   process.env["DATABASE_URL"] || path.join(__dirname, "data.sqlite");
 console.log("SQLite DB path:", DATABASE_URL);
@@ -244,13 +250,16 @@ app.get("/config.js", (req, res) => {
 });
 
 // --- Register trip and city routes in separate modules ---
-require("./routes/trips")(app, { 
+import registerTripRoutes from "./routes/trips.js";
+import registerCityRoutes from "./routes/cities.js";
+
+registerTripRoutes(app, { 
   csrfProtection, 
   getSession, 
   run, 
   get 
 });
-require("./routes/cities")(app, {
+registerCityRoutes(app, {
   csrfProtection,
   getSession,
   run,
