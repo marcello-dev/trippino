@@ -687,7 +687,7 @@
 
       // Get trip ID from URL
       const urlParams = new URLSearchParams(window.location.search);
-      const tripId = urlParams.get("id");
+      const tripId = Number(urlParams.get("id"));
 
       if (!tripId) {
         window.location.href = "index.html";
