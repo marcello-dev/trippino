@@ -1163,10 +1163,10 @@
         topline.className = "topline";
         topline.innerHTML = `
                 <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-                    <h2 style="margin:0;font-size:18px">${escapeHtml(trip.name || "Unnamed trip")}</h2>
+                    <h2 style="margin:0;font-size:18px">${trip.name || "Unnamed trip"}</h2>
                     <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
                         <div class="small" style="color:var(--muted)">Start date</div>
-                        <input class="trip-start" type="date" value="${escapeHtml(trip.start || "")}" />
+                        <input class="trip-start" type="date" value="${trip.start || ""}" />
                     </div>
                 </div>
             `;
@@ -1309,7 +1309,7 @@
                     </div>
                     <div>
                         <div class="name">
-                            ${escapeHtml(c.name || "Unnamed city")}
+                            ${c.name || "Unnamed city"}
                         </div>
                     </div>
                     <div class="nights-control">

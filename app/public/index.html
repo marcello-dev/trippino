@@ -836,7 +836,7 @@
           header.style.alignItems = "center";
           header.innerHTML = `
                 <div>
-                    <strong>${escapeHtml(t.name || "Untitled")}</strong>
+                    <strong>${t.name || "Untitled"}</strong>
                     <div class="small" style="color:var(--muted)">${t.start || ""}</div>
                     <div class="small" style="color:var(--muted)">${t.cities ? t.cities.length : 0} ${t.cities?.length === 1 ? "city" : "cities"}</div>
                 </div>
@@ -1017,19 +1017,6 @@
         renderTripsContainer();
       }
 
-      // escape for safety (we control the HTML but keep it safe)
-      function escapeHtml(s) {
-        return String(s).replace(/[&<>"']/g, function (ch) {
-          return {
-            "&": "&amp;",
-            "<": "&lt;",
-            ">": "&gt;",
-            '"': "&quot;",
-            "'": "&#39;",
-          }[ch];
-        });
-      }
-
       createTripBtn.addEventListener("click", async () => {
         await createTrip(
           newTripName.value || "New trip",
@@ -1043,7 +1030,6 @@
       refreshAll();
       renderHome();
 
-      // burger menu toggle
       function setupBurgerMenu() {
         const burgerBtn = document.getElementById("burgerBtn");
         const burgerMenu = document.getElementById("burgerMenu");
