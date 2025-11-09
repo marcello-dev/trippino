@@ -33,16 +33,6 @@ jobs:
         SESSION_SECRET: test-secret-key-for-ci
         SKIP_EMAIL_SENDING: true
         SKIP_BACKGROUND_JOBS: true
-    
-    - name: Upload test results
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-results-node-22.x
-        path: |
-          coverage/
-          test-results/
-        retention-days: 30
   
   lint:
     runs-on: ubuntu-latest
