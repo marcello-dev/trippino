@@ -93,9 +93,6 @@ db.serialize(() => {
   db.run(
     `CREATE TABLE IF NOT EXISTS sessions (sid TEXT PRIMARY KEY, user_id INTEGER, createdAt INTEGER)`,
   );
-  db.run(
-    `CREATE TABLE IF NOT EXISTS states (user_id INTEGER PRIMARY KEY, state TEXT)`,
-  );
   db.run(`CREATE TABLE IF NOT EXISTS trips (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -520,7 +517,6 @@ app.get("/api/state", async (req, res) => {
         id: trip.id,
         name: trip.name,
         start: trip.start_date,
-        // map city.nights to city.days
         cities: cities.filter((city) => city.trip_id === trip.id),
       })),
     };
