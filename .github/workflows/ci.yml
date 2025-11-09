@@ -52,7 +52,6 @@ jobs:
     
     - name: Check code formatting
       run: npx prettier --check "**/*.{js,json,md}"
-      continue-on-error: true
   
   build:
     runs-on: ubuntu-latest
