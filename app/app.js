@@ -415,6 +415,17 @@ app.post(
         user.id,
       ]);
 
+      // Invalidate all sessions for this user (force re-login on all devices)
+      const result = await run(`DELETE FROM sessions WHERE user_id = ?`, [
+        user.id,
+      ]);
+      console.log(
+        `[Password Change] Invalidated ${result.changes} session(s) for user ${user.id}`,
+      );
+
+      // Clear current session cookie
+      res.clearCookie(COOKIE_NAME, { httpOnly: true, sameSite: "lax" });
+
       return res.json({ ok: true, message: "password changed successfully" });
     } catch (e) {
       console.error(e);
