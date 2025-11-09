@@ -1,5 +1,10 @@
 # Trippino
 
+[![CI/CD](https://github.com/marcello-dev/trippino/actions/workflows/ci.yml/badge.svg)](https://github.com/marcello-dev/trippino/actions/workflows/ci.yml)
+[![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org/)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/marcello-dev/trippino/pulls)
+
 Trippino is a website for planning simple trips. Check it out here: https://trippino.apivenue.com
 
 It is built as a small single-node Express + SQLite demo app. It serves a static frontend from `app/public` and provides JSON APIs in `app/app.js`.
