@@ -117,16 +117,6 @@ db.serialize(() => {
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE
   )`);
-  // seed demo users with hashed passwords
-  try {
-    const marcHash = bcrypt.hashSync("marc", 10);
-    db.run(
-      `INSERT OR IGNORE INTO users(email,password,verified) VALUES(?,?,1)`,
-      ["marc@demo.com", marcHash],
-    );
-  } catch (e) {
-    console.error("failed seeding users", e);
-  }
 });
 
 // cookie name
