@@ -17,8 +17,8 @@ The table below summarizes how the state (trips, cities, etc.) is managed.
 
 |                               | Online                                                           | Offline                                                          |
 | ----------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------- |
-| Anonymous user (unregistered) | State saved to device local storage only                                | State saved to device local storage only                                |
-| First login user              | Local state is saved to remote database                          | Error                 |
+| Anonymous user (unregistered) | State saved to device local storage only                         | State saved to device local storage only                         |
+| First login user              | Local state is saved to remote database                          | Error                                                            |
 | Logged in user                | Local and remote state in sync                                   | Read-only                                                        |
 | Logged out user               | Local storage only, state is replaced with remote state on login | Local storage only, state is replaced with remote state on login |
 
