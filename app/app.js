@@ -629,10 +629,9 @@ const CLEANUP_INTERVAL = 60 * 60 * 1000; // 1 hour
 setInterval(async () => {
   try {
     const cutoff = Date.now() - SESSION_MAX_AGE;
-    const result = await run(
-      `DELETE FROM sessions WHERE createdAt < ?`,
-      [cutoff],
-    );
+    const result = await run(`DELETE FROM sessions WHERE createdAt < ?`, [
+      cutoff,
+    ]);
     if (result.changes > 0) {
       console.log(
         `[Session Cleanup] Deleted ${result.changes} expired session(s)`,

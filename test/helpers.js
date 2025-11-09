@@ -3,17 +3,17 @@
  * Utility functions for setting up test databases, creating test users, etc.
  */
 
-import sqlite3 from 'sqlite3';
-import bcrypt from 'bcryptjs';
-import { randomUUID } from 'crypto';
-import { promisify } from 'util';
+import sqlite3 from "sqlite3";
+import bcrypt from "bcryptjs";
+import { randomUUID } from "crypto";
+import { promisify } from "util";
 
 /**
  * Create an in-memory SQLite database for testing
  */
 export function createTestDatabase() {
-  const db = new sqlite3.Database(':memory:');
-  
+  const db = new sqlite3.Database(":memory:");
+
   const run = (sql, params = []) => {
     return new Promise((resolve, reject) => {
       db.run(sql, params, function (err) {
@@ -23,10 +23,10 @@ export function createTestDatabase() {
       });
     });
   };
-  
+
   const get = promisify(db.get.bind(db));
   const all = promisify(db.all.bind(db));
-  
+
   return { db, run, get, all };
 }
 
@@ -35,7 +35,7 @@ export function createTestDatabase() {
  */
 export async function initTestDatabase(run) {
   await run(`PRAGMA foreign_keys = ON`);
-  
+
   await run(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -46,7 +46,7 @@ export async function initTestDatabase(run) {
       verification_expires INTEGER
     )
   `);
-  
+
   await run(`
     CREATE TABLE IF NOT EXISTS sessions (
       sid TEXT PRIMARY KEY,
@@ -55,7 +55,7 @@ export async function initTestDatabase(run) {
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )
   `);
-  
+
   await run(`
     CREATE TABLE IF NOT EXISTS states (
       user_id INTEGER PRIMARY KEY,
@@ -63,7 +63,7 @@ export async function initTestDatabase(run) {
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )
   `);
-  
+
   await run(`
     CREATE TABLE IF NOT EXISTS trips (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -75,7 +75,7 @@ export async function initTestDatabase(run) {
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )
   `);
-  
+
   await run(`
     CREATE TABLE IF NOT EXISTS cities (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -94,18 +94,23 @@ export async function initTestDatabase(run) {
 /**
  * Create a test user and return user data
  */
-export async function createTestUser(run, email = 'test@example.com', password = 'password123', verified = 1) {
+export async function createTestUser(
+  run,
+  email = "test@example.com",
+  password = "password123",
+  verified = 1,
+) {
   const hashedPassword = await bcrypt.hash(password, 10);
   const result = await run(
     `INSERT INTO users (email, password, verified) VALUES (?, ?, ?)`,
-    [email, hashedPassword, verified]
+    [email, hashedPassword, verified],
   );
-  
+
   return {
     id: result.lastID,
     email,
     password, // Return plain password for login tests
-    verified
+    verified,
   };
 }
 
@@ -115,44 +120,56 @@ export async function createTestUser(run, email = 'test@example.com', password =
 export async function createTestSession(run, userId) {
   const sid = randomUUID();
   const createdAt = Date.now();
-  await run(
-    `INSERT INTO sessions (sid, user_id, createdAt) VALUES (?, ?, ?)`,
-    [sid, userId, createdAt]
-  );
+  await run(`INSERT INTO sessions (sid, user_id, createdAt) VALUES (?, ?, ?)`, [
+    sid,
+    userId,
+    createdAt,
+  ]);
   return sid;
 }
 
 /**
  * Create a test trip
  */
-export async function createTestTrip(run, userId, name = 'Test Trip', startDate = '2025-12-01') {
+export async function createTestTrip(
+  run,
+  userId,
+  name = "Test Trip",
+  startDate = "2025-12-01",
+) {
   const result = await run(
     `INSERT INTO trips (name, start_date, user_id) VALUES (?, ?, ?)`,
-    [name, startDate, userId]
+    [name, startDate, userId],
   );
   return {
     id: result.lastID,
     name,
     start_date: startDate,
-    user_id: userId
+    user_id: userId,
   };
 }
 
 /**
  * Create a test city in a trip
  */
-export async function createTestCity(run, tripId, name = 'Test City', nights = 2, sortOrder = 0) {
+export async function createTestCity(
+  run,
+  tripId,
+  name = "Test City",
+  nights = 2,
+  sortOrder = 0,
+) {
   const result = await run(
     `INSERT INTO cities (name, nights, notes, sort_order, trip_id) VALUES (?, ?, ?, ?, ?)`,
-    [name, nights, '', sortOrder, tripId]
+    [name, nights, "", sortOrder, tripId],
   );
   return {
     id: result.lastID,
     name,
     nights,
-    notes: '',
+    notes: "",
     sort_order: sortOrder,
-    trip_id: tripId
+    trip_id: tripId,
   };
 }
 
@@ -160,13 +177,13 @@ export async function createTestCity(run, tripId, name = 'Test City', nights = 2
  * Extract session cookie from response
  */
 export function extractSessionCookie(response) {
-  const cookies = response.headers['set-cookie'];
+  const cookies = response.headers["set-cookie"];
   if (!cookies) return null;
-  
-  const sessionCookie = cookies.find(c => c.startsWith('trippino_sid='));
+
+  const sessionCookie = cookies.find((c) => c.startsWith("trippino_sid="));
   if (!sessionCookie) return null;
-  
-  return sessionCookie.split(';')[0];
+
+  return sessionCookie.split(";")[0];
 }
 
 /**

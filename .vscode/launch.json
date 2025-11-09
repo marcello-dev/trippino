@@ -12,9 +12,7 @@
       "envFile": "${workspaceFolder}/app/.env",
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
-      "skipFiles": [
-        "<node_internals>/**"
-      ]
+      "skipFiles": ["<node_internals>/**"]
     },
     {
       "name": "Launch App (Debug Mode)",
@@ -27,9 +25,7 @@
       "envFile": "${workspaceFolder}/app/.env",
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
-      "skipFiles": [
-        "<node_internals>/**"
-      ],
+      "skipFiles": ["<node_internals>/**"],
       "outputCapture": "std"
     },
     {
@@ -73,9 +69,7 @@
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
-      "skipFiles": [
-        "<node_internals>/**"
-      ],
+      "skipFiles": ["<node_internals>/**"],
       "env": {
         "NODE_ENV": "test",
         "NODE_OPTIONS": "--experimental-vm-modules"
@@ -96,9 +90,7 @@
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
-      "skipFiles": [
-        "<node_internals>/**"
-      ],
+      "skipFiles": ["<node_internals>/**"],
       "env": {
         "NODE_ENV": "test",
         "NODE_OPTIONS": "--experimental-vm-modules"
@@ -119,9 +111,7 @@
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
-      "skipFiles": [
-        "<node_internals>/**"
-      ],
+      "skipFiles": ["<node_internals>/**"],
       "env": {
         "NODE_ENV": "test",
         "NODE_OPTIONS": "--experimental-vm-modules"
@@ -142,9 +132,7 @@
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
-      "skipFiles": [
-        "<node_internals>/**"
-      ],
+      "skipFiles": ["<node_internals>/**"],
       "env": {
         "NODE_ENV": "test",
         "NODE_OPTIONS": "--experimental-vm-modules"
@@ -165,9 +153,7 @@
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
-      "skipFiles": [
-        "<node_internals>/**"
-      ],
+      "skipFiles": ["<node_internals>/**"],
       "env": {
         "NODE_ENV": "test",
         "NODE_OPTIONS": "--experimental-vm-modules"

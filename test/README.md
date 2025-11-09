@@ -27,6 +27,7 @@ npm run test:coverage
 ## Test Coverage
 
 ### Authentication (`auth.test.js`)
+
 - ✅ User signup with validation
 - ✅ Email verification flow
 - ✅ Login with credentials
@@ -36,6 +37,7 @@ npm run test:coverage
 - ✅ Session expiration handling
 
 ### Trips (`trips.test.js`)
+
 - ✅ Create trip with validation
 - ✅ List user trips
 - ✅ Get single trip with cities
@@ -45,6 +47,7 @@ npm run test:coverage
 - ✅ Authentication requirements
 
 ### Cities (`cities.test.js`)
+
 - ✅ Create city with auto sort order
 - ✅ Update city (name, nights, notes)
 - ✅ Batch update sort order (move up/down)
@@ -54,6 +57,7 @@ npm run test:coverage
 - ✅ Field validation (nights minimum, etc.)
 
 ### Sessions (`sessions.test.js`)
+
 - ✅ Session creation with timestamps
 - ✅ Session expiration (7-day timeout)
 - ✅ Background cleanup simulation
@@ -65,6 +69,7 @@ npm run test:coverage
 ## Test Database
 
 Tests use an in-memory SQLite database that is:
+
 - Created fresh for each test
 - Isolated between tests
 - Automatically cleaned up after each test
@@ -73,6 +78,7 @@ Tests use an in-memory SQLite database that is:
 ## Environment Variables
 
 Test environment automatically sets:
+
 - `NODE_ENV=test`
 - `PORT=0` (random available port)
 - `SESSION_SECRET=test-secret-key-for-testing-only`
@@ -103,34 +109,35 @@ The `helpers.js` file provides:
 6. Assert responses and database state
 
 Example:
+
 ```javascript
-describe('New Feature', () => {
+describe("New Feature", () => {
   let app, db, run, get, all;
-  
+
   beforeEach(async () => {
     const testDb = createTestDatabase();
     db = testDb.db;
     run = testDb.run;
     get = testDb.get;
     all = testDb.all;
-    
+
     await initTestDatabase(run);
-    
+
     // Set up Express app...
   });
-  
+
   afterEach(async () => {
     await cleanupDatabase(db);
   });
-  
-  it('should do something', async () => {
+
+  it("should do something", async () => {
     const user = await createTestUser(run);
     const sid = await createTestSession(run, user.id);
-    
+
     const response = await request(app)
-      .get('/api/endpoint')
-      .set('Cookie', `trippino_sid=${sid}`);
-    
+      .get("/api/endpoint")
+      .set("Cookie", `trippino_sid=${sid}`);
+
     expect(response.status).toBe(200);
   });
 });
@@ -144,7 +151,7 @@ Tests can be integrated into CI/CD pipelines:
 # GitHub Actions example
 - name: Run tests
   run: npm test
-  
+
 - name: Upload coverage
   run: npm run test:coverage
 ```
