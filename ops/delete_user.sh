@@ -41,7 +41,6 @@ BEGIN;
 DELETE FROM users    WHERE id = $USER_ID;
 DELETE FROM trips    WHERE user_id = $USER_ID;   -- no-op if cascaded
 DELETE FROM sessions WHERE user_id = $USER_ID;
-DELETE FROM states   WHERE user_id = $USER_ID;
 COMMIT;
 SQL
 

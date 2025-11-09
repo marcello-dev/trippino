@@ -57,14 +57,6 @@ export async function initTestDatabase(run) {
   `);
 
   await run(`
-    CREATE TABLE IF NOT EXISTS states (
-      user_id INTEGER PRIMARY KEY,
-      state TEXT,
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-    )
-  `);
-
-  await run(`
     CREATE TABLE IF NOT EXISTS trips (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
