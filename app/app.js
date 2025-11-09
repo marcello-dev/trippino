@@ -535,13 +535,7 @@ app.get("/api/state", async (req, res) => {
         name: trip.name,
         start: trip.start_date,
         // map city.nights to city.days
-        cities: cities.filter(city => city.trip_id === trip.id).map(city => ({
-          id: city.id,
-          name: city.name,
-          days: city.nights,
-          notes: city.notes,
-          sort_order: city.sort_order,
-        })),
+        cities: cities.filter(city => city.trip_id === trip.id),
       })),
     };
     return res.json({ state });

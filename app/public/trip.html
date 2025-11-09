@@ -396,13 +396,13 @@
         color: var(--muted);
       }
 
-      .days-control {
+      .nights-control {
         display: flex;
         gap: 6px;
         align-items: center;
       }
 
-      .days-control button {
+      .nights-control button {
         width: 30px;
         height: 30px;
         border: none;
@@ -412,7 +412,7 @@
         transition: background-color 0.2s;
       }
 
-      .days-control button:hover {
+      .nights-control button:hover {
         background: #f0f0f0;
       }
 
@@ -587,7 +587,7 @@
       const STORAGE_KEY = "simpleTripPlanner_v1";
       const MAX_CITIES_PER_TRIP = 30;
       const MAX_CITY_NAME_LENGTH = 60;
-      const MAX_DAYS_PER_CITY = 365;
+      const MAX_NIGHTS_PER_CITY = 365;
       const NAME_SAFE_REGEX = /^[A-Za-z0-9 \-\'\(\)\.,]*$/;
 
       // --- Auth config & helpers ---
@@ -752,14 +752,14 @@
         return { ok: true };
       }
 
-      function validateDays(n) {
+      function validateNights(n) {
         const v = Number(n) || 0;
         if (!Number.isFinite(v) || v < 0)
-          return { ok: false, error: "Days must be a non-negative number" };
-        if (v > MAX_DAYS_PER_CITY)
+          return { ok: false, error: "Nights must be a non-negative number" };
+        if (v > MAX_NIGHTS_PER_CITY)
           return {
             ok: false,
-            error: `Days per city cannot exceed ${MAX_DAYS_PER_CITY}`,
+            error: `Nights per city cannot exceed ${MAX_NIGHTS_PER_CITY}`,
           };
         return { ok: true };
       }
@@ -772,7 +772,7 @@
         }
       }
 
-      // Server-first city update helper. Accepts partial fields: { name?, days?, notes? }.
+      // Server-first city update helper. Accepts partial fields: { name?, nights?, notes? }.
       async function updateCity(cityId, changes) {
         const c = trip.cities.find((x) => x.id === cityId || x.id === Number(cityId));
         if (!c) return false;
@@ -785,8 +785,8 @@
             return false;
           }
         }
-        if (typeof changes.days !== "undefined") {
-          const v = validateDays(changes.days);
+        if (typeof changes.nights !== "undefined") {
+          const v = validateNights(changes.nights);
           if (!v.ok) {
             showClientError(v.error);
             return false;
@@ -796,7 +796,7 @@
         // Anonymous users: update locally only
         if (!currentUser) {
           if (typeof changes.name !== "undefined") c.name = String(changes.name);
-          if (typeof changes.days !== "undefined") c.days = Math.max(0, Number(changes.days));
+          if (typeof changes.nights !== "undefined") c.nights = Math.max(0, Number(changes.nights));
           if (typeof changes.notes !== "undefined") c.notes = String(changes.notes || "");
           updateTripInStore();
           render();
@@ -804,12 +804,12 @@
         }
 
         // Authenticated: call backend first
-        const prev = { name: c.name, days: Number(c.days), notes: c.notes };
+        const prev = { name: c.name, nights: Number(c.nights), notes: c.notes };
         try {
           const token = await getCsrfToken();
           const payload = {};
           if (typeof changes.name !== "undefined") payload.name = String(changes.name);
-          if (typeof changes.days !== "undefined") payload.nights = Math.max(0, Number(changes.days));
+          if (typeof changes.nights !== "undefined") payload.nights = Math.max(0, Number(changes.nights));
           if (typeof changes.notes !== "undefined") payload.notes = String(changes.notes || "");
 
           if (Object.keys(payload).length === 0) return false;
@@ -829,11 +829,11 @@
             const uc = data && data.city ? data.city : null;
             if (uc) {
               c.name = uc.name;
-              c.days = Number(uc.nights);
+              c.nights = Number(uc.nights);
               c.notes = uc.notes || "";
             } else {
               if (typeof changes.name !== "undefined") c.name = String(changes.name);
-              if (typeof changes.days !== "undefined") c.days = Math.max(0, Number(changes.days));
+              if (typeof changes.nights !== "undefined") c.nights = Math.max(0, Number(changes.nights));
               if (typeof changes.notes !== "undefined") c.notes = String(changes.notes || "");
             }
             updateTripInStore();
@@ -863,15 +863,15 @@
 
         // Revert local changes if any accidental UI edits happened
         c.name = prev.name;
-        c.days = prev.days;
+        c.nights = prev.nights;
         c.notes = prev.notes;
         render();
         return false;
       }
 
-      function updateDays(cityId, newDays) {
+      function updateNights(cityId, newNights) {
         // Delegate to updateCity with server-first pattern
-        updateCity(cityId, { days: Math.max(0, Number(newDays)) });
+        updateCity(cityId, { nights: Math.max(0, Number(newNights)) });
       }
 
       function removeCityFromTrip(cityId) {
@@ -1145,7 +1145,7 @@
         metaRow.style.justifyContent = "space-between";
         metaRow.style.alignItems = "center";
         metaRow.style.marginTop = "12px";
-        metaRow.innerHTML = `<div class="meta">Total nights: <span class="total-days">0</span></div>`;
+        metaRow.innerHTML = `<div class="meta">Total nights: <span class="total-nights">0</span></div>`;
         editorCard.appendChild(metaRow);
 
         const startInput = topline.querySelector(".trip-start");
@@ -1212,9 +1212,9 @@
 
         renderCitiesList(citiesContainer);
 
-        const total = trip.cities.reduce((s, c) => s + Number(c.days), 0);
-        const totalDaysEl = editorCard.querySelector(".total-days");
-        if (totalDaysEl) totalDaysEl.textContent = total;
+        const total = trip.cities.reduce((s, c) => s + Number(c.nights), 0);
+        const totalNightsEl = editorCard.querySelector(".total-nights");
+        if (totalNightsEl) totalNightsEl.textContent = total;
 
         container.appendChild(editorCard);
 
@@ -1249,7 +1249,7 @@
         for (let i = 0; i < trip.cities.length; i++) {
           const c = trip.cities[i];
           const start = dayCursor;
-          const end = dayCursor + Number(c.days);
+          const end = dayCursor + Number(c.nights);
           const cityRow = document.createElement("div");
           cityRow.className = "city";
           cityRow.dataset.id = c.id;
@@ -1258,7 +1258,7 @@
           if (!trip.start) {
             dateHtml =
               '<div class="small no-start" style="color:var(--muted)">No start date</div>';
-          } else if (Number(c.days) === 0) {
+          } else if (Number(c.nights) === 0) {
             dateHtml =
               '<div class="small stepover" style="font-weight:600;color:var(--muted)">Stepover</div>';
           } else {
@@ -1276,9 +1276,9 @@
                             ${escapeHtml(c.name || "Unnamed city")}
                         </div>
                     </div>
-                    <div class="days-control">
+                    <div class="nights-control">
                         <button data-action="dec">−</button>
-                        <div class="days-display" style="background:white;width:30px;text-align:center;padding:1px 1px;border: none;border-radius:6px">${c.days}</div>
+                        <div class="nights-display" style="background:white;width:30px;text-align:center;padding:1px 1px;border: none;border-radius:6px">${c.nights}</div>
                         <button data-action="inc">+</button>
                     </div>
                     ${dateHtml}
@@ -1317,16 +1317,16 @@
             .querySelector('[data-action="dec"]')
             .addEventListener("click", (e) => {
               e.stopPropagation();
-              const newDays = Math.max(0, Number(c.days) - 1);
-              updateDays(c.id, newDays);
+              const newNights = Math.max(0, Number(c.nights) - 1);
+              updateNights(c.id, newNights);
             });
 
           cityRow
             .querySelector('[data-action="inc"]')
             .addEventListener("click", (e) => {
               e.stopPropagation();
-              const newDays = Math.max(0, Number(c.days) + 1);
-              updateDays(c.id, newDays);
+              const newNights = Math.max(0, Number(c.nights) + 1);
+              updateNights(c.id, newNights);
             });
 
           cityRow
@@ -1570,7 +1570,7 @@
                   const newCity = {
                     id: data.id,
                     name: data.name,
-                    days: data.nights, // Note: backend uses 'nights', frontend uses 'days'
+                    nights: data.nights,
                     notes: data.notes || "",
                     updatedAt: new Date().toISOString(),
                   };
@@ -1627,7 +1627,7 @@
               const newCity = {
                 id: uid(),
                 name: name,
-                days: 1,
+                nights: 1,
                 updatedAt: new Date().toISOString(),
               };
               trip.cities.push(newCity);
@@ -1659,8 +1659,8 @@
         const cityRanges = [];
         for (const c of trip.cities) {
           const s = cur;
-          const e = cur + Number(c.days);
-          if (Number(c.days) > 0) {
+          const e = cur + Number(c.nights);
+          if (Number(c.nights) > 0) {
             cityRanges.push({
               id: c.id,
               name: c.name || "Unnamed",
@@ -1810,7 +1810,7 @@
                 if (
                   !city.name ||
                   city.name.trim() === "" ||
-                  Number(city.days) === 0
+                  Number(city.nights) === 0
                 )
                   continue;
 
@@ -1833,7 +1833,7 @@
                   if (data && data.length > 0) {
                     citiesWithCoords.push({
                       name: city.name,
-                      days: Number(city.days),
+                      nights: Number(city.nights),
                       lat: parseFloat(data[0].lat),
                       lon: parseFloat(data[0].lon),
                     });
@@ -1890,14 +1890,14 @@
                 // Custom icon with day count
                 const dayIcon = L.divIcon({
                   className: "custom-marker",
-                  html: `<div style="background:#f97316;color:white;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3)">${city.days}</div>`,
+                  html: `<div style="background:#f97316;color:white;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3)">${city.nights}</div>`,
                   iconSize: [32, 32],
                   iconAnchor: [16, 16],
                 });
 
                 marker.setIcon(dayIcon);
                 marker.bindPopup(
-                  `<strong>${city.name}</strong><br>${city.days} day${city.days !== 1 ? "s" : ""}`,
+                  `<strong>${city.name}</strong><br>${city.nights} night${city.nights !== 1 ? "s" : ""}`,
                 );
               });
 

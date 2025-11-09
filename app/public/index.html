@@ -572,7 +572,7 @@
       const MAX_CITIES_PER_TRIP = 30;
       const MAX_TRIP_NAME_LENGTH = 80;
       const MAX_CITY_NAME_LENGTH = 60;
-      const MAX_DAYS_PER_CITY = 365;
+      const MAX_NIGHTS_PER_CITY = 365;
       // Allow letters, numbers, spaces, common punctuation: - ' ( ) , .
       const NAME_SAFE_REGEX = /^[A-Za-z0-9 \-\'\(\)\.,]*$/;
 
@@ -599,19 +599,6 @@
           };
         if (!NAME_SAFE_REGEX.test(name))
           return { ok: false, error: "City name contains invalid characters" };
-        return { ok: true };
-      }
-
-      function validateDays(n) {
-        const v = Number(n) || 0;
-        // allow 0 for stopover, otherwise must be non-negative
-        if (!Number.isFinite(v) || v < 0)
-          return { ok: false, error: "Days must be a non-negative number" };
-        if (v > MAX_DAYS_PER_CITY)
-          return {
-            ok: false,
-            error: `Days per city cannot exceed ${MAX_DAYS_PER_CITY}`,
-          };
         return { ok: true };
       }
 
@@ -963,7 +950,7 @@
         for (const trip of appState.trips || []) {
           if (!trip.start) continue;
           const totalDays = (trip.cities || []).reduce(
-            (s, c) => s + Number(c.days || 0),
+            (s, c) => s + Number(c.nights || 0),
             0,
           );
           if (totalDays <= 0) continue;
