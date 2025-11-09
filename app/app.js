@@ -336,18 +336,35 @@ app.post("/api/register", csrfProtection, registerLimiter, async (req, res) => {
 
     try {
       const hash = await bcrypt.hash(password, 10);
-      const verificationToken = uuidv4();
-      const verificationExpires = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
 
-      await run(
-        `INSERT INTO users(email, password, verification_token, verification_expires) VALUES(?,?,?,?)`,
-        [email, hash, verificationToken, verificationExpires],
-      );
+      // Check if email sending is disabled (for development/testing)
+      const skipEmail = process.env.SKIP_EMAIL_SENDING === "true";
 
-      // Send verification email
-      await sendVerificationEmail(email, verificationToken);
+      if (skipEmail) {
+        // Skip email verification - create user as verified
+        await run(
+          `INSERT INTO users(email, password, verified) VALUES(?,?,1)`,
+          [email, hash],
+        );
+        console.log(
+          `[Registration] Email sending disabled - user ${email} created as verified`,
+        );
+        return res.json({ ok: true, message: "account created successfully" });
+      } else {
+        // Normal flow with email verification
+        const verificationToken = uuidv4();
+        const verificationExpires = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
 
-      return res.json({ ok: true, message: "verification email sent" });
+        await run(
+          `INSERT INTO users(email, password, verification_token, verification_expires) VALUES(?,?,?,?)`,
+          [email, hash, verificationToken, verificationExpires],
+        );
+
+        // Send verification email
+        await sendVerificationEmail(email, verificationToken);
+
+        return res.json({ ok: true, message: "verification email sent" });
+      }
     } catch (e) {
       // likely UNIQUE constraint
       if (e && e.message && e.message.indexOf("UNIQUE") !== -1)
