@@ -90,89 +90,6 @@
         margin-bottom: 12px;
       }
 
-      .controls {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-      }
-
-      .cities {
-        margin-top: 12px;
-      }
-
-      .city {
-        display: grid;
-        grid-template-columns: 24px 1fr 160px 250px 80px;
-        gap: 10px;
-        align-items: center;
-        padding: 10px;
-        border-radius: 8px;
-        border: 1px dashed #eee;
-        margin-bottom: 8px;
-      }
-
-      .city .drag-handle {
-        width: 24px;
-        height: 24px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #999;
-        cursor: grab;
-        user-select: none;
-      }
-
-      .city .drag-handle svg {
-        width: 16px;
-        height: 16px;
-      }
-
-      .city .name {
-        font-weight: 600;
-      }
-
-      /* calendar styles */
-      .calendar-wrapper {
-        margin-top: 12px;
-      }
-
-      .months {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-        gap: 12px;
-        width: 100%;
-        box-sizing: border-box;
-      }
-
-      .month-card {
-        border-radius: 8px;
-        border: 1px solid #eee;
-        padding: 10px;
-        background: var(--card);
-        box-sizing: border-box;
-        width: 100%;
-        /* remove fixed 350px width */
-      }
-
-      .month-header {
-        font-weight: 700;
-        margin-bottom: 6px;
-      }
-
-      .weekday-row {
-        display: grid;
-        grid-template-columns: repeat(7, 1fr);
-        font-size: 12px;
-        color: var(--muted);
-        text-align: center;
-      }
-
-      .days-grid {
-        display: grid;
-        grid-template-columns: repeat(7, 1fr);
-        gap: 0;
-      }
-
       /* each day cell is identical size so bars are visually contiguous */
       .day {
         height: 56px;
@@ -186,70 +103,9 @@
         box-sizing: border-box;
         overflow: visible;
       }
-
-      .day.blank {
-        background: transparent;
-      }
-
-      /* blue bar styles for in-range days */
-      /* in-range days no longer color the whole cell; we render thin bars instead */
-      .day.in-range {
-        color: inherit;
-      }
-
-      /* round only the ends so consecutive .in-range cells form one contiguous bar */
-      .day.range-start {
-        border-top-left-radius: 20px;
-        border-bottom-left-radius: 20px;
-      }
-
-      .day.range-end {
-        border-top-right-radius: 20px;
-        border-bottom-right-radius: 20px;
-      }
-
-      /* label is absolutely positioned so it won't change cell height */
-      /* thin horizontal bar that represents the city range on a day cell */
-      .range-seg {
-        position: absolute;
-        left: 0px;
-        right: -2px;
-        /* slightly extend to connect with next cell */
-        height: 14px;
-        background: var(--primary);
-        color: #fff;
-        font-size: 12px;
-        line-height: 14px;
-        padding: 0 6px;
-        box-sizing: border-box;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        border-radius: 0;
-        /* no rounding in middle segments */
-        z-index: 1;
-      }
-
-      .range-seg .seg-label {
-        font-size: 11px;
-        color: #fff;
-      }
-
+      
       .day .date-num {
         z-index: 2;
-      }
-
-      .range-seg.range-start {
-        border-top-left-radius: 10px;
-        border-bottom-left-radius: 10px;
-      }
-
-      .range-seg.range-end {
-        border-top-right-radius: 10px;
-        border-bottom-right-radius: 10px;
       }
 
       .day .date-num {
@@ -263,31 +119,6 @@
       .small {
         font-size: 12px;
         color: var(--muted);
-      }
-
-      .days-control {
-        display: flex;
-        gap: 6px;
-        align-items: center;
-      }
-
-      .days-control button {
-        width: 30px;
-        height: 30px;
-        border: none;
-        cursor: pointer;
-        background: #fff;
-        border-radius: 20px;
-        transition: background-color 0.2s;
-      }
-
-      .days-control button:hover {
-        background: #f0f0f0;
-      }
-
-      .days-control input {
-        width: 60px;
-        text-align: center;
       }
 
       .meta {
@@ -394,53 +225,6 @@
 
         .topline .actions .btn {
           flex: 1;
-        }
-
-        /* --- City rows --- */
-        .city {
-          position: relative;
-          display: grid;
-          /* columns: drag | name | days-control | actions */
-          grid-template-columns: 24px minmax(120px, 1fr) auto auto;
-          /* two rows: main row + secondary row for date/stopover */
-          grid-template-rows: auto auto;
-          gap: 8px;
-          padding: 8px;
-          cursor: pointer;
-          align-items: center;
-        }
-
-        .city.active {
-          background: #f6f8fa;
-        }
-
-        /* Place the date/stopover/no-start text on a second full-width row under the main row */
-        .city .date-range,
-        .city .stopover,
-        .city .no-start {
-          grid-column: 2 / -1;
-          grid-row: 2;
-          font-size: 12px;
-          color: var(--muted);
-          margin-top: 4px;
-        }
-
-        /* Hide action buttons by default on mobile to keep single-row layout */
-        .city .actions {
-          display: none;
-        }
-
-        /* Show actions when city is active (appear as an additional row below the city) */
-        .city.active .actions {
-          display: flex;
-        }
-
-        /* Slightly larger action buttons for touch targets on mobile */
-        .city .actions button {
-          padding: 6px 8px;
-          min-width: 36px;
-          height: 36px;
-          border-radius: 6px;
         }
 
         /* Smaller padding for mobile cards */
@@ -750,53 +534,8 @@
           // ignore
         }
       }
-
-      async function doRegister() {
-        const e = document.getElementById("authEmail").value.trim();
-        const p = document.getElementById("authPass").value;
-        if (!e || !p) return alert("email and password required");
-        try {
-          const res = await fetch(`${API_BASE}/api/register`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ email: e, password: p }),
-          });
-          if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            return alert(err.error || "register failed");
-          }
-          // re-load and sync state after registering
-          await loadAndSyncState();
-        } catch (e) {
-          console.error(e);
-          alert("register failed");
-        }
-      }
-
-      async function doLogin() {
-        const e = document.getElementById("authEmail").value.trim();
-        const p = document.getElementById("authPass").value;
-        if (!e || !p) return alert("email and password required");
-        try {
-          const res = await fetch(`${API_BASE}/api/login`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ email: e, password: p }),
-          });
-          if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            return alert(err.error || "login failed");
-          }
-          // re-load and sync state after login
-          await loadAndSyncState();
-        } catch (e) {
-          console.error(e);
-          alert("login failed");
-        }
-      }
-
+      
+      
       async function doLogout() {
         try {
           await logout();
@@ -812,15 +551,6 @@
 
       // check auth and sync state on load
       loadAndSyncState();
-
-      // Close active city when clicking outside
-      document.addEventListener("click", (e) => {
-        if (!e.target.closest(".city")) {
-          document
-            .querySelectorAll(".city.active")
-            .forEach((c) => c.classList.remove("active"));
-        }
-      });
 
       // App model: { trips: [{id,name,start,cities}] }
       const STORAGE_KEY = "simpleTripPlanner_v1";
