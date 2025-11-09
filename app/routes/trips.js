@@ -121,7 +121,7 @@ function registerTripRoutes(app, deps) {
           .json({ error: "trip not found or unauthorized" });
       }
       // enable PRAGMA foreign_keys to also remove associated cities
-      await run('PRAGMA foreign_keys = ON');
+      await run("PRAGMA foreign_keys = ON");
       await run(`DELETE FROM trips WHERE id = ?`, [tripId]);
       return res.json({ ok: true });
     } catch (e) {

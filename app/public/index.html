@@ -103,7 +103,7 @@
         box-sizing: border-box;
         overflow: visible;
       }
-      
+
       .day .date-num {
         z-index: 2;
       }
@@ -420,7 +420,7 @@
           appState = localState || { trips: [] };
         } else if (!backendState) {
           // logged in, only local exists -> use local and push to backend as first login
-          console.log("no backend state, pushing local state to backend"); 
+          console.log("no backend state, pushing local state to backend");
 
           //appState = localState || { trips: [] };
           try {
@@ -436,15 +436,17 @@
               credentials: "include",
               body: JSON.stringify({ state: appState }),
             });
-            
+
             if (response.ok) {
               const json = await response.json();
               appState = json.state;
               save(appState);
             } else {
-              console.warn("first login: failed to persist local state", response);
+              console.warn(
+                "first login: failed to persist local state",
+                response,
+              );
             }
-
           } catch (e) {
             console.warn("push local to backend failed", e);
           }
@@ -534,8 +536,7 @@
           // ignore
         }
       }
-      
-      
+
       async function doLogout() {
         try {
           await logout();

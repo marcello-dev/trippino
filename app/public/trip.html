@@ -774,7 +774,9 @@
 
       // Server-first city update helper. Accepts partial fields: { name?, nights?, notes? }.
       async function updateCity(cityId, changes) {
-        const c = trip.cities.find((x) => x.id === cityId || x.id === Number(cityId));
+        const c = trip.cities.find(
+          (x) => x.id === cityId || x.id === Number(cityId),
+        );
         if (!c) return false;
 
         // Validate fields client-side when provided
@@ -795,9 +797,12 @@
 
         // Anonymous users: update locally only
         if (!currentUser) {
-          if (typeof changes.name !== "undefined") c.name = String(changes.name);
-          if (typeof changes.nights !== "undefined") c.nights = Math.max(0, Number(changes.nights));
-          if (typeof changes.notes !== "undefined") c.notes = String(changes.notes || "");
+          if (typeof changes.name !== "undefined")
+            c.name = String(changes.name);
+          if (typeof changes.nights !== "undefined")
+            c.nights = Math.max(0, Number(changes.nights));
+          if (typeof changes.notes !== "undefined")
+            c.notes = String(changes.notes || "");
           updateTripInStore();
           render();
           return true;
@@ -808,21 +813,27 @@
         try {
           const token = await getCsrfToken();
           const payload = {};
-          if (typeof changes.name !== "undefined") payload.name = String(changes.name);
-          if (typeof changes.nights !== "undefined") payload.nights = Math.max(0, Number(changes.nights));
-          if (typeof changes.notes !== "undefined") payload.notes = String(changes.notes || "");
+          if (typeof changes.name !== "undefined")
+            payload.name = String(changes.name);
+          if (typeof changes.nights !== "undefined")
+            payload.nights = Math.max(0, Number(changes.nights));
+          if (typeof changes.notes !== "undefined")
+            payload.notes = String(changes.notes || "");
 
           if (Object.keys(payload).length === 0) return false;
 
-          const res = await fetch(`${API_BASE}/api/trips/${trip.id}/cities/${c.id}`, {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-              "CSRF-Token": token,
+          const res = await fetch(
+            `${API_BASE}/api/trips/${trip.id}/cities/${c.id}`,
+            {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/json",
+                "CSRF-Token": token,
+              },
+              credentials: "include",
+              body: JSON.stringify(payload),
             },
-            credentials: "include",
-            body: JSON.stringify(payload),
-          });
+          );
 
           if (res.ok) {
             const data = await res.json().catch(() => ({}));
@@ -832,9 +843,12 @@
               c.nights = Number(uc.nights);
               c.notes = uc.notes || "";
             } else {
-              if (typeof changes.name !== "undefined") c.name = String(changes.name);
-              if (typeof changes.nights !== "undefined") c.nights = Math.max(0, Number(changes.nights));
-              if (typeof changes.notes !== "undefined") c.notes = String(changes.notes || "");
+              if (typeof changes.name !== "undefined")
+                c.name = String(changes.name);
+              if (typeof changes.nights !== "undefined")
+                c.nights = Math.max(0, Number(changes.nights));
+              if (typeof changes.notes !== "undefined")
+                c.notes = String(changes.notes || "");
             }
             updateTripInStore();
             render();
@@ -849,16 +863,21 @@
           } else if (res.status === 404) {
             const err = await res.json().catch(() => ({}));
             showClientError(
-              err.error || "City not found or you don't have permission to edit it.",
+              err.error ||
+                "City not found or you don't have permission to edit it.",
             );
           } else {
             const err = await res.json().catch(() => ({}));
             console.warn("Failed to update city in backend:", err);
-            showClientError("Cannot update city: backend error (read-only mode).");
+            showClientError(
+              "Cannot update city: backend error (read-only mode).",
+            );
           }
         } catch (e) {
           console.warn("Network error updating city:", e);
-          showClientError("Cannot update city: offline or network error (read-only mode).");
+          showClientError(
+            "Cannot update city: offline or network error (read-only mode).",
+          );
         }
 
         // Revert local changes if any accidental UI edits happened
@@ -880,39 +899,50 @@
           (async () => {
             try {
               const token = await getCsrfToken();
-              const deleteRes = await fetch(`${API_BASE}/api/trips/${trip.id}/cities/${cityId}`, {
-                method: "DELETE",
-                headers: {
-                  "CSRF-Token": token,
+              const deleteRes = await fetch(
+                `${API_BASE}/api/trips/${trip.id}/cities/${cityId}`,
+                {
+                  method: "DELETE",
+                  headers: {
+                    "CSRF-Token": token,
+                  },
+                  credentials: "include",
                 },
-                credentials: "include",
-              });
-              
+              );
+
               if (deleteRes.ok) {
                 // Successfully deleted from backend, now delete from local
                 trip.cities = trip.cities.filter((c) => c.id !== cityId);
-                
+
                 // Update sort order in backend for remaining cities
                 try {
-                  const updateRes = await fetch(`${API_BASE}/api/trips/${trip.id}/cities`, {
-                    method: "PUT",
-                    headers: {
-                      "Content-Type": "application/json",
-                      "CSRF-Token": token,
+                  const updateRes = await fetch(
+                    `${API_BASE}/api/trips/${trip.id}/cities`,
+                    {
+                      method: "PUT",
+                      headers: {
+                        "Content-Type": "application/json",
+                        "CSRF-Token": token,
+                      },
+                      credentials: "include",
+                      body: JSON.stringify({
+                        sortOrder: trip.cities.map((c, index) => ({
+                          id: c.id,
+                          index: index,
+                        })),
+                      }),
                     },
-                    credentials: "include",
-                    body: JSON.stringify({
-                      sortOrder: trip.cities.map((c, index) => ({ id: c.id, index: index }))
-                    }),
-                  });
-                  
+                  );
+
                   if (!updateRes.ok) {
-                    console.warn("Failed to update sort order after delete, but city was deleted");
+                    console.warn(
+                      "Failed to update sort order after delete, but city was deleted",
+                    );
                   }
                 } catch (e) {
                   console.warn("Failed to update sort order after delete:", e);
                 }
-                
+
                 updateTripInStore();
                 render();
               } else if (deleteRes.status === 401) {
@@ -920,7 +950,9 @@
                 console.warn("Session expired");
                 currentUser = null;
                 checkAuth();
-                return showClientError("Session expired. Please sign in again.");
+                return showClientError(
+                  "Session expired. Please sign in again.",
+                );
               } else if (deleteRes.status === 400) {
                 // Validation error from backend
                 const err = await deleteRes.json().catch(() => ({}));
@@ -931,21 +963,25 @@
                 const err = await deleteRes.json().catch(() => ({}));
                 console.warn("City not found or unauthorized:", err);
                 return showClientError(
-                  err.error || "City not found or you don't have permission to delete it."
+                  err.error ||
+                    "City not found or you don't have permission to delete it.",
                 );
               } else {
                 // Other backend error - read-only mode
                 const err = await deleteRes.json().catch(() => ({}));
                 console.warn("Failed to delete city from backend:", err);
                 return showClientError(
-                  "Cannot delete city: backend error (read-only mode)."
+                  "Cannot delete city: backend error (read-only mode).",
                 );
               }
             } catch (e) {
               // Network error or offline - read-only mode
-              console.warn("Failed to delete city from backend (network error):", e);
+              console.warn(
+                "Failed to delete city from backend (network error):",
+                e,
+              );
               return showClientError(
-                "Cannot delete city: offline or network error (read-only mode)."
+                "Cannot delete city: offline or network error (read-only mode).",
               );
             }
           })();
@@ -1385,17 +1421,23 @@
             if (currentUser) {
               try {
                 const token = await getCsrfToken();
-                const res = await fetch(`${API_BASE}/api/trips/${trip.id}/cities`, {
-                  method: "PUT",
-                  headers: {
-                    "Content-Type": "application/json",
-                    "CSRF-Token": token,
+                const res = await fetch(
+                  `${API_BASE}/api/trips/${trip.id}/cities`,
+                  {
+                    method: "PUT",
+                    headers: {
+                      "Content-Type": "application/json",
+                      "CSRF-Token": token,
+                    },
+                    credentials: "include",
+                    body: JSON.stringify({
+                      sortOrder: newOrder.map((c, index) => ({
+                        id: c.id,
+                        index,
+                      })),
+                    }),
                   },
-                  credentials: "include",
-                  body: JSON.stringify({
-                    sortOrder: newOrder.map((c, index) => ({ id: c.id, index }))
-                  }),
-                });
+                );
                 if (res.ok) {
                   trip.cities = newOrder;
                   updateTripInStore();
@@ -1409,15 +1451,21 @@
                   showClientError(err.error || "Invalid sort order update.");
                 } else if (res.status === 404) {
                   const err = await res.json().catch(() => ({}));
-                  showClientError(err.error || "City or trip not found/unauthorized.");
+                  showClientError(
+                    err.error || "City or trip not found/unauthorized.",
+                  );
                 } else {
                   const err = await res.json().catch(() => ({}));
                   console.warn("Failed to reorder cities:", err);
-                  showClientError("Cannot reorder: backend error (read-only mode).");
+                  showClientError(
+                    "Cannot reorder: backend error (read-only mode).",
+                  );
                 }
               } catch (err) {
                 console.warn("Network error reordering cities:", err);
-                showClientError("Cannot reorder: offline or network error (read-only mode).");
+                showClientError(
+                  "Cannot reorder: offline or network error (read-only mode).",
+                );
               }
             } else {
               // Anonymous: apply locally
@@ -1439,17 +1487,23 @@
             if (currentUser) {
               try {
                 const token = await getCsrfToken();
-                const res = await fetch(`${API_BASE}/api/trips/${trip.id}/cities`, {
-                  method: "PUT",
-                  headers: {
-                    "Content-Type": "application/json",
-                    "CSRF-Token": token,
+                const res = await fetch(
+                  `${API_BASE}/api/trips/${trip.id}/cities`,
+                  {
+                    method: "PUT",
+                    headers: {
+                      "Content-Type": "application/json",
+                      "CSRF-Token": token,
+                    },
+                    credentials: "include",
+                    body: JSON.stringify({
+                      sortOrder: newOrder.map((c, index) => ({
+                        id: c.id,
+                        index,
+                      })),
+                    }),
                   },
-                  credentials: "include",
-                  body: JSON.stringify({
-                    sortOrder: newOrder.map((c, index) => ({ id: c.id, index }))
-                  }),
-                });
+                );
                 if (res.ok) {
                   trip.cities = newOrder;
                   updateTripInStore();
@@ -1463,15 +1517,21 @@
                   showClientError(err.error || "Invalid sort order update.");
                 } else if (res.status === 404) {
                   const err = await res.json().catch(() => ({}));
-                  showClientError(err.error || "City or trip not found/unauthorized.");
+                  showClientError(
+                    err.error || "City or trip not found/unauthorized.",
+                  );
                 } else {
                   const err = await res.json().catch(() => ({}));
                   console.warn("Failed to reorder cities:", err);
-                  showClientError("Cannot reorder: backend error (read-only mode).");
+                  showClientError(
+                    "Cannot reorder: backend error (read-only mode).",
+                  );
                 }
               } catch (err) {
                 console.warn("Network error reordering cities:", err);
-                showClientError("Cannot reorder: offline or network error (read-only mode).");
+                showClientError(
+                  "Cannot reorder: offline or network error (read-only mode).",
+                );
               }
             } else {
               trip.cities = newOrder;
@@ -1504,7 +1564,9 @@
               const ok = await updateCity(c.id, { notes: newNotes });
               if (!ok) {
                 // Revert textarea value to stored state on failure
-                const cc = trip.cities.find((x) => x.id === c.id || x.id === Number(c.id));
+                const cc = trip.cities.find(
+                  (x) => x.id === c.id || x.id === Number(c.id),
+                );
                 if (cc) notesTa.value = cc.notes || "";
               }
             });
@@ -1517,7 +1579,9 @@
                 const newNotes = notesTa.value;
                 const ok = await updateCity(c.id, { notes: newNotes });
                 if (!ok) {
-                  const cc = trip.cities.find((x) => x.id === c.id || x.id === Number(c.id));
+                  const cc = trip.cities.find(
+                    (x) => x.id === c.id || x.id === Number(c.id),
+                  );
                   if (cc) notesTa.value = cc.notes || "";
                 }
               }
@@ -1546,24 +1610,27 @@
               return showClientError(
                 `Maximum cities per trip reached (${MAX_CITIES_PER_TRIP}).`,
               );
-            
+
             // If user is logged in, try to create city in backend first
             if (currentUser) {
               try {
                 const token = await getCsrfToken();
-                const createRes = await fetch(`${API_BASE}/api/trips/${trip.id}/cities`, {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    "CSRF-Token": token,
+                const createRes = await fetch(
+                  `${API_BASE}/api/trips/${trip.id}/cities`,
+                  {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                      "CSRF-Token": token,
+                    },
+                    credentials: "include",
+                    body: JSON.stringify({
+                      name: name,
+                      nights: 1,
+                      notes: "",
+                    }),
                   },
-                  credentials: "include",
-                  body: JSON.stringify({
-                    name: name,
-                    nights: 1,
-                    notes: ""
-                  }),
-                });
+                );
                 if (createRes.status === 201) {
                   const data = await createRes.json();
                   // Use backend data to create local city with server-generated ID
@@ -1576,17 +1643,23 @@
                   };
                   trip.cities.push(newCity);
                   // Update sort order in backend
-                  const updateRes = await fetch(`${API_BASE}/api/trips/${trip.id}/cities`, {
-                    method: "PUT",
-                    headers: {
-                      "Content-Type": "application/json",
-                      "CSRF-Token": token,
+                  const updateRes = await fetch(
+                    `${API_BASE}/api/trips/${trip.id}/cities`,
+                    {
+                      method: "PUT",
+                      headers: {
+                        "Content-Type": "application/json",
+                        "CSRF-Token": token,
+                      },
+                      credentials: "include",
+                      body: JSON.stringify({
+                        sortOrder: trip.cities.map((c, index) => ({
+                          id: c.id,
+                          index: index,
+                        })),
+                      }),
                     },
-                    credentials: "include",
-                    body: JSON.stringify({
-                      sortOrder: trip.cities.map((c, index) => ({ id: c.id, index: index }))
-                    }),
-                  });
+                  );
                   updateTripInStore();
                   render();
                 } else if (createRes.status === 401) {
@@ -1594,7 +1667,9 @@
                   console.warn("Session expired");
                   currentUser = null;
                   checkAuth();
-                  return showClientError("Session expired. Please sign in again.");
+                  return showClientError(
+                    "Session expired. Please sign in again.",
+                  );
                 } else if (createRes.status === 400) {
                   // Validation error from backend
                   const err = await createRes.json().catch(() => ({}));
@@ -1605,21 +1680,25 @@
                   const err = await createRes.json().catch(() => ({}));
                   console.warn("Trip not found or unauthorized:", err);
                   return showClientError(
-                    err.error || "Trip not found or you don't have permission to edit it."
+                    err.error ||
+                      "Trip not found or you don't have permission to edit it.",
                   );
                 } else {
                   // Other backend error - read-only mode
                   const err = await createRes.json().catch(() => ({}));
                   console.warn("Failed to create city in backend:", err);
                   return showClientError(
-                    "Cannot add city: backend error (read-only mode)."
+                    "Cannot add city: backend error (read-only mode).",
                   );
                 }
               } catch (e) {
                 // Network error or offline - read-only mode
-                console.warn("Failed to create city in backend (network error):", e);
+                console.warn(
+                  "Failed to create city in backend (network error):",
+                  e,
+                );
                 return showClientError(
-                  "Cannot add city: offline or network error (read-only mode)."
+                  "Cannot add city: offline or network error (read-only mode).",
                 );
               }
             } else {

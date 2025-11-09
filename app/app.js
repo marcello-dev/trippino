@@ -253,11 +253,11 @@ app.get("/config.js", (req, res) => {
 import registerTripRoutes from "./routes/trips.js";
 import registerCityRoutes from "./routes/cities.js";
 
-registerTripRoutes(app, { 
-  csrfProtection, 
-  getSession, 
-  run, 
-  get 
+registerTripRoutes(app, {
+  csrfProtection,
+  getSession,
+  run,
+  get,
 });
 registerCityRoutes(app, {
   csrfProtection,
@@ -478,24 +478,18 @@ app.post("/api/state/firstlogin", csrfProtection, async (req, res) => {
       for (const city of cities) {
         await run(
           `INSERT INTO cities(name, nights, notes, sort_order, trip_id) VALUES(?,?,?,?,?)`,
-          [
-            city.name,
-            city.nights || 0,
-            city.notes,
-            sort_order,
-            tripId,
-          ],
+          [city.name, city.nights || 0, city.notes, sort_order, tripId],
         );
         sort_order += 1;
       }
     }
     // return state with new Ids
     const newState = {
-      trips: trips.map(trip => ({
+      trips: trips.map((trip) => ({
         id: trip.id,
         name: trip.name,
         start_date: trip.start_date,
-        cities: trip.cities.map(city => ({
+        cities: trip.cities.map((city) => ({
           id: city.id,
           name: city.name,
           nights: city.nights,
@@ -517,7 +511,7 @@ app.get("/api/state", async (req, res) => {
     const s = await getSession(req);
     if (!s) return res.status(401).json({ error: "not authenticated" });
     const userId = s.user.id;
-    
+
     const trips = await all(
       `SELECT id, name, start_date FROM trips WHERE user_id = ?`,
       [userId],
@@ -526,16 +520,16 @@ app.get("/api/state", async (req, res) => {
 
     const cities = await all(
       `SELECT id, name, nights, notes, sort_order, trip_id FROM cities WHERE trip_id IN (${trips.map(() => "?").join(", ")})`,
-      trips.map(trip => trip.id),
+      trips.map((trip) => trip.id),
     );
 
     const state = {
-      trips: trips.map(trip => ({
+      trips: trips.map((trip) => ({
         id: trip.id,
         name: trip.name,
         start: trip.start_date,
         // map city.nights to city.days
-        cities: cities.filter(city => city.trip_id === trip.id),
+        cities: cities.filter((city) => city.trip_id === trip.id),
       })),
     };
     return res.json({ state });
