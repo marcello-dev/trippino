@@ -267,6 +267,9 @@ async function createSessionForUserId(userId) {
   return sid;
 }
 
+// Session configuration
+const SESSION_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+
 async function getSession(req) {
   const sid = req.cookies[COOKIE_NAME];
   if (!sid) return null;
@@ -275,6 +278,15 @@ async function getSession(req) {
     [sid],
   );
   if (!row) return null;
+
+  // Check if session has expired
+  const sessionAge = Date.now() - row.createdAt;
+  if (sessionAge > SESSION_MAX_AGE) {
+    // Session expired, delete it
+    await run(`DELETE FROM sessions WHERE sid = ?`, [sid]);
+    return null;
+  }
+
   return {
     sid: row.sid,
     createdAt: row.createdAt,
@@ -600,5 +612,24 @@ app.get("/api/tomtom", async (req, res) => {
     return res.status(500).json({ error: "tomtom proxy failed" });
   }
 });
+
+// Background job: Clean up expired sessions every hour
+const CLEANUP_INTERVAL = 60 * 60 * 1000; // 1 hour
+setInterval(async () => {
+  try {
+    const cutoff = Date.now() - SESSION_MAX_AGE;
+    const result = await run(
+      `DELETE FROM sessions WHERE createdAt < ?`,
+      [cutoff],
+    );
+    if (result.changes > 0) {
+      console.log(
+        `[Session Cleanup] Deleted ${result.changes} expired session(s)`,
+      );
+    }
+  } catch (e) {
+    console.error("[Session Cleanup] Error:", e);
+  }
+}, CLEANUP_INTERVAL);
 
 app.listen(PORT, () => console.log(`Trippino listening on port: ${PORT}`));
