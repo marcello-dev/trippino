@@ -424,27 +424,6 @@ app.post("/api/logout", csrfProtection, async (req, res) => {
   }
 });
 
-// save state for authenticated user
-app.post("/api/state", csrfProtection, async (req, res) => {
-  try {
-    const s = await getSession(req);
-    if (!s) return res.status(401).json({ error: "not authenticated" });
-    const userId = s.user.id;
-    const state = req.body && req.body.state;
-    if (typeof state === "undefined")
-      return res.status(400).json({ error: "state missing in body" });
-    const blob = JSON.stringify(state);
-    await run(`INSERT OR REPLACE INTO states(user_id, state) VALUES(?,?)`, [
-      userId,
-      blob,
-    ]);
-    return res.json({ ok: true });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({ error: "server error" });
-  }
-});
-
 // Save state for the first time login into database tables
 app.post("/api/state/firstlogin", csrfProtection, async (req, res) => {
   try {
