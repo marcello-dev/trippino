@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import nodemailer from "nodemailer";
 import rateLimit from "express-rate-limit";
 import csrf from "csurf";
+import helmet from "helmet";
 
 const app = express();
 const PORT = process.env.PORT;
@@ -126,6 +127,18 @@ const COOKIE_NAME = "trippino_sid";
 
 app.use(express.json());
 app.use(cookieParser());
+
+// --- Security Headers ---
+// Disable Express x-powered-by header explicitly (defense in depth)
+app.disable("x-powered-by");
+// Apply Helmet with conservative defaults that won't break inline scripts/CSP
+app.use(
+  helmet({
+    contentSecurityPolicy: false, // keep disabled for now due to inline scripts and CDN usage
+    crossOriginEmbedderPolicy: false, // avoid COEP issues with third-party resources
+    hsts: process.env.NODE_ENV === "production" ? undefined : false, // don't set HSTS on localhost/dev
+  }),
+);
 
 // --- CSRF Protection ---
 const csrfProtection = csrf({
