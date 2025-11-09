@@ -444,7 +444,6 @@
           // logged in, only local exists -> use local and push to backend as first login
           console.log("no backend state, pushing local state to backend");
 
-          //appState = localState || { trips: [] };
           try {
             const token = await getCsrfToken();
             // persist local state to backend and save it as local
@@ -462,6 +461,7 @@
             if (response.ok) {
               const json = await response.json();
               appState = json.state;
+              console.log("first login: persisted local state to backend");
               save(appState);
             } else {
               console.warn(
@@ -682,7 +682,7 @@
       let appState = load();
       if (!appState.trips) appState.trips = [];
 
-      async function createTrip(name, start) {
+      async function createTrip(name, start_date) {
         const tripName = (name || "New trip").trim();
         // enforce max trips
         if (appState.trips && appState.trips.length >= MAX_TRIPS) {
@@ -693,7 +693,7 @@
         const v = validateTripName(tripName);
         if (!v.ok) return showClientError(v.error);
         // validate start date and return error if empty
-        if (!start) return showClientError("Start date is required");
+        if (!start_date) return showClientError("Start date is required");
 
         let tripId = null;
 
@@ -710,7 +710,7 @@
               credentials: "include",
               body: JSON.stringify({
                 name: tripName,
-                start_date: start || null,
+                start_date: start_date || null,
               }),
             });
 
@@ -748,7 +748,7 @@
         const t = {
           id: tripId || tid(appState.trips),
           name: tripName,
-          start: start || "",
+          start_date: start_date || "",
           cities: [],
         };
         appState.trips.push(t);
@@ -840,10 +840,10 @@
       function renderTripsContainer() {
         // sort by start date desc (most recent first). Empty start goes last.
         const sorted = [...appState.trips].sort((a, b) => {
-          if (!a.start && !b.start) return 0;
-          if (!a.start) return 1;
-          if (!b.start) return -1;
-          return b.start.localeCompare(a.start);
+          if (!a.start_date && !b.start_date) return 0;
+          if (!a.start_date) return 1;
+          if (!b.start_date) return -1;
+          return b.start_date.localeCompare(a.start_date);
         });
         tripsContainer.innerHTML = "";
         for (const t of sorted) {
@@ -859,7 +859,7 @@
           header.innerHTML = `
                 <div>
                     <strong>${t.name || "Untitled"}</strong>
-                    <div class="small" style="color:var(--muted)">${t.start || ""}</div>
+                    <div class="small" style="color:var(--muted)">${t.start_date || ""}</div>
                     <div class="small" style="color:var(--muted)">${t.cities ? t.cities.length : 0} ${t.cities?.length === 1 ? "city" : "cities"}</div>
                 </div>
                 <div style="display:flex;gap:8px">
@@ -971,13 +971,13 @@
         // gather unique travel dates per year
         const yearMap = new Map(); // year -> Set of date strings
         for (const trip of appState.trips || []) {
-          if (!trip.start) continue;
+          if (!trip.start_date) continue;
           const totalDays = (trip.cities || []).reduce(
             (s, c) => s + Number(c.nights || 0),
             0,
           );
           if (totalDays <= 0) continue;
-          const tripStart = new Date(trip.start);
+          const tripStart = new Date(trip.start_date);
           for (let i = 0; i < totalDays; i++) {
             const d = addDays(tripStart, i);
             const y = d.getFullYear();

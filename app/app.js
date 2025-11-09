@@ -508,7 +508,10 @@ app.post("/api/state/firstlogin", csrfProtection, async (req, res) => {
     if (!s) return res.status(401).json({ error: "not authenticated" });
     const userId = s.user.id;
     const state = req.body && req.body.state;
-    console.log("first login: saving state", state);
+    // Log full nested structure (trips with their cities) for debugging
+    console.log(
+      "first login: saving state =>\n" + JSON.stringify(state, null, 2),
+    );
     if (typeof state === "undefined")
       return res.status(400).json({ error: "state missing in body" });
     // Save state for first time login into trips and cities tables
@@ -573,7 +576,7 @@ app.get("/api/state", async (req, res) => {
       trips: trips.map((trip) => ({
         id: trip.id,
         name: trip.name,
-        start: trip.start_date,
+        start_date: trip.start_date,
         cities: cities.filter((city) => city.trip_id === trip.id),
       })),
     };
