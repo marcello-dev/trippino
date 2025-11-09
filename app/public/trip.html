@@ -911,9 +911,9 @@
         return false;
       }
 
-      function updateNights(cityId, newNights) {
+      async function updateNights(cityId, newNights) {
         // Delegate to updateCity with server-first pattern
-        updateCity(cityId, { nights: Math.max(0, Number(newNights)) });
+        return await updateCity(cityId, { nights: Math.max(0, Number(newNights)) });
       }
 
       function removeCityFromTrip(cityId) {
@@ -1372,18 +1372,18 @@
 
           cityRow
             .querySelector('[data-action="dec"]')
-            .addEventListener("click", (e) => {
+            .addEventListener("click", async (e) => {
               e.stopPropagation();
               const newNights = Math.max(0, Number(c.nights) - 1);
-              updateNights(c.id, newNights);
+              await updateNights(c.id, newNights);
             });
 
           cityRow
             .querySelector('[data-action="inc"]')
-            .addEventListener("click", (e) => {
+            .addEventListener("click", async (e) => {
               e.stopPropagation();
               const newNights = Math.max(0, Number(c.nights) + 1);
-              updateNights(c.id, newNights);
+              await updateNights(c.id, newNights);
             });
 
           cityRow
