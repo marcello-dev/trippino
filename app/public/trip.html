@@ -732,7 +732,7 @@
       if (!appState.trips) appState.trips = [];
 
       const trip = appState.trips.find(
-        (t) => t.id === tripId || t.id === Number(tripId),
+        (t) => t.id === tripId,
       );
       if (!trip) {
         alert("Trip not found");
@@ -1151,7 +1151,7 @@
 
         // fetch info from state
         const trip = appState.trips.find(
-          (t) => t.id === tripId || t.id === Number(tripId),
+          (t) => t.id === tripId,
         );
         if (!trip) return;
 
