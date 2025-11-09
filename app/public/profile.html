@@ -231,6 +231,22 @@
           ></div>
         </form>
       </div>
+
+      <div class="card">
+        <h3 style="margin-top: 0; color: #b91c1c">Delete Account</h3>
+        <p style="color: var(--muted); margin-bottom: 16px">
+          Permanently delete your account and all associated data. This action
+          cannot be undone.
+        </p>
+        <button
+          id="deleteAccountBtn"
+          class="btn"
+          style="background: #b91c1c; color: white"
+        >
+          Delete My Account
+        </button>
+        <div id="deleteMessage" style="margin-top: 8px; font-size: 14px"></div>
+      </div>
     </div>
 
     <script src="/config.js"></script>
@@ -407,6 +423,61 @@
             document.getElementById("changePasswordForm").reset();
           } catch (err) {
             messageEl.textContent = err.message || "Failed to change password";
+            messageEl.style.color = "red";
+          }
+        });
+
+      // Handle delete account button
+      document
+        .getElementById("deleteAccountBtn")
+        .addEventListener("click", async () => {
+          const messageEl = document.getElementById("deleteMessage");
+          messageEl.textContent = "";
+          messageEl.style.color = "";
+
+          // Confirmation dialog
+          const confirmed = confirm(
+            "Are you sure you want to delete your account? This will permanently delete all your trips, cities, and data. This action cannot be undone.",
+          );
+
+          if (!confirmed) {
+            return;
+          }
+
+          // Double confirmation
+          const doubleConfirmed = confirm(
+            "This is your last chance. Are you absolutely sure you want to permanently delete your account?",
+          );
+
+          if (!doubleConfirmed) {
+            return;
+          }
+
+          try {
+            const token = await getCsrfToken();
+            const res = await fetch(`${API_BASE}/api/me`, {
+              method: "DELETE",
+              headers: {
+                "CSRF-Token": token,
+              },
+              credentials: "include",
+            });
+
+            if (!res.ok) {
+              const err = await res.json().catch(() => ({}));
+              throw new Error(err.error || "Failed to delete account");
+            }
+
+            // Clear local storage
+            localStorage.clear();
+
+            // Show success message
+            alert("Your account has been successfully deleted.");
+
+            // Redirect to home page
+            window.location.href = "index.html";
+          } catch (err) {
+            messageEl.textContent = err.message || "Failed to delete account";
             messageEl.style.color = "red";
           }
         });

@@ -913,7 +913,9 @@
 
       async function updateNights(cityId, newNights) {
         // Delegate to updateCity with server-first pattern
-        return await updateCity(cityId, { nights: Math.max(0, Number(newNights)) });
+        return await updateCity(cityId, {
+          nights: Math.max(0, Number(newNights)),
+        });
       }
 
       function removeCityFromTrip(cityId) {

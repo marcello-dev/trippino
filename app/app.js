@@ -91,7 +91,12 @@ db.serialize(() => {
     verification_expires INTEGER
   )`);
   db.run(
-    `CREATE TABLE IF NOT EXISTS sessions (sid TEXT PRIMARY KEY, user_id INTEGER, createdAt INTEGER)`,
+    `CREATE TABLE IF NOT EXISTS sessions (
+      sid TEXT PRIMARY KEY, 
+      user_id INTEGER, 
+      createdAt INTEGER,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )`,
   );
   db.run(`CREATE TABLE IF NOT EXISTS trips (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -440,6 +445,28 @@ app.post("/api/logout", csrfProtection, async (req, res) => {
     res.json({ ok: true });
   } catch (e) {
     console.error(e);
+    return res.status(500).json({ error: "server error" });
+  }
+});
+
+app.delete("/api/me", csrfProtection, async (req, res) => {
+  try {
+    const s = await getSession(req);
+    if (!s) return res.status(401).json({ error: "not authenticated" });
+
+    const userId = s.user.id;
+
+    // Delete user (CASCADE will handle sessions, trips, and cities)
+    await run("PRAGMA foreign_keys = ON");
+    await run(`DELETE FROM users WHERE id = ?`, [userId]);
+
+    // Clear session cookie
+    res.clearCookie(COOKIE_NAME, { httpOnly: true, sameSite: "lax" });
+
+    console.log(`[Account Deletion] User ${userId} deleted successfully`);
+    return res.json({ ok: true, message: "account deleted successfully" });
+  } catch (e) {
+    console.error("[Account Deletion] Error:", e);
     return res.status(500).json({ error: "server error" });
   }
 });

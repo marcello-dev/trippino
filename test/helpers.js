@@ -168,11 +168,11 @@ export async function createTestCity(
 /**
  * Extract session cookie from response
  */
-export function extractSessionCookie(response) {
+export function extractSessionCookie(response, cookieName = "trippino_sid") {
   const cookies = response.headers["set-cookie"];
   if (!cookies) return null;
 
-  const sessionCookie = cookies.find((c) => c.startsWith("trippino_sid="));
+  const sessionCookie = cookies.find((c) => c.startsWith(`${cookieName}=`));
   if (!sessionCookie) return null;
 
   return sessionCookie.split(";")[0];
