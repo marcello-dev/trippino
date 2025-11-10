@@ -1185,7 +1185,7 @@
                     <h2 style="margin:0;font-size:18px">${trip.name || "Unnamed trip"}</h2>
                     <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
                         <div class="small" style="color:var(--muted)">Start date</div>
-                        <input class="trip-start" type="date" value="${trip.start || ""}" />
+                        <input class="trip-start" type="date" value="${trip.start_date || ""}" />
                     </div>
                 </div>
             `;
@@ -1205,7 +1205,7 @@
 
         const startInput = topline.querySelector(".trip-start");
         startInput.addEventListener("change", async () => {
-          const prev = trip.start || "";
+          const prev = trip.start_date || "";
           const newVal = startInput.value || "";
           // If logged in, attempt backend update first
           if (currentUser) {
@@ -1222,7 +1222,7 @@
               });
               if (res.ok) {
                 const data = await res.json().catch(() => ({}));
-                trip.start =
+                trip.start_date =
                   (data && data.trip && data.trip.start_date) || newVal;
                 updateTripInStore();
                 render();
@@ -1259,7 +1259,7 @@
             }
           } else {
             // Anonymous: update locally
-            trip.start = newVal;
+            trip.start_date = newVal;
             updateTripInStore();
             render();
           }
@@ -1310,14 +1310,14 @@
           cityRow.dataset.id = c.id;
 
           let dateHtml = "";
-          if (!trip.start) {
+          if (!trip.start_date) {
             dateHtml =
               '<div class="small no-start" style="color:var(--muted)">No start date</div>';
           } else if (Number(c.nights) === 0) {
             dateHtml =
               '<div class="small stepover" style="font-weight:600;color:var(--muted)">Stepover</div>';
           } else {
-            dateHtml = `<div class="small date-range">${formatDate(addDays(new Date(trip.start), start - 1))} (${weekdayName(addDays(new Date(trip.start), start - 1))}) → ${formatDate(addDays(new Date(trip.start), end - 1))} (${weekdayName(addDays(new Date(trip.start), end - 1))})</div>`;
+            dateHtml = `<div class="small date-range">${formatDate(addDays(new Date(trip.start_date), start - 1))} (${weekdayName(addDays(new Date(trip.start_date), start - 1))}) → ${formatDate(addDays(new Date(trip.start_date), end - 1))} (${weekdayName(addDays(new Date(trip.start_date), end - 1))})</div>`;
           }
 
           cityRow.innerHTML = `
@@ -1747,7 +1747,7 @@
         months.className = "months";
         container.appendChild(months);
 
-        if (!trip.start || trip.cities.length === 0) {
+        if (!trip.start_date || trip.cities.length === 0) {
           hint.style.display = "block";
           return;
         }
@@ -1769,7 +1769,7 @@
           cur = e;
         }
 
-        const tripStart = new Date(trip.start);
+        const tripStart = new Date(trip.start_date);
         const totalDays = cityRanges.length
           ? cityRanges[cityRanges.length - 1].end
           : 0;
