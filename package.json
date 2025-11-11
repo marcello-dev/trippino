@@ -5,7 +5,7 @@
   "type": "module",
   "main": "app/app.js",
   "scripts": {
-    "start": "bash -c 'set -a; source app/.env; set +a; node app/app.js'",
+    "start": "bash -c 'set -a; source app/.env; set +a; node migrate.js; node app/app.js'",
     "migrate": "node migrate.js",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest --setupFilesAfterEnv=./test/setup.js",
     "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch --setupFilesAfterEnv=./test/setup.js"
