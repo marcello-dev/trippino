@@ -4,9 +4,6 @@
   "private": true,
   "type": "module",
   "main": "app/app.js",
-  "engines": {
-    "node": ">=24.0.0"
-  },
   "scripts": {
     "start": "bash -c 'set -a; source app/.env; set +a; node app/app.js'",
     "migrate": "node migrate.js",
