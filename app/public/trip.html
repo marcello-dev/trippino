@@ -791,8 +791,9 @@
         }
       }
 
-      // Server-first city update helper. Accepts partial fields: { name?, nights?, notes? }.
+      // Server-first city update helper. Accepts partial fields: { name?, nights?, notes?, latitude?, longitude? }.
       async function updateCity(cityId, changes) {
+        console.log("Updating city with changes:", changes);
         const c = trip.cities.find(
           (x) => x.id === cityId || x.id === Number(cityId),
         );
@@ -822,13 +823,23 @@
             c.nights = Math.max(0, Number(changes.nights));
           if (typeof changes.notes !== "undefined")
             c.notes = String(changes.notes || "");
+          if (typeof changes.latitude !== "undefined")
+            c.latitude = changes.latitude;
+          if (typeof changes.longitude !== "undefined")
+            c.longitude = changes.longitude;
           updateTripInStore();
           render();
           return true;
         }
 
         // Authenticated: call backend first
-        const prev = { name: c.name, nights: Number(c.nights), notes: c.notes };
+        const prev = {
+          name: c.name,
+          nights: Number(c.nights),
+          notes: c.notes,
+          latitude: c.latitude,
+          longitude: c.longitude,
+        };
         try {
           const token = await getCsrfToken();
           const payload = {};
@@ -838,6 +849,10 @@
             payload.nights = Math.max(0, Number(changes.nights));
           if (typeof changes.notes !== "undefined")
             payload.notes = String(changes.notes || "");
+          if (typeof changes.latitude !== "undefined")
+            payload.latitude = changes.latitude;
+          if (typeof changes.longitude !== "undefined")
+            payload.longitude = changes.longitude;
 
           if (Object.keys(payload).length === 0) return false;
 
@@ -861,6 +876,8 @@
               c.name = uc.name;
               c.nights = Number(uc.nights);
               c.notes = uc.notes || "";
+              c.latitude = uc.latitude || null;
+              c.longitude = uc.longitude || null;
             } else {
               if (typeof changes.name !== "undefined")
                 c.name = String(changes.name);
@@ -868,6 +885,10 @@
                 c.nights = Math.max(0, Number(changes.nights));
               if (typeof changes.notes !== "undefined")
                 c.notes = String(changes.notes || "");
+              if (typeof changes.latitude !== "undefined")
+                c.latitude = changes.latitude;
+              if (typeof changes.longitude !== "undefined")
+                c.longitude = changes.longitude;
             }
             updateTripInStore();
             render();
@@ -903,6 +924,8 @@
         c.name = prev.name;
         c.nights = prev.nights;
         c.notes = prev.notes;
+        c.latitude = prev.latitude;
+        c.longitude = prev.longitude;
         render();
         return false;
       }
@@ -1090,6 +1113,7 @@
           }
           try {
             const url = `${API_BASE}/api/tomtom?q=${encodeURIComponent(q)}&limit=6&typeahead=true`;
+            console.log("Querying TomTom API with URL:", url);
             const res = await fetch(url, { credentials: "include" });
             if (!res.ok) {
               renderList([]);
@@ -1098,6 +1122,12 @@
             const json = await res.json();
             const suggestions = (json.results || []).map((r) => ({
               name: `${r.address.freeformAddress}, ${r.address.countryCode || ""}`.trim(),
+              position: r.position
+                ? {
+                    lat: r.position.lat,
+                    lon: r.position.lon,
+                  }
+                : null,
             }));
             renderList(suggestions);
           } catch (e) {
@@ -1403,15 +1433,16 @@
                   const name = (sel.name || "").trim();
                   const vname = validateCityName(name);
                   if (!vname.ok) return showClientError(vname.error);
-                  // Server-first update for name
-                  const ok = await updateCity(c.id, { name });
-                  if (ok && sel.position) {
-                    // Enrich with coordinates locally (not persisted on backend)
-                    c.lat = sel.position.lat;
-                    c.lon = sel.position.lon;
-                    updateTripInStore();
-                    render();
+
+                  // Prepare update data
+                  const updateData = { name };
+                  if (sel.position && sel.position.lat && sel.position.lon) {
+                    updateData.latitude = sel.position.lat;
+                    updateData.longitude = sel.position.lon;
                   }
+
+                  // Server-first update for name and coordinates
+                  await updateCity(c.id, updateData);
                 },
                 c.name,
               );
@@ -1634,6 +1665,18 @@
             if (currentUser) {
               try {
                 const token = await getCsrfToken();
+                const cityData = {
+                  name: name,
+                  nights: 1,
+                  notes: "",
+                };
+
+                // Include coordinates if available
+                if (sel.position && sel.position.lat && sel.position.lon) {
+                  cityData.latitude = sel.position.lat;
+                  cityData.longitude = sel.position.lon;
+                }
+
                 const createRes = await fetch(
                   `${API_BASE}/api/trips/${trip.id}/cities`,
                   {
@@ -1643,11 +1686,7 @@
                       "CSRF-Token": token,
                     },
                     credentials: "include",
-                    body: JSON.stringify({
-                      name: name,
-                      nights: 1,
-                      notes: "",
-                    }),
+                    body: JSON.stringify(cityData),
                   },
                 );
                 if (createRes.status === 201) {
@@ -1658,6 +1697,8 @@
                     name: data.name,
                     nights: data.nights,
                     notes: data.notes || "",
+                    latitude: data.latitude || null,
+                    longitude: data.longitude || null,
                     updatedAt: new Date().toISOString(),
                   };
                   trip.cities.push(newCity);
@@ -1726,6 +1767,10 @@
                 id: uid(),
                 name: name,
                 nights: 1,
+                latitude:
+                  sel.position && sel.position.lat ? sel.position.lat : null,
+                longitude:
+                  sel.position && sel.position.lon ? sel.position.lon : null,
                 updatedAt: new Date().toISOString(),
               };
               trip.cities.push(newCity);

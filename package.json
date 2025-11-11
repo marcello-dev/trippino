@@ -9,6 +9,7 @@
   },
   "scripts": {
     "start": "bash -c 'set -a; source app/.env; set +a; node app/app.js'",
+    "migrate": "node migrate.js",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest --setupFilesAfterEnv=./test/setup.js",
     "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch --setupFilesAfterEnv=./test/setup.js"
   },
@@ -20,6 +21,7 @@
     "express-rate-limit": "^7.1.5",
     "helmet": "^7.1.0",
     "nodemailer": "^7.0.10",
+    "sqlite-up": "^0.4.0",
     "sqlite3": "^5.1.6",
     "uuid": "^9.0.0"
   },
