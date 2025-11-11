@@ -568,7 +568,7 @@ app.get("/api/state", async (req, res) => {
     if (!trips || trips.length === 0) return res.json({ state: null });
 
     const cities = await all(
-      `SELECT id, name, nights, notes, sort_order, trip_id FROM cities WHERE trip_id IN (${trips.map(() => "?").join(", ")})`,
+      `SELECT id, name, nights, notes, latitude, longitude, sort_order, trip_id FROM cities WHERE trip_id IN (${trips.map(() => "?").join(", ")})`,
       trips.map((trip) => trip.id),
     );
 

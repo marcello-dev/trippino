@@ -74,6 +74,8 @@ export async function initTestDatabase(run) {
       name TEXT NOT NULL,
       nights INTEGER NOT NULL,
       notes TEXT,
+      latitude REAL,
+      longitude REAL,
       sort_order INTEGER NOT NULL,
       trip_id INTEGER NOT NULL,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,

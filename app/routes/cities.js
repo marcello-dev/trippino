@@ -29,7 +29,7 @@ function registerCityRoutes(app, deps) {
           .json({ error: "trip not found or unauthorized" });
       }
 
-      const { name, nights, notes } = req.body || {};
+      const { name, nights, notes, latitude, longitude } = req.body || {};
       if (!name || !String(name).trim()) {
         return res.status(400).json({ error: "city name required" });
       }
@@ -42,18 +42,51 @@ function registerCityRoutes(app, deps) {
           .json({ error: "nights must be a non-negative number" });
       }
 
+      // Validate coordinates if provided
+      let lat = null;
+      let lon = null;
+      if (latitude !== undefined || longitude !== undefined) {
+        lat = Number(latitude);
+        lon = Number(longitude);
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+          return res
+            .status(400)
+            .json({ error: "coordinates must be valid numbers" });
+        }
+        if (lat < -90 || lat > 90) {
+          return res
+            .status(400)
+            .json({ error: "latitude must be between -90 and 90" });
+        }
+        if (lon < -180 || lon > 180) {
+          return res
+            .status(400)
+            .json({ error: "longitude must be between -180 and 180" });
+        }
+      }
+
+      // Get max sort_order to append at the end
+      const maxSortOrder = await get(
+        `SELECT MAX(sort_order) as max FROM cities WHERE trip_id = ?`,
+        [tripId],
+      );
+      const sortOrder = (maxSortOrder.max ?? -1) + 1;
+
       const result = await run(
-        `INSERT INTO cities(name, nights, notes, trip_id) VALUES(?,?,?,?)`,
+        `INSERT INTO cities(name, nights, notes, latitude, longitude, sort_order, trip_id) VALUES(?,?,?,?,?,?,?)`,
         [
           String(name).trim(),
           n,
           typeof notes === "string" && notes.trim() !== "" ? notes : null,
+          lat,
+          lon,
+          sortOrder,
           tripId,
         ],
       );
 
       const city = await get(
-        `SELECT id, name, nights, notes, sort_order, trip_id FROM cities WHERE id = ?`,
+        `SELECT id, name, nights, notes, latitude, longitude, sort_order, trip_id FROM cities WHERE id = ?`,
         [result.lastID],
       );
       // Return 201 Created status
@@ -97,7 +130,7 @@ function registerCityRoutes(app, deps) {
 
         // Verify the city belongs to the trip
         const city = await get(
-          `SELECT id, name, nights, notes, sort_order, trip_id FROM cities WHERE id = ? AND trip_id = ?`,
+          `SELECT id, name, nights, notes, latitude, longitude, sort_order, trip_id FROM cities WHERE id = ? AND trip_id = ?`,
           [cityId, tripId],
         );
         if (!city) {
@@ -106,7 +139,7 @@ function registerCityRoutes(app, deps) {
             .json({ error: "city not found or unauthorized" });
         }
 
-        const { name, nights, notes } = req.body || {};
+        const { name, nights, notes, latitude, longitude } = req.body || {};
         const sets = [];
         const params = [];
 
@@ -136,6 +169,39 @@ function registerCityRoutes(app, deps) {
           );
         }
 
+        // Handle coordinate updates
+        if (typeof latitude !== "undefined") {
+          if (latitude === null) {
+            sets.push("latitude = ?");
+            params.push(null);
+          } else {
+            const lat = Number(latitude);
+            if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
+              return res
+                .status(400)
+                .json({ error: "latitude must be between -90 and 90" });
+            }
+            sets.push("latitude = ?");
+            params.push(lat);
+          }
+        }
+
+        if (typeof longitude !== "undefined") {
+          if (longitude === null) {
+            sets.push("longitude = ?");
+            params.push(null);
+          } else {
+            const lon = Number(longitude);
+            if (!Number.isFinite(lon) || lon < -180 || lon > 180) {
+              return res
+                .status(400)
+                .json({ error: "longitude must be between -180 and 180" });
+            }
+            sets.push("longitude = ?");
+            params.push(lon);
+          }
+        }
+
         if (sets.length === 0) {
           return res.status(400).json({ error: "no fields to update" });
         }
@@ -145,7 +211,7 @@ function registerCityRoutes(app, deps) {
         await run(sql, params);
 
         const updatedCity = await get(
-          `SELECT id, name, nights, notes, sort_order, trip_id FROM cities WHERE id = ?`,
+          `SELECT id, name, nights, notes, latitude, longitude, sort_order, trip_id FROM cities WHERE id = ?`,
           [cityId],
         );
 
