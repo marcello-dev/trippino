@@ -1982,7 +1982,7 @@
               // Get cities with coordinates
               const citiesWithCoords = [];
               const stepoverCities = []; // Cities with 0 nights
-              
+
               for (const city of trip.cities) {
                 if (!city.name || city.name.trim() === "") continue;
 
@@ -1994,7 +1994,7 @@
                     lat: Number(city.lat),
                     lon: Number(city.lon),
                   };
-                  
+
                   if (cityData.nights > 0) {
                     citiesWithCoords.push(cityData);
                   } else {
@@ -2026,7 +2026,7 @@
                       lat: parseFloat(data[0].lat),
                       lon: parseFloat(data[0].lon),
                     };
-                    
+
                     if (cityData.nights > 0) {
                       citiesWithCoords.push(cityData);
                     } else {
@@ -2102,15 +2102,20 @@
               if (allCities.length > 1) {
                 // Create route coordinates including all cities in order
                 const routeCoordinates = [];
-                
+
                 // Add all cities (both with nights and stopovers) in the order they appear in trip.cities
                 for (const city of trip.cities) {
                   if (!city.name || city.name.trim() === "") continue;
-                  
+
                   // Find the city in our processed lists
-                  const cityWithCoords = allCities.find(c => c.name === city.name);
+                  const cityWithCoords = allCities.find(
+                    (c) => c.name === city.name,
+                  );
                   if (cityWithCoords) {
-                    routeCoordinates.push([cityWithCoords.lon, cityWithCoords.lat]);
+                    routeCoordinates.push([
+                      cityWithCoords.lon,
+                      cityWithCoords.lat,
+                    ]);
                   }
                 }
 
@@ -2153,16 +2158,15 @@
 
                 const marker = new maplibregl.Marker({
                   element: markerEl,
-                  anchor: 'center'
+                  anchor: "center",
                 })
                   .setLngLat([city.lon, city.lat])
                   .addTo(tripMap);
 
                 // Add popup
-                const popup = new maplibregl.Popup({ offset: 25 })
-                  .setHTML(
-                    `<strong>${city.name}</strong><br>${city.nights} night${city.nights !== 1 ? "s" : ""}`,
-                  );
+                const popup = new maplibregl.Popup({ offset: 25 }).setHTML(
+                  `<strong>${city.name}</strong><br>${city.nights} night${city.nights !== 1 ? "s" : ""}`,
+                );
 
                 marker.setPopup(popup);
               });
@@ -2174,14 +2178,15 @@
 
                 const marker = new maplibregl.Marker({
                   element: markerEl,
-                  anchor: 'center'
+                  anchor: "center",
                 })
                   .setLngLat([city.lon, city.lat])
                   .addTo(tripMap);
 
                 // Add popup
-                const popup = new maplibregl.Popup({ offset: 25 })
-                  .setHTML(`<strong>${city.name}</strong><br>Stopover`);
+                const popup = new maplibregl.Popup({ offset: 25 }).setHTML(
+                  `<strong>${city.name}</strong><br>Stopover`,
+                );
 
                 marker.setPopup(popup);
               });
