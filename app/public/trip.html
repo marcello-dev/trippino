@@ -1146,7 +1146,7 @@
           }
           try {
             const limit = 6;
-            const url = `https://api.tomtom.com/search/2/search/${encodeURIComponent(q)}.json?key=${TOMTOM_API_KEY}&limit=${encodeURIComponent(limit)}&typeahead=true&entityTypeSet=Municipality`;
+            const url = `https://api.tomtom.com/search/2/search/${encodeURIComponent(q)}.json?key=${TOMTOM_API_KEY}&limit=${limit}&typeahead=true&entityTypeSet=Municipality`;
             const res = await fetch(url);
             if (!res.ok) {
               renderList([]);
