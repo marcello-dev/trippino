@@ -13,6 +13,7 @@ const API_BASE =
   process.env.NODE_ENV == "production"
     ? process.env.API_BASE
     : `http://localhost:${PORT}`;
+const TOMTOM_API_KEY = process.env.TOMTOM_API_KEY || "";
 
 // Email configuration
 const transporter = nodemailer.createTransport({
@@ -251,7 +252,7 @@ app.use(express.static(path.join(__dirname, "public")));
 // --- Dynamic config.js ---
 app.get("/config.js", (req, res) => {
   res.type("application/javascript");
-  res.send(`window.APP_CONFIG = { API_BASE: "${API_BASE}" };`);
+  res.send(`window.APP_CONFIG = { API_BASE: "${API_BASE}", TOMTOM_API_KEY: "${TOMTOM_API_KEY}" };`);
 });
 
 // --- Register trip and city routes in separate modules ---
@@ -651,32 +652,6 @@ app.put("/api/trips/:id", csrfProtection, async (req, res) => {
   } catch (e) {
     console.error(e);
     return res.status(500).json({ error: "server error" });
-  }
-});
-
-// TomTom proxy - forwards queries to TomTom Search API using server-side key
-app.get("/api/tomtom", async (req, res) => {
-  try {
-    const q = req.query.q;
-    if (!q) return res.status(400).json({ error: "q query param required" });
-    const key = process.env.TOMTOM_API_KEY;
-    if (!key)
-      return res
-        .status(500)
-        .json({ error: "TomTom API key not configured on server" });
-    // forward to TomTom
-    const limit = req.query.limit || 6;
-    const typeahead =
-      typeof req.query.typeahead === "undefined"
-        ? "true"
-        : String(req.query.typeahead);
-    const url = `https://api.tomtom.com/search/2/search/${encodeURIComponent(q)}.json?key=${key}&limit=${encodeURIComponent(limit)}&typeahead=${encodeURIComponent(typeahead)}&entityTypeSet=Municipality`;
-    const r = await fetch(url);
-    const json = await r.json();
-    return res.json(json);
-  } catch (e) {
-    console.error("tomtom proxy failed", e);
-    return res.status(500).json({ error: "tomtom proxy failed" });
   }
 });
 
