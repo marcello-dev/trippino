@@ -2058,29 +2058,7 @@
               // Initialize MapLibre GL map
               tripMap = new maplibregl.Map({
                 container: "tripMap",
-                style: {
-                  // Basic style - you can replace this URL later with your TomTom style
-                  version: 8,
-                  sources: {
-                    "osm-raster": {
-                      type: "raster",
-                      tiles: [
-                        "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                        "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                        "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                      ],
-                      tileSize: 256,
-                      attribution: "© OpenStreetMap contributors",
-                    },
-                  },
-                  layers: [
-                    {
-                      id: "osm-raster-layer",
-                      type: "raster",
-                      source: "osm-raster",
-                    },
-                  ],
-                },
+                style: "https://api.tomtom.com/style/2/custom/style/dG9tdG9tQEBAbmNBWHhDa2JUeFJZYXZRUjszvJw2DshKcqFW_sLVVfTP.json?key=2d8s3fXbPCuJb58sQcXXkJy6e58bjtXq",
                 center: [allCities[0].lon, allCities[0].lat],
                 zoom: 6,
               });
