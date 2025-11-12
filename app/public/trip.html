@@ -5,17 +5,11 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Trip Details - Trippino</title>
     <link rel="icon" type="image/png" href="favicon.png" />
+    <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
     <link
+      href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css"
       rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-      crossorigin=""
     />
-    <script
-      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-      crossorigin=""
-    ></script>
     <style>
       :root {
         --bg: #f6f8fa;
@@ -262,6 +256,44 @@
         padding: 40px 20px;
         text-align: center;
         color: var(--muted);
+      }
+
+      /* MapLibre marker styles */
+      .city-marker {
+        background: var(--primary);
+        color: white;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 14px;
+        border: 2px solid white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        cursor: pointer;
+      }
+
+      .stepover-marker {
+        background: #f97316;
+        color: white;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        border: 2px solid white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        cursor: pointer;
+      }
+
+      .maplibregl-popup-content {
+        padding: 8px 12px;
+        border-radius: 6px;
+      }
+
+      .maplibregl-popup-anchor-bottom .maplibregl-popup-tip,
+      .maplibregl-popup-anchor-top .maplibregl-popup-tip {
+        border-top-color: var(--primary);
       }
 
       @keyframes spin {
@@ -1949,16 +1981,30 @@
             (async () => {
               // Get cities with coordinates
               const citiesWithCoords = [];
+              const stepoverCities = []; // Cities with 0 nights
+              
               for (const city of trip.cities) {
-                if (
-                  !city.name ||
-                  city.name.trim() === "" ||
-                  Number(city.nights) === 0
-                )
+                if (!city.name || city.name.trim() === "") continue;
+
+                // Check if city already has coordinates
+                if (city.lat && city.lon) {
+                  const cityData = {
+                    name: city.name,
+                    nights: Number(city.nights),
+                    lat: Number(city.lat),
+                    lon: Number(city.lon),
+                  };
+                  
+                  if (cityData.nights > 0) {
+                    citiesWithCoords.push(cityData);
+                  } else {
+                    stepoverCities.push(cityData);
+                  }
                   continue;
+                }
 
                 try {
-                  // Use Nominatim geocoding API with timeout
+                  // Use Nominatim geocoding API with timeout for cities without coordinates
                   const controller = new AbortController();
                   const fetchTimeout = setTimeout(
                     () => controller.abort(),
@@ -1974,137 +2020,171 @@
                   const data = await response.json();
 
                   if (data && data.length > 0) {
-                    citiesWithCoords.push({
+                    const cityData = {
                       name: city.name,
                       nights: Number(city.nights),
                       lat: parseFloat(data[0].lat),
                       lon: parseFloat(data[0].lon),
-                    });
+                    };
+                    
+                    if (cityData.nights > 0) {
+                      citiesWithCoords.push(cityData);
+                    } else {
+                      stepoverCities.push(cityData);
+                    }
                   }
                 } catch (err) {
                   console.error(`Failed to geocode ${city.name}:`, err);
                 }
               }
 
-              if (citiesWithCoords.length === 0) {
+              const allCities = [...citiesWithCoords, ...stepoverCities];
+
+              if (allCities.length === 0) {
                 mapEl.innerHTML =
                   '<div class="map-error">Add cities to see the route map</div>';
                 return;
               }
 
-              // Initialize map
+              // Remove existing map
               if (tripMap) {
                 tripMap.remove();
+                tripMap = null;
               }
 
               // Clear loading state
               mapEl.innerHTML = "";
 
-              tripMap = L.map("tripMap", {
-                zoomControl: true,
-                scrollWheelZoom: false,
-              });
-
-              // Add OpenStreetMap tiles with error handling
-              const tileLayer = L.tileLayer(
-                "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                {
-                  attribution: "© OpenStreetMap contributors",
-                  maxZoom: 19,
+              // Initialize MapLibre GL map
+              tripMap = new maplibregl.Map({
+                container: "tripMap",
+                style: {
+                  // Basic style - you can replace this URL later with your TomTom style
+                  version: 8,
+                  sources: {
+                    "osm-raster": {
+                      type: "raster",
+                      tiles: [
+                        "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                        "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                        "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                      ],
+                      tileSize: 256,
+                      attribution: "© OpenStreetMap contributors",
+                    },
+                  },
+                  layers: [
+                    {
+                      id: "osm-raster-layer",
+                      type: "raster",
+                      source: "osm-raster",
+                    },
+                  ],
                 },
-              );
-
-              tileLayer.on("tileerror", (error) => {
-                console.error("Tile loading error:", error);
+                center: [allCities[0].lon, allCities[0].lat],
+                zoom: 6,
               });
 
-              tileLayer.addTo(tripMap);
+              // Wait for map to load
+              await new Promise((resolve, reject) => {
+                tripMap.on("load", resolve);
+                tripMap.on("error", reject);
+              });
 
               // Calculate bounds to fit all cities
-              const bounds = L.latLngBounds(
-                citiesWithCoords.map((c) => [c.lat, c.lon]),
-              );
-              tripMap.fitBounds(bounds, { padding: [50, 50] });
-
-              // Add markers with day count
-              citiesWithCoords.forEach((city, index) => {
-                const marker = L.marker([city.lat, city.lon]).addTo(tripMap);
-
-                // Custom icon with day count
-                const dayIcon = L.divIcon({
-                  className: "custom-marker",
-                  html: `<div style="background:#f97316;color:white;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3)">${city.nights}</div>`,
-                  iconSize: [32, 32],
-                  iconAnchor: [16, 16],
-                });
-
-                marker.setIcon(dayIcon);
-                marker.bindPopup(
-                  `<strong>${city.name}</strong><br>${city.nights} night${city.nights !== 1 ? "s" : ""}`,
-                );
+              const bounds = new maplibregl.LngLatBounds();
+              allCities.forEach((city) => {
+                bounds.extend([city.lon, city.lat]);
               });
+              tripMap.fitBounds(bounds, { padding: 50 });
 
-              // Draw curved arrows between consecutive cities
-              for (let i = 0; i < citiesWithCoords.length - 1; i++) {
-                const from = citiesWithCoords[i];
-                const to = citiesWithCoords[i + 1];
-
-                // Calculate control point for curve (offset perpendicular to the line)
-                const midLat = (from.lat + to.lat) / 2;
-                const midLon = (from.lon + to.lon) / 2;
-
-                // Offset perpendicular to create curve
-                const dx = to.lon - from.lon;
-                const dy = to.lat - from.lat;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                const curvature = dist * 0.2; // 20% offset for curve
-
-                const controlLat = midLat + (-dx / dist) * curvature;
-                const controlLon = midLon + (dy / dist) * curvature;
-
-                // Create curved path using quadratic bezier approximation
-                const points = [];
-                for (let t = 0; t <= 1; t += 0.05) {
-                  const lat =
-                    (1 - t) * (1 - t) * from.lat +
-                    2 * (1 - t) * t * controlLat +
-                    t * t * to.lat;
-                  const lon =
-                    (1 - t) * (1 - t) * from.lon +
-                    2 * (1 - t) * t * controlLon +
-                    t * t * to.lon;
-                  points.push([lat, lon]);
+              // Add route line if there are multiple cities
+              if (allCities.length > 1) {
+                // Create route coordinates including all cities in order
+                const routeCoordinates = [];
+                
+                // Add all cities (both with nights and stopovers) in the order they appear in trip.cities
+                for (const city of trip.cities) {
+                  if (!city.name || city.name.trim() === "") continue;
+                  
+                  // Find the city in our processed lists
+                  const cityWithCoords = allCities.find(c => c.name === city.name);
+                  if (cityWithCoords) {
+                    routeCoordinates.push([cityWithCoords.lon, cityWithCoords.lat]);
+                  }
                 }
 
-                // Draw curved line
-                const curve = L.polyline(points, {
-                  color: "#f97316",
-                  weight: 3,
-                  opacity: 0.7,
-                  dashArray: "10, 5",
-                }).addTo(tripMap);
+                if (routeCoordinates.length > 1) {
+                  // Add route line source and layer
+                  tripMap.addSource("route", {
+                    type: "geojson",
+                    data: {
+                      type: "Feature",
+                      properties: {},
+                      geometry: {
+                        type: "LineString",
+                        coordinates: routeCoordinates,
+                      },
+                    },
+                  });
 
-                // Add arrow at the end
-                const arrowEnd = points[points.length - 1];
-                const arrowStart =
-                  points[points.length - 3] || points[points.length - 2];
-                const angle =
-                  (Math.atan2(
-                    arrowEnd[0] - arrowStart[0],
-                    arrowEnd[1] - arrowStart[1],
-                  ) *
-                    180) /
-                  Math.PI;
-
-                const arrowIcon = L.divIcon({
-                  className: "arrow-marker",
-                  html: `<div style="transform:rotate(${angle}deg);width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:12px solid #f97316;opacity:0.7"></div>`,
-                  iconSize: [12, 12],
-                  iconAnchor: [6, 0],
-                });
-
-                L.marker(arrowEnd, { icon: arrowIcon }).addTo(tripMap);
+                  tripMap.addLayer({
+                    id: "route-line",
+                    type: "line",
+                    source: "route",
+                    layout: {
+                      "line-join": "round",
+                      "line-cap": "round",
+                    },
+                    paint: {
+                      "line-color": "#f97316",
+                      "line-width": 3,
+                      "line-opacity": 0.7,
+                    },
+                  });
+                }
               }
+
+              // Add markers for cities with nights
+              citiesWithCoords.forEach((city, index) => {
+                const markerEl = document.createElement("div");
+                markerEl.className = "city-marker";
+                markerEl.textContent = city.nights.toString();
+
+                const marker = new maplibregl.Marker({
+                  element: markerEl,
+                  anchor: 'center'
+                })
+                  .setLngLat([city.lon, city.lat])
+                  .addTo(tripMap);
+
+                // Add popup
+                const popup = new maplibregl.Popup({ offset: 25 })
+                  .setHTML(
+                    `<strong>${city.name}</strong><br>${city.nights} night${city.nights !== 1 ? "s" : ""}`,
+                  );
+
+                marker.setPopup(popup);
+              });
+
+              // Add markers for stepover cities (0 nights)
+              stepoverCities.forEach((city) => {
+                const markerEl = document.createElement("div");
+                markerEl.className = "stepover-marker";
+
+                const marker = new maplibregl.Marker({
+                  element: markerEl,
+                  anchor: 'center'
+                })
+                  .setLngLat([city.lon, city.lat])
+                  .addTo(tripMap);
+
+                // Add popup
+                const popup = new maplibregl.Popup({ offset: 25 })
+                  .setHTML(`<strong>${city.name}</strong><br>Stopover`);
+
+                marker.setPopup(popup);
+              });
             })(),
             timeoutPromise,
           ]);
