@@ -252,7 +252,9 @@ app.use(express.static(path.join(__dirname, "public")));
 // --- Dynamic config.js ---
 app.get("/config.js", (req, res) => {
   res.type("application/javascript");
-  res.send(`window.APP_CONFIG = { API_BASE: "${API_BASE}", TOMTOM_API_KEY: "${TOMTOM_API_KEY}" };`);
+  res.send(
+    `window.APP_CONFIG = { API_BASE: "${API_BASE}", TOMTOM_API_KEY: "${TOMTOM_API_KEY}" };`,
+  );
 });
 
 // --- Register trip and city routes in separate modules ---

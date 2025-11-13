@@ -263,8 +263,8 @@
         background: var(--primary);
         color: white;
         border-radius: 50%;
-        width: 32px;
-        height: 32px;
+        width: 22px;
+        height: 22px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -279,8 +279,8 @@
         background: #f97316;
         color: white;
         border-radius: 50%;
-        width: 20px;
-        height: 20px;
+        width: 12px;
+        height: 12px;
         border: 2px solid white;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         cursor: pointer;
@@ -1469,7 +1469,11 @@
 
                   // Prepare update data
                   const updateData = { name };
-                  if (sel.position && sel.position.latitude && sel.position.longitude) {
+                  if (
+                    sel.position &&
+                    sel.position.latitude &&
+                    sel.position.longitude
+                  ) {
                     updateData.latitude = sel.position.latitude;
                     updateData.longitude = sel.position.longitude;
                   }
@@ -1705,7 +1709,11 @@
                 };
 
                 // Include coordinates if available
-                if (sel.position && sel.position.latitude && sel.position.longitude) {
+                if (
+                  sel.position &&
+                  sel.position.latitude &&
+                  sel.position.longitude
+                ) {
                   cityData.latitude = sel.position.latitude;
                   cityData.longitude = sel.position.longitude;
                 }
@@ -1801,9 +1809,13 @@
                 name: name,
                 nights: 1,
                 latitude:
-                  sel.position && sel.position.latitude ? sel.position.latitude : null,
+                  sel.position && sel.position.latitude
+                    ? sel.position.latitude
+                    : null,
                 longitude:
-                  sel.position && sel.position.longitude ? sel.position.longitude : null,
+                  sel.position && sel.position.longitude
+                    ? sel.position.longitude
+                    : null,
                 updatedAt: new Date().toISOString(),
               };
               trip.cities.push(newCity);
@@ -2025,7 +2037,9 @@
               // Initialize MapLibre GL map
               tripMap = new maplibregl.Map({
                 container: "tripMap",
-                style: "https://api.tomtom.com/style/2/custom/style/dG9tdG9tQEBAbmNBWHhDa2JUeFJZYXZRUjszvJw2DshKcqFW_sLVVfTP.json?key=" + TOMTOM_API_KEY,
+                style:
+                  "https://api.tomtom.com/style/2/custom/style/dG9tdG9tQEBAbmNBWHhDa2JUeFJZYXZRUjszvJw2DshKcqFW_sLVVfTP.json?key=" +
+                  TOMTOM_API_KEY,
                 center: [allCities[0].longitude, allCities[0].latitude],
                 zoom: 6,
               });
