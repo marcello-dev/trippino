@@ -2052,11 +2052,19 @@
               });
 
               // Calculate bounds to fit all cities
-              const bounds = new maplibregl.LngLatBounds();
-              allCities.forEach((city) => {
-                bounds.extend([city.longitude, city.latitude]);
-              });
-              tripMap.fitBounds(bounds, { padding: 50 });
+              if (allCities.length === 1) {
+                // For single city, set a reasonable city-level zoom instead of using fitBounds
+                const city = allCities[0];
+                tripMap.setCenter([city.longitude, city.latitude]);
+                tripMap.setZoom(10); // City-level zoom (10-12 is good for city level)
+              } else {
+                // For multiple cities, use fitBounds as normal
+                const bounds = new maplibregl.LngLatBounds();
+                allCities.forEach((city) => {
+                  bounds.extend([city.longitude, city.latitude]);
+                });
+                tripMap.fitBounds(bounds, { padding: 50 });
+              }
 
               // Add route line if there are multiple cities
               if (allCities.length > 1) {
