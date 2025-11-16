@@ -846,6 +846,23 @@
           return b.start_date.localeCompare(a.start_date);
         });
         tripsContainer.innerHTML = "";
+
+        // Show empty state when no trips
+        if (sorted.length === 0) {
+          const emptyState = document.createElement("div");
+          emptyState.className = "card";
+          emptyState.style.textAlign = "center";
+          emptyState.style.padding = "40px 20px";
+          emptyState.style.color = "var(--muted)";
+          emptyState.innerHTML = `
+            <div style="font-size: 48px; margin-bottom: 16px;">✈️</div>
+            <h3 style="margin: 0 0 8px 0; color: #111;">Create your first trip</h3>
+            <p style="margin: 0; font-size: 14px;">Start planning your next adventure by creating a new trip above.</p>
+          `;
+          tripsContainer.appendChild(emptyState);
+          return;
+        }
+
         for (const t of sorted) {
           const card = document.createElement("div");
           card.className = "card";
