@@ -1362,6 +1362,13 @@
       }
 
       function renderCitiesList(citiesContainer) {
+        // Auto-resize textarea function
+        function autoResizeTextarea(textarea) {
+          textarea.style.height = "auto";
+          const newHeight = Math.min(textarea.scrollHeight, 300); // Max 300px
+          textarea.style.height = Math.max(newHeight, 72) + "px"; // Min 72px
+        }
+
         citiesContainer.innerHTML = "";
         let dayCursor = 1;
 
@@ -1425,7 +1432,7 @@
                         </button>
                     </div>
                     <div class="notes" style="grid-column:1 / -1;margin-top:8px">
-                        <textarea class="city-notes" placeholder="Notes about this city..." style="width:100%;min-height:72px;border:1px solid #eee;padding:8px;border-radius:8px;box-sizing:border-box">${escapeHtml(c.notes || "")}</textarea>
+                        <textarea class="city-notes" placeholder="Notes about this city..." style="width:100%;min-height:72px;max-height:300px;border:1px solid #eee;padding:8px;border-radius:8px;box-sizing:border-box;resize:none;overflow-y:auto">${escapeHtml(c.notes || "")}</textarea>
                         <div style="text-align:right;margin-top:6px">
                             <button data-action="save-note" class="btn primary">Save note</button>
                         </div>
@@ -1638,6 +1645,15 @@
             });
 
             cityRow.classList.toggle("active");
+
+            // Resize textarea when city is expanded
+            const notesTa = cityRow.querySelector(".city-notes");
+            if (notesTa && cityRow.classList.contains("active")) {
+              // Use setTimeout to ensure the element is visible before calculating size
+              setTimeout(() => {
+                autoResizeTextarea(notesTa);
+              }, 10);
+            }
           });
 
           const notesTa = cityRow.querySelector(".city-notes");
@@ -1646,6 +1662,13 @@
           );
 
           if (notesTa) {
+            // Set initial size (will be resized on expand)
+
+            // Auto-resize on input
+            notesTa.addEventListener("input", () => {
+              autoResizeTextarea(notesTa);
+            });
+
             // Auto-save on blur: server-first when authenticated
             notesTa.addEventListener("blur", async () => {
               const newNotes = notesTa.value;
