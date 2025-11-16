@@ -645,6 +645,15 @@
       const MAX_CITY_NAME_LENGTH = 60;
       const MAX_NIGHTS_PER_CITY = 365;
       const NAME_SAFE_REGEX = /^[A-Za-z0-9 \-\'\(\)\.,]*$/;
+      const TRANSPORT_MODES = [
+        { value: "flight", label: "Flight", icon: "✈" },
+        { value: "car", label: "Car", icon: "🚗" },
+        { value: "public_transport", label: "Public transport", icon: "🚌" },
+        { value: "train", label: "Train", icon: "🚆" },
+        { value: "boat", label: "Boat", icon: "⛴" },
+        { value: "bike", label: "Bike", icon: "🚲" },
+        { value: "walk", label: "Walk", icon: "🚶" },
+      ];
 
       // --- Auth config & helpers ---
       const authArea = document.getElementById("authArea");
@@ -790,6 +799,10 @@
       if (!trip) {
         alert("Trip not found");
         window.location.href = "index.html";
+      }
+
+      if (!Array.isArray(trip.transportation)) {
+        trip.transportation = [];
       }
 
       function validateCityName(name) {
@@ -962,6 +975,52 @@
         c.longitude = prev.longitude;
         render();
         return false;
+      }
+
+      function findTransportationForLeg(fromCityId, toCityId) {
+        if (!Array.isArray(trip.transportation)) return null;
+        return (
+          trip.transportation.find(
+            (t) =>
+              (t.from_city_id === fromCityId ||
+                t.from_city_id === Number(fromCityId)) &&
+              (t.to_city_id === toCityId || t.to_city_id === Number(toCityId)),
+          ) || null
+        );
+      }
+
+      function upsertTransportationLocal(fromCityId, toCityId, mode, notes) {
+        if (!Array.isArray(trip.transportation)) trip.transportation = [];
+        const existing = findTransportationForLeg(fromCityId, toCityId);
+        if (existing) {
+          existing.mode = mode;
+          existing.notes = notes || "";
+        } else {
+          trip.transportation.push({
+            id: uid(),
+            trip_id: trip.id,
+            from_city_id: fromCityId,
+            to_city_id: toCityId,
+            mode,
+            notes: notes || "",
+          });
+        }
+        updateTripInStore();
+        render();
+      }
+
+      function removeTransportationLocal(fromCityId, toCityId) {
+        if (!Array.isArray(trip.transportation)) return;
+        trip.transportation = trip.transportation.filter(
+          (t) =>
+            !(
+              (t.from_city_id === fromCityId ||
+                t.from_city_id === Number(fromCityId)) &&
+              (t.to_city_id === toCityId || t.to_city_id === Number(toCityId))
+            ),
+        );
+        updateTripInStore();
+        render();
       }
 
       async function updateNights(cityId, newNights) {
@@ -1432,10 +1491,23 @@
                         </button>
                     </div>
                     <div class="notes" style="grid-column:1 / -1;margin-top:8px">
-                        <textarea class="city-notes" placeholder="Notes about this city..." style="width:100%;min-height:72px;max-height:300px;border:1px solid #eee;padding:8px;border-radius:8px;box-sizing:border-box;resize:none;overflow-y:auto">${escapeHtml(c.notes || "")}</textarea>
-                        <div style="text-align:right;margin-top:6px">
-                            <button data-action="save-note" class="btn primary">Save note</button>
-                        </div>
+                      <textarea class="city-notes" placeholder="Notes about this city..." style="width:100%;min-height:72px;max-height:300px;border:1px solid #eee;padding:8px;border-radius:8px;box-sizing:border-box;resize:none;overflow-y:auto">${escapeHtml(c.notes || "")}</textarea>
+                      <div style="text-align:right;margin-top:6px">
+                        <button data-action="save-note" class="btn primary">Save note</button>
+                      </div>
+                    </div>
+                    <div class="transport-edit" style="display:none;grid-column:1 / -1;margin-top:8px">
+                      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                        <span style="font-size:13px;color:#555">Transportation to next city</span>
+                        <select class="transport-mode" style="padding:6px 8px;border-radius:6px;border:1px solid #ddd;font-size:13px">
+                          <option value="">Select mode...</option>
+                          ${TRANSPORT_MODES.map((m) => `<option value="${m.value}">${m.icon} ${m.label}</option>`).join("")}
+                        </select>
+                        <input type="text" class="transport-notes" placeholder="Details (optional)" style="flex:1;min-width:140px;padding:6px 8px;border-radius:6px;border:1px solid #ddd;font-size:13px" />
+                        <button class="btn ghost" data-action="save-transport" style="font-size:13px;padding:6px 10px">Save</button>
+                        <button class="btn ghost" data-action="remove-transport" style="font-size:13px;padding:6px 10px">Remove</button>
+                      </div>
+                      <div class="transport-hint" style="margin-top:4px;font-size:12px;color:#888"></div>
                     </div>
                 `;
 
@@ -1635,6 +1707,18 @@
             }
           });
 
+          const transportEdit = cityRow.querySelector(".transport-edit");
+          const transportModeSel = cityRow.querySelector(".transport-mode");
+          const transportNotesInput = cityRow.querySelector(
+            ".transport-notes",
+          );
+          const saveTransportBtn = cityRow.querySelector(
+            '[data-action="save-transport"]',
+          );
+          const removeTransportBtn = cityRow.querySelector(
+            '[data-action="remove-transport"]',
+          );
+
           // Click handling to expand/collapse - only on arrow
           const expandArrow = cityRow.querySelector(".expand-arrow");
           expandArrow.addEventListener("click", (e) => {
@@ -1654,12 +1738,140 @@
                 autoResizeTextarea(notesTa);
               }, 10);
             }
+
+            // Show transportation editor only for non-last city
+            if (transportEdit) {
+              const isLast = i === trip.cities.length - 1;
+              if (cityRow.classList.contains("active") && !isLast) {
+                transportEdit.style.display = "block";
+                const nextCity = trip.cities[i + 1];
+                const legTransport = nextCity
+                  ? findTransportationForLeg(c.id, nextCity.id)
+                  : null;
+                if (legTransport && transportModeSel && transportNotesInput) {
+                  transportModeSel.value = legTransport.mode || "";
+                  transportNotesInput.value = legTransport.notes || "";
+                } else if (transportModeSel && transportNotesInput) {
+                  transportModeSel.value = "";
+                  transportNotesInput.value = "";
+                }
+                const hint = cityRow.querySelector(".transport-hint");
+                if (hint && nextCity) {
+                  hint.textContent = `Leg: ${c.name || "This city"} → ${
+                    nextCity.name || "next city"
+                  }`;
+                }
+              } else {
+                transportEdit.style.display = "none";
+              }
+            }
           });
 
           const notesTa = cityRow.querySelector(".city-notes");
           const saveNoteBtn = cityRow.querySelector(
             '[data-action="save-note"]',
           );
+
+          if (saveTransportBtn && transportModeSel && transportNotesInput) {
+            saveTransportBtn.addEventListener("click", async (ev) => {
+              ev.stopPropagation();
+              const mode = transportModeSel.value;
+              const notesVal = transportNotesInput.value || "";
+              const nextCity = trip.cities[i + 1];
+              if (!nextCity) return;
+              if (!mode) {
+                showClientError("Select a transportation mode first.");
+                return;
+              }
+
+              if (currentUser) {
+                try {
+                  const token = await getCsrfToken();
+                  const res = await fetch(
+                    `${API_BASE}/api/trips/${trip.id}/cities/${c.id}/transportation`,
+                    {
+                      method: "PUT",
+                      headers: {
+                        "Content-Type": "application/json",
+                        "CSRF-Token": token,
+                      },
+                      credentials: "include",
+                      body: JSON.stringify({
+                        toCityId: nextCity.id,
+                        mode,
+                        notes: notesVal,
+                      }),
+                    },
+                  );
+                  if (res.ok) {
+                    const data = await res.json();
+                    const t = data.transportation;
+                    upsertTransportationLocal(
+                      t.from_city_id,
+                      t.to_city_id,
+                      t.mode,
+                      t.notes || "",
+                    );
+                  } else if (res.status === 401) {
+                    currentUser = null;
+                    checkAuth();
+                    showClientError("Session expired. Please sign in again.");
+                  } else {
+                    const err = await res.json().catch(() => ({}));
+                    showClientError(err.error || "Failed to save transportation.");
+                  }
+                } catch (e) {
+                  console.warn("transportation save failed", e);
+                  showClientError(
+                    "Cannot save transportation: offline or network error.",
+                  );
+                }
+              } else {
+                upsertTransportationLocal(c.id, nextCity.id, mode, notesVal);
+              }
+            });
+          }
+
+          if (removeTransportBtn) {
+            removeTransportBtn.addEventListener("click", async (ev) => {
+              ev.stopPropagation();
+              const nextCity = trip.cities[i + 1];
+              if (!nextCity) return;
+
+              if (currentUser) {
+                try {
+                  const token = await getCsrfToken();
+                  const res = await fetch(
+                    `${API_BASE}/api/trips/${trip.id}/cities/${c.id}/transportation`,
+                    {
+                      method: "DELETE",
+                      headers: {
+                        "CSRF-Token": token,
+                      },
+                      credentials: "include",
+                    },
+                  );
+                  if (res.ok) {
+                    removeTransportationLocal(c.id, nextCity.id);
+                  } else if (res.status === 401) {
+                    currentUser = null;
+                    checkAuth();
+                    showClientError("Session expired. Please sign in again.");
+                  } else {
+                    const err = await res.json().catch(() => ({}));
+                    showClientError(err.error || "Failed to remove transportation.");
+                  }
+                } catch (e) {
+                  console.warn("transportation delete failed", e);
+                  showClientError(
+                    "Cannot remove transportation: offline or network error.",
+                  );
+                }
+              } else {
+                removeTransportationLocal(c.id, nextCity.id);
+              }
+            });
+          }
 
           if (notesTa) {
             // Set initial size (will be resized on expand)
@@ -1701,6 +1913,32 @@
 
           // Drag and drop
           citiesContainer.appendChild(cityRow);
+
+          // Compact transportation row between this city and the next
+          const nextCity = trip.cities[i + 1];
+          if (nextCity) {
+            const legTransport = findTransportationForLeg(c.id, nextCity.id);
+            if (legTransport) {
+              const tRow = document.createElement("div");
+              tRow.className = "transport-row";
+              tRow.style.cssText =
+                "display:flex;align-items:center;gap:6px;margin:-2px 0 4px 32px;font-size:13px;color:#555;";
+
+              const modeDef =
+                TRANSPORT_MODES.find((m) => m.value === legTransport.mode) ||
+                null;
+              const icon = modeDef ? modeDef.icon : "↓";
+              const label = modeDef ? modeDef.label : legTransport.mode;
+
+              tRow.innerHTML = `
+                <span style="font-size:14px">${icon}</span>
+                <span>${escapeHtml(label)} to ${escapeHtml(nextCity.name || "next city")}</span>
+              `;
+
+              citiesContainer.appendChild(tRow);
+            }
+          }
+
           dayCursor = end;
         }
 

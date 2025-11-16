@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 import bcrypt from "bcryptjs";
 import nodemailer from "nodemailer";
 import rateLimit from "express-rate-limit";
+import registerTransportationRoutes from "./routes/transportation.js";
 import csrf from "csurf";
 import helmet from "helmet";
 
@@ -120,6 +121,20 @@ db.serialize(() => {
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE
+  )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS transportation (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    trip_id INTEGER NOT NULL,
+    from_city_id INTEGER NOT NULL,
+    to_city_id INTEGER NOT NULL,
+    mode TEXT NOT NULL,
+    notes TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE,
+    FOREIGN KEY (from_city_id) REFERENCES cities(id) ON DELETE CASCADE,
+    FOREIGN KEY (to_city_id) REFERENCES cities(id) ON DELETE CASCADE
   )`);
 });
 
@@ -272,6 +287,13 @@ registerCityRoutes(app, {
   getSession,
   run,
   get,
+});
+registerTransportationRoutes(app, {
+  csrfProtection,
+  getSession,
+  run,
+  get,
+  all,
 });
 
 async function createSessionForUserId(userId) {
@@ -570,9 +592,20 @@ app.get("/api/state", async (req, res) => {
     );
     if (!trips || trips.length === 0) return res.json({ state: null });
 
+    const tripIds = trips.map((trip) => trip.id);
+
     const cities = await all(
-      `SELECT id, name, nights, notes, latitude, longitude, sort_order, trip_id FROM cities WHERE trip_id IN (${trips.map(() => "?").join(", ")})`,
-      trips.map((trip) => trip.id),
+      `SELECT id, name, nights, notes, latitude, longitude, sort_order, trip_id FROM cities WHERE trip_id IN (${tripIds
+        .map(() => "?")
+        .join(", ")})`,
+      tripIds,
+    );
+
+    const transportation = await all(
+      `SELECT id, trip_id, from_city_id, to_city_id, mode, notes FROM transportation WHERE trip_id IN (${tripIds
+        .map(() => "?")
+        .join(", ")})`,
+      tripIds,
     );
 
     const state = {
@@ -581,6 +614,7 @@ app.get("/api/state", async (req, res) => {
         name: trip.name,
         start_date: trip.start_date,
         cities: cities.filter((city) => city.trip_id === trip.id),
+        transportation: transportation.filter((t) => t.trip_id === trip.id),
       })),
     };
     return res.json({ state });
