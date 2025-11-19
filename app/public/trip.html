@@ -805,6 +805,26 @@
         trip.transportation = [];
       }
 
+      ensureCitiesSorted(trip);
+
+      function ensureCitiesSorted(targetTrip = trip) {
+        if (!targetTrip || !Array.isArray(targetTrip.cities)) return;
+        targetTrip.cities.forEach((city, index) => {
+          const numericOrder = Number(city.sort_order);
+          city.sort_order = Number.isFinite(numericOrder)
+            ? numericOrder
+            : index;
+        });
+        targetTrip.cities.sort((a, b) => a.sort_order - b.sort_order);
+      }
+
+      function reindexCitySortOrders(cities = trip?.cities) {
+        if (!Array.isArray(cities)) return;
+        cities.forEach((city, index) => {
+          city.sort_order = index;
+        });
+      }
+
       function validateCityName(name) {
         if (!name || !name.trim())
           return { ok: false, error: "City name required" };
@@ -1050,6 +1070,7 @@
               if (deleteRes.ok) {
                 // Successfully deleted from backend, now delete from local
                 trip.cities = trip.cities.filter((c) => c.id !== cityId);
+                reindexCitySortOrders(trip.cities);
 
                 // Update sort order in backend for remaining cities
                 try {
@@ -1125,6 +1146,7 @@
         } else {
           // Anonymous user - delete locally only
           trip.cities = trip.cities.filter((c) => c.id !== cityId);
+          reindexCitySortOrders(trip.cities);
           updateTripInStore();
           render();
         }
@@ -1296,6 +1318,7 @@
         // fetch info from state
         const trip = appState.trips.find((t) => t.id === tripId);
         if (!trip) return;
+        ensureCitiesSorted(trip);
 
         // Trip editor card
         const editorCard = document.createElement("div");
@@ -1421,6 +1444,7 @@
       }
 
       function renderCitiesList(citiesContainer) {
+        ensureCitiesSorted(trip);
         // Auto-resize textarea function
         function autoResizeTextarea(textarea) {
           textarea.style.height = "auto";
@@ -1607,6 +1631,7 @@
                 );
                 if (res.ok) {
                   trip.cities = newOrder;
+                  reindexCitySortOrders(trip.cities);
                   updateTripInStore();
                   render();
                 } else if (res.status === 401) {
@@ -1637,6 +1662,7 @@
             } else {
               // Anonymous: apply locally
               trip.cities = newOrder;
+              reindexCitySortOrders(trip.cities);
               updateTripInStore();
               render();
             }
@@ -1673,6 +1699,7 @@
                 );
                 if (res.ok) {
                   trip.cities = newOrder;
+                  reindexCitySortOrders(trip.cities);
                   updateTripInStore();
                   render();
                 } else if (res.status === 401) {
@@ -1702,6 +1729,7 @@
               }
             } else {
               trip.cities = newOrder;
+              reindexCitySortOrders(trip.cities);
               updateTripInStore();
               render();
             }
@@ -1994,6 +2022,7 @@
                 );
                 if (createRes.status === 201) {
                   const data = await createRes.json();
+                  const fallbackOrder = trip.cities.length;
                   // Use backend data to create local city with server-generated ID
                   const newCity = {
                     id: data.id,
@@ -2002,9 +2031,13 @@
                     notes: data.notes || "",
                     latitude: data.latitude || null,
                     longitude: data.longitude || null,
+                    sort_order: Number.isFinite(Number(data.sort_order))
+                      ? Number(data.sort_order)
+                      : fallbackOrder,
                     updatedAt: new Date().toISOString(),
                   };
                   trip.cities.push(newCity);
+                  reindexCitySortOrders(trip.cities);
                   // Update sort order in backend
                   const updateRes = await fetch(
                     `${API_BASE}/api/trips/${trip.id}/cities`,
@@ -2078,9 +2111,11 @@
                   sel.position && sel.position.longitude
                     ? sel.position.longitude
                     : null,
+                sort_order: trip.cities.length,
                 updatedAt: new Date().toISOString(),
               };
               trip.cities.push(newCity);
+              reindexCitySortOrders(trip.cities);
               updateTripInStore();
               render();
             }
@@ -2098,6 +2133,8 @@
         const months = document.createElement("div");
         months.className = "months";
         container.appendChild(months);
+
+        ensureCitiesSorted(trip);
 
         if (!trip.start_date || trip.cities.length === 0) {
           hint.style.display = "block";
@@ -2241,6 +2278,8 @@
         const mapEl = document.getElementById("tripMap");
         if (!mapEl) return;
 
+        ensureCitiesSorted(trip);
+
         const MAP_TIMEOUT = 15000; // 15 seconds timeout
 
         try {
@@ -2264,6 +2303,7 @@
                 // Check if city already has coordinates
                 if (city.latitude && city.longitude) {
                   const cityData = {
+                    id: city.id,
                     name: city.name,
                     nights: Number(city.nights),
                     latitude: Number(city.latitude),
@@ -2280,6 +2320,12 @@
               }
 
               const allCities = [...citiesWithCoords, ...stepoverCities];
+              const cityCoordsById = new Map();
+              allCities.forEach((city) => {
+                if (!cityCoordsById.has(city.id)) {
+                  cityCoordsById.set(city.id, city);
+                }
+              });
 
               if (allCities.length === 0) {
                 mapEl.innerHTML =
@@ -2332,14 +2378,9 @@
                 // Create route coordinates including all cities in order
                 const routeCoordinates = [];
 
-                // Add all cities (both with nights and stopovers) in the order they appear in trip.cities
                 for (const city of trip.cities) {
                   if (!city.name || city.name.trim() === "") continue;
-
-                  // Find the city in our processed lists
-                  const cityWithCoords = allCities.find(
-                    (c) => c.name === city.name,
-                  );
+                  const cityWithCoords = cityCoordsById.get(city.id);
                   if (cityWithCoords) {
                     routeCoordinates.push([
                       cityWithCoords.longitude,
