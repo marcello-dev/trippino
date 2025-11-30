@@ -35,6 +35,7 @@ function registerTransportationRoutes(app, deps) {
           "car",
           "train",
           "public_transport",
+          "motorbike",
           "boat",
           "bike",
           "walk",

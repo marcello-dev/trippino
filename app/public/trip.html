@@ -652,6 +652,7 @@
         { value: "train", label: "Train", icon: "🚆" },
         { value: "boat", label: "Boat", icon: "⛴" },
         { value: "bike", label: "Bike", icon: "🚲" },
+        { value: "motorbike", label: "Motorbike", icon: "🏍️" },
         { value: "walk", label: "Walk", icon: "🚶" },
       ];
 
@@ -1957,7 +1958,7 @@
               const modeDef =
                 TRANSPORT_MODES.find((m) => m.value === legTransport.mode) ||
                 null;
-              const icon = modeDef ? modeDef.icon : "↓";
+              const icon = modeDef ? modeDef.icon : "";
               const label = modeDef ? modeDef.label : legTransport.mode;
 
               tRow.innerHTML = `
