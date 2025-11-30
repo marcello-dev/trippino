@@ -33,6 +33,7 @@ function registerTransportationRoutes(app, deps) {
         const allowedModes = new Set([
           "flight",
           "car",
+          "train",
           "public_transport",
           "boat",
           "bike",
@@ -65,7 +66,8 @@ function registerTransportationRoutes(app, deps) {
         const nextCity = cities[fromIdx + 1];
         if (!nextCity || nextCity.id !== toId) {
           return res.status(400).json({
-            error: "transportation can only be set to the next city in the trip",
+            error:
+              "transportation can only be set to the next city in the trip",
           });
         }
 
