@@ -1961,8 +1961,8 @@
               const label = modeDef ? modeDef.label : legTransport.mode;
 
               tRow.innerHTML = `
-                <span style="font-size:14px">${icon}</span>
-                <span>${escapeHtml(label)} to ${escapeHtml(nextCity.name || "next city")}</span>
+                <span style="font-size:14px">↓ ${icon}</span>
+                <span>${escapeHtml(label)}</span>
               `;
 
               citiesContainer.appendChild(tRow);
