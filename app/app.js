@@ -7,6 +7,7 @@ import rateLimit from "express-rate-limit";
 import registerTransportationRoutes from "./routes/transportation.js";
 import csrf from "csurf";
 import helmet from "helmet";
+import { runMigrations } from "../migrate.js";
 
 const app = express();
 const PORT = process.env.PORT;
@@ -84,6 +85,7 @@ function all(sql, params = []) {
 }
 
 // initialize schema
+console.log("Initializing database schema...");
 db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT, 
@@ -708,5 +710,9 @@ setInterval(async () => {
     console.error("[Session Cleanup] Error:", e);
   }
 }, CLEANUP_INTERVAL);
+
+// Run migrations before starting the server
+console.log("Running database migrations...");
+await runMigrations();
 
 app.listen(PORT, () => console.log(`Trippino listening on port: ${PORT}`));
