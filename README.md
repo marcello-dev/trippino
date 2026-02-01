@@ -9,6 +9,10 @@ Trippino is a website for planning simple trips. Check it out here: https://trip
 
 It is built as a small single-node Express + SQLite demo app. It serves a static frontend from `app/public` and provides JSON APIs in `app/app.js`.
 
+## Preview
+
+![Trippino](./trippino.png)
+
 ## State management
 
 As we don't always have internet connection when travelling, Trippino tries to to work offline as much as it can.
