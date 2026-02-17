@@ -3,3 +3,4 @@ node_modules/
 data.sqlite
 app/.env
 todo.md
+ops/deploy.sh

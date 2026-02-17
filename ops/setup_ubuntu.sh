@@ -14,10 +14,15 @@ chown -R trippino:trippino /opt/trippino
 apt install nodejs
 apt install npm
 npm install -g http-server
-
+apt install sqlite3
+apt install python3-pip -y
 
 mkdir /etc/trippino
 chown -R trippino:trippino /etc/trippino
+
+# for db
+mkdir /var/lib/trippino
+chown -R trippino:trippino /var/lib/trippino
 
 
 cat << EOL > /etc/systemd/system/trippino.service
