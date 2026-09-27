@@ -4,3 +4,4 @@ data.sqlite
 app/.env
 todo.md
 ops/deploy.sh
+ops/deploy_aws.sh

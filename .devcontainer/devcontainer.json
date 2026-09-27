@@ -2,7 +2,9 @@
   "name": "Ubuntu DevContainer",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
   "features": {
-    "ghcr.io/devcontainers/features/node:1": {}
+    "ghcr.io/devcontainers/features/node:2.1.0": {
+      "version": "22"
+    }
   },
   "customizations": {
     "vscode": {
