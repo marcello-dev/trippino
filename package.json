@@ -11,21 +11,21 @@
     "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch --setupFilesAfterEnv=./test/setup.js"
   },
   "dependencies": {
-    "bcryptjs": "^2.4.3",
-    "cookie-parser": "^1.4.6",
+    "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
     "csurf": "^1.11.0",
-    "express": "^4.18.2",
-    "express-rate-limit": "^7.1.5",
-    "helmet": "^7.1.0",
-    "nodemailer": "^7.0.10",
-    "sqlite-up": "^0.4.0",
-    "sqlite3": "^5.1.6",
-    "uuid": "^9.0.0"
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.7.0",
+    "helmet": "^8.3.0",
+    "nodemailer": "^10.0.11",
+    "sqlite-up": "^0.6.0",
+    "sqlite3": "^6.0.1",
+    "uuid": "^14.0.2"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",
-    "jest": "^30.2.0",
-    "prettier": "3.6.2",
-    "supertest": "^7.1.4"
+    "jest": "^30.5.2",
+    "prettier": "3.9.9",
+    "supertest": "^7.3.0"
   }
 }

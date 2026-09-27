@@ -178,7 +178,8 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
   // Use IP address as identifier
   keyGenerator: (req) => {
-    return req.ip || req.connection.remoteAddress;
+    const ip = req.ip ?? req.socket?.remoteAddress;
+    return ip ? ipKeyGenerator(ip) : 'unknown';
   },
 });
 
@@ -190,7 +191,8 @@ const registerLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => {
-    return req.ip || req.connection.remoteAddress;
+    const ip = req.ip ?? req.socket?.remoteAddress;
+    return ip ? ipKeyGenerator(ip) : 'unknown';
   },
 });
 
@@ -205,7 +207,9 @@ const passwordChangeLimiter = rateLimit({
   legacyHeaders: false,
   keyGenerator: (req) => {
     // Use session ID if available, otherwise IP
-    return req.cookies[COOKIE_NAME] || req.ip || req.connection.remoteAddress;
+    const ip = req.ip ?? req.socket?.remoteAddress;
+    const resolvedIp = ip ? ipKeyGenerator(ip) : 'unknown';
+    return req.cookies[COOKIE_NAME] || resolvedIp;
   },
 });
 
@@ -217,7 +221,8 @@ const apiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => {
-    return req.ip || req.connection.remoteAddress;
+    const ip = req.ip ?? req.socket?.remoteAddress;
+    return ip ? ipKeyGenerator(ip) : 'unknown';
   },
   // Skip rate limiting for health check
   skip: (req) => req.path === "/api/health",
