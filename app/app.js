@@ -1,9 +1,9 @@
 import express from "express";
 import cookieParser from "cookie-parser";
-import { v4 as uuidv4 } from "uuid";
+import { randomUUID } from "node:crypto";
 import bcrypt from "bcryptjs";
 import nodemailer from "nodemailer";
-import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import registerTransportationRoutes from "./routes/transportation.js";
 import csrf from "csurf";
 import helmet from "helmet";
@@ -304,7 +304,7 @@ registerTransportationRoutes(app, {
 });
 
 async function createSessionForUserId(userId) {
-  const sid = uuidv4();
+  const sid = randomUUID();
   const createdAt = Date.now();
   await run(`INSERT INTO sessions(sid, user_id, createdAt) VALUES(?,?,?)`, [
     sid,
@@ -397,7 +397,7 @@ app.post("/api/register", csrfProtection, registerLimiter, async (req, res) => {
         return res.json({ ok: true, message: "account created successfully" });
       } else {
         // Normal flow with email verification
-        const verificationToken = uuidv4();
+        const verificationToken = randomUUID();
         const verificationExpires = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
 
         await run(

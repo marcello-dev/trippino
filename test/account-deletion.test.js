@@ -2,7 +2,6 @@ import request from "supertest";
 import express from "express";
 import cookieParser from "cookie-parser";
 import bcrypt from "bcryptjs";
-import { v4 as uuidv4 } from "uuid";
 import csrf from "csurf";
 import {
   createTestDatabase,
