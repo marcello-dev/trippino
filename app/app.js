@@ -179,7 +179,7 @@ const authLimiter = rateLimit({
   // Use IP address as identifier
   keyGenerator: (req) => {
     const ip = req.ip ?? req.socket?.remoteAddress;
-    return ip ? ipKeyGenerator(ip) : 'unknown';
+    return ip ? ipKeyGenerator(ip) : "unknown";
   },
 });
 
@@ -192,7 +192,7 @@ const registerLimiter = rateLimit({
   legacyHeaders: false,
   keyGenerator: (req) => {
     const ip = req.ip ?? req.socket?.remoteAddress;
-    return ip ? ipKeyGenerator(ip) : 'unknown';
+    return ip ? ipKeyGenerator(ip) : "unknown";
   },
 });
 
@@ -208,7 +208,7 @@ const passwordChangeLimiter = rateLimit({
   keyGenerator: (req) => {
     // Use session ID if available, otherwise IP
     const ip = req.ip ?? req.socket?.remoteAddress;
-    const resolvedIp = ip ? ipKeyGenerator(ip) : 'unknown';
+    const resolvedIp = ip ? ipKeyGenerator(ip) : "unknown";
     return req.cookies[COOKIE_NAME] || resolvedIp;
   },
 });
@@ -222,7 +222,7 @@ const apiLimiter = rateLimit({
   legacyHeaders: false,
   keyGenerator: (req) => {
     const ip = req.ip ?? req.socket?.remoteAddress;
-    return ip ? ipKeyGenerator(ip) : 'unknown';
+    return ip ? ipKeyGenerator(ip) : "unknown";
   },
   // Skip rate limiting for health check
   skip: (req) => req.path === "/api/health",
