@@ -3,7 +3,7 @@ import cookieParser from "cookie-parser";
 import { v4 as uuidv4 } from "uuid";
 import bcrypt from "bcryptjs";
 import nodemailer from "nodemailer";
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import registerTransportationRoutes from "./routes/transportation.js";
 import csrf from "csurf";
 import helmet from "helmet";
