@@ -1,5 +1,16 @@
 // Transportation routes: manage transportation between consecutive cities in a trip
 
+export const TRANSPORT_MODES = new Set([
+  "flight",
+  "car",
+  "train",
+  "public_transport",
+  "motorbike",
+  "boat",
+  "bike",
+  "walk",
+]);
+
 function registerTransportationRoutes(app, deps) {
   const { csrfProtection, getSession, run, get, all } = deps;
 
@@ -30,17 +41,7 @@ function registerTransportationRoutes(app, deps) {
           return res.status(400).json({ error: "mode is required" });
         }
 
-        const allowedModes = new Set([
-          "flight",
-          "car",
-          "train",
-          "public_transport",
-          "motorbike",
-          "boat",
-          "bike",
-          "walk",
-        ]);
-        if (!allowedModes.has(mode)) {
+        if (!TRANSPORT_MODES.has(mode)) {
           return res.status(400).json({ error: "invalid mode" });
         }
 

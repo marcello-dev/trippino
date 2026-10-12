@@ -8,7 +8,6 @@ function registerCityRoutes(app, deps) {
 
   // Create a city in a trip (appended at the end)
   app.post("/api/trips/:id/cities", csrfProtection, async (req, res) => {
-    console.log("Creating city with data:", req.body);
     try {
       const s = await getSession(req);
       if (!s) return res.status(401).json({ error: "not authenticated" });
@@ -226,7 +225,6 @@ function registerCityRoutes(app, deps) {
   // Update cities order in a trip. The sortOrder is provided in the body as an array of objects with city ID and sortOrder.
   app.put("/api/trips/:tripId/cities", csrfProtection, async (req, res) => {
     try {
-      console.log("Reordering cities with data:", req.body);
       const s = await getSession(req);
       if (!s) return res.status(401).json({ error: "not authenticated" });
 

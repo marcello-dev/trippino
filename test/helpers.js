@@ -1,88 +1,71 @@
 /**
  * Test Helpers
- * Utility functions for setting up test databases, creating test users, etc.
+ * Builds the real Express app (app/server.js) on an in-memory SQLite database
+ * with the production schema and migrations, plus fixtures for seeding data.
  */
 
-import sqlite3 from "sqlite3";
+import request from "supertest";
 import bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
-import { promisify } from "util";
+import { jest } from "@jest/globals";
+import { openDatabase, initSchema } from "../app/db.js";
+import { createApp } from "../app/server.js";
+import { runMigrations } from "../migrate.js";
+
+export const COOKIE_NAME = "trippino_sid";
 
 /**
- * Create an in-memory SQLite database for testing
+ * Create the real app backed by a fresh in-memory database.
+ * Returns the app, db helpers, the mocked email sender and a close() function.
  */
-export function createTestDatabase() {
-  const db = new sqlite3.Database(":memory:");
+export async function createTestContext(configOverrides = {}) {
+  const database = openDatabase(":memory:");
+  await initSchema(database.run);
+  await runMigrations(database.db);
 
-  const run = (sql, params = []) => {
-    return new Promise((resolve, reject) => {
-      db.run(sql, params, function (err) {
-        if (err) return reject(err);
-        // 'this' context contains lastID and changes
-        resolve(this);
-      });
-    });
+  const sendVerificationEmail = jest.fn().mockResolvedValue(undefined);
+  const app = createApp({
+    run: database.run,
+    get: database.get,
+    all: database.all,
+    transaction: database.transaction,
+    sendVerificationEmail,
+    config: {
+      apiBase: "http://localhost:5000",
+      tomtomApiKey: "test-tomtom-key",
+      isProduction: false,
+      skipEmailSending: false,
+      ...configOverrides,
+    },
+  });
+
+  return {
+    app,
+    run: database.run,
+    get: database.get,
+    all: database.all,
+    transaction: database.transaction,
+    sendVerificationEmail,
+    close: database.close,
   };
-
-  const get = promisify(db.get.bind(db));
-  const all = promisify(db.all.bind(db));
-
-  return { db, run, get, all };
 }
 
 /**
- * Initialize test database with schema
+ * Fetch a CSRF token and return the headers needed for a state-changing
+ * request, optionally authenticated with a session id.
  */
-export async function initTestDatabase(run) {
-  await run(`PRAGMA foreign_keys = ON`);
+export async function authHeaders(app, sid) {
+  const res = await request(app).get("/api/csrf-token");
+  const cookies = [extractCookie(res, "_csrf")];
+  if (sid) cookies.push(`${COOKIE_NAME}=${sid}`);
+  return { Cookie: cookies.join("; "), "CSRF-Token": res.body.csrfToken };
+}
 
-  await run(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      email TEXT UNIQUE NOT NULL,
-      password TEXT NOT NULL,
-      verified INTEGER DEFAULT 0,
-      verification_token TEXT,
-      verification_expires INTEGER
-    )
-  `);
-
-  await run(`
-    CREATE TABLE IF NOT EXISTS sessions (
-      sid TEXT PRIMARY KEY,
-      user_id INTEGER NOT NULL,
-      createdAt INTEGER NOT NULL,
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-    )
-  `);
-
-  await run(`
-    CREATE TABLE IF NOT EXISTS trips (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      start_date TEXT NOT NULL,
-      user_id INTEGER NOT NULL,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-    )
-  `);
-
-  await run(`
-    CREATE TABLE IF NOT EXISTS cities (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      nights INTEGER NOT NULL,
-      notes TEXT,
-      latitude REAL,
-      longitude REAL,
-      sort_order INTEGER NOT NULL,
-      trip_id INTEGER NOT NULL,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE
-    )
-  `);
+/**
+ * Headers for an authenticated request that does not need CSRF (GET).
+ */
+export function sessionCookie(sid) {
+  return { Cookie: `${COOKIE_NAME}=${sid}` };
 }
 
 /**
@@ -111,9 +94,8 @@ export async function createTestUser(
 /**
  * Create a test session for a user
  */
-export async function createTestSession(run, userId) {
+export async function createTestSession(run, userId, createdAt = Date.now()) {
   const sid = randomUUID();
-  const createdAt = Date.now();
   await run(`INSERT INTO sessions (sid, user_id, createdAt) VALUES (?, ?, ?)`, [
     sid,
     userId,
@@ -155,46 +137,52 @@ export async function createTestCity(
 ) {
   const result = await run(
     `INSERT INTO cities (name, nights, notes, sort_order, trip_id) VALUES (?, ?, ?, ?, ?)`,
-    [name, nights, "", sortOrder, tripId],
+    [name, nights, null, sortOrder, tripId],
   );
   return {
     id: result.lastID,
     name,
     nights,
-    notes: "",
+    notes: null,
     sort_order: sortOrder,
     trip_id: tripId,
   };
 }
 
 /**
- * Extract session cookie from response
+ * Create a transportation leg between two cities
  */
-export function extractSessionCookie(response, cookieName = "trippino_sid") {
+export async function createTestTransportation(
+  run,
+  tripId,
+  fromCityId,
+  toCityId,
+  mode = "train",
+) {
+  const result = await run(
+    `INSERT INTO transportation (trip_id, from_city_id, to_city_id, mode) VALUES (?, ?, ?, ?)`,
+    [tripId, fromCityId, toCityId, mode],
+  );
+  return { id: result.lastID };
+}
+
+/**
+ * Extract a "name=value" cookie pair from a response's Set-Cookie headers
+ */
+export function extractCookie(response, cookieName = COOKIE_NAME) {
   const cookies = response.headers["set-cookie"];
   if (!cookies) return null;
 
-  const sessionCookie = cookies.find((c) => c.startsWith(`${cookieName}=`));
-  if (!sessionCookie) return null;
+  const cookie = cookies.find((c) => c.startsWith(`${cookieName}=`));
+  if (!cookie) return null;
 
-  return sessionCookie.split(";")[0];
+  return cookie.split(";")[0];
 }
 
 /**
- * Extract CSRF token from response
+ * Full Set-Cookie header (with attributes) for a cookie name
  */
-export function extractCsrfToken(response) {
-  return response.body?.csrfToken || null;
-}
-
-/**
- * Clean up database after tests
- */
-export async function cleanupDatabase(db) {
-  return new Promise((resolve, reject) => {
-    db.close((err) => {
-      if (err) reject(err);
-      else resolve();
-    });
-  });
+export function findSetCookie(response, cookieName = COOKIE_NAME) {
+  const cookies = response.headers["set-cookie"] || [];
+  return cookies.find((c) => c.startsWith(`${cookieName}=`)) || null;
 }

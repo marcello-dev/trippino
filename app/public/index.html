@@ -586,16 +586,12 @@
       const newTripStart = document.getElementById("newTripStart");
 
       // helpers
-      const uid = () => Math.random().toString(36).slice(2, 9);
       const tid = (trips) => {
         return trips.length + 1;
       };
 
       const MAX_TRIPS = 50;
-      const MAX_CITIES_PER_TRIP = 30;
       const MAX_TRIP_NAME_LENGTH = 80;
-      const MAX_CITY_NAME_LENGTH = 60;
-      const MAX_NIGHTS_PER_CITY = 365;
       // Allow letters, numbers, spaces, common punctuation: - ' ( ) , .
       const NAME_SAFE_REGEX = /^[A-Za-z0-9 \-\'\(\)\.,]*$/;
 
@@ -612,19 +608,6 @@
         return { ok: true };
       }
 
-      function validateCityName(name) {
-        if (!name || !name.trim())
-          return { ok: false, error: "City name required" };
-        if (name.length > MAX_CITY_NAME_LENGTH)
-          return {
-            ok: false,
-            error: `City name too long (max ${MAX_CITY_NAME_LENGTH} characters)`,
-          };
-        if (!NAME_SAFE_REGEX.test(name))
-          return { ok: false, error: "City name contains invalid characters" };
-        return { ok: true };
-      }
-
       function showClientError(msg) {
         // lightweight UX: use alert for now; can be swapped with a toast component
         try {
@@ -633,17 +616,6 @@
           console.error(msg);
         }
       }
-
-      /* Typeahead / suggestions styles */
-      const styleEl = document.createElement("style");
-      styleEl.textContent = `
-    .tt-popup { position: absolute; background: white; border: 1px solid #eee; box-shadow: 0 6px 18px rgba(12,18,32,0.06); border-radius:6px; z-index:1000; width:260px; }
-    .tt-popup .tt-item { padding:8px; cursor:pointer; border-bottom:1px solid #f2f4f6 }
-    .tt-popup .tt-item:last-child { border-bottom:0 }
-    .tt-popup .tt-item:hover { background:#f6f8fa }
-    .tt-input-inline { padding:6px 8px; border:1px solid #ddd; border-radius:6px; width:220px }
-    `;
-      document.head.appendChild(styleEl);
 
       function load() {
         const raw = localStorage.getItem(STORAGE_KEY);
@@ -659,23 +631,6 @@
       }
       function save(appState) {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
-      }
-
-      async function saveApi(appState) {
-        try {
-          const token = await getCsrfToken();
-          await fetch(`${API_BASE}/api/state`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "CSRF-Token": token,
-            },
-            credentials: "include",
-            body: JSON.stringify({ state: appState }),
-          });
-        } catch (e) {
-          console.warn("push local to backend failed", e);
-        }
       }
 
       // app state
@@ -837,6 +792,18 @@
         refreshAll();
       }
 
+      function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, function (ch) {
+          return {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;",
+          }[ch];
+        });
+      }
+
       function renderTripsContainer() {
         // sort by start date desc (most recent first). Empty start goes last.
         const sorted = [...appState.trips].sort((a, b) => {
@@ -875,8 +842,8 @@
           header.style.alignItems = "center";
           header.innerHTML = `
                 <div>
-                    <strong>${t.name || "Untitled"}</strong>
-                    <div class="small" style="color:var(--muted)">${t.start_date || ""}</div>
+                    <strong>${escapeHtml(t.name || "Untitled")}</strong>
+                    <div class="small" style="color:var(--muted)">${escapeHtml(t.start_date || "")}</div>
                     <div class="small" style="color:var(--muted)">${t.cities ? t.cities.length : 0} ${t.cities?.length === 1 ? "city" : "cities"}</div>
                 </div>
                 <div style="display:flex;gap:8px">

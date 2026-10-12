@@ -803,23 +803,6 @@
         localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
       }
 
-      async function saveApi(appState) {
-        try {
-          const token = await getCsrfToken();
-          await fetch(`${API_BASE}/api/state`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "CSRF-Token": token,
-            },
-            credentials: "include",
-            body: JSON.stringify({ state: appState }),
-          });
-        } catch (e) {
-          console.warn("push local to backend failed", e);
-        }
-      }
-
       let appState = load();
       if (!appState.trips) appState.trips = [];
 
@@ -1224,6 +1207,39 @@
         `;
       document.head.appendChild(styleEl);
 
+      // TomTom styles label places with the local-language `name`. Point label
+      // layers at `name_<language>` instead, falling back to `name` where no
+      // translation exists (same approach as the TomTom Maps SDK for Web).
+      function isLocalizableTextField(textField) {
+        if (!textField) return false;
+        return (
+          textField === "{name}" ||
+          (textField.length === 2 && textField[1] === "name") ||
+          (textField.length === 3 &&
+            Array.isArray(textField[1]) &&
+            typeof textField[1][1] === "string" &&
+            textField[1][1].includes("name_") &&
+            Array.isArray(textField[2]) &&
+            textField[2].includes("name"))
+        );
+      }
+
+      function setMapLabelLanguage(map, language) {
+        for (const layer of map.getStyle().layers) {
+          if (
+            layer.type === "symbol" &&
+            isLocalizableTextField(layer.layout?.["text-field"])
+          ) {
+            map.setLayoutProperty(
+              layer.id,
+              "text-field",
+              ["coalesce", ["get", `name_${language}`], ["get", "name"]],
+              { validate: false },
+            );
+          }
+        }
+      }
+
       function createCitySearchPopup(anchorEl, onSelect, initialValue = "") {
         const popup = document.createElement("div");
         popup.className = "tt-popup";
@@ -1356,10 +1372,10 @@
         topline.className = "topline";
         topline.innerHTML = `
                 <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-                    <h2 style="margin:0;font-size:18px">${trip.name || "Unnamed trip"}</h2>
+                    <h2 style="margin:0;font-size:18px">${escapeHtml(trip.name || "Unnamed trip")}</h2>
                     <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
                         <div class="small" style="color:var(--muted)">Start date</div>
-                        <input class="trip-start" type="date" value="${trip.start_date || ""}" />
+                        <input class="trip-start" type="date" value="${escapeHtml(trip.start_date || "")}" />
                     </div>
                 </div>
             `;
@@ -1510,12 +1526,12 @@
                     </div>
                     <div>
                         <div class="name">
-                            ${c.name || "Unnamed city"}
+                            ${escapeHtml(c.name || "Unnamed city")}
                         </div>
                     </div>
                     <div class="nights-control">
                         <button data-action="dec">−</button>
-                        <div class="nights-display" style="background:white;width:30px;text-align:center;padding:1px 1px;border: none;border-radius:6px">${c.nights}</div>
+                        <div class="nights-display" style="background:white;width:30px;text-align:center;padding:1px 1px;border: none;border-radius:6px">${escapeHtml(c.nights)}</div>
                         <button data-action="inc">+</button>
                     </div>
                     ${dateHtml}
@@ -2381,6 +2397,9 @@
                 center: [allCities[0].longitude, allCities[0].latitude],
                 zoom: 6,
               });
+              tripMap.once("style.load", (e) =>
+                setMapLabelLanguage(e.target, "en"),
+              );
 
               // Wait for map to load
               await new Promise((resolve, reject) => {
@@ -2465,7 +2484,7 @@
 
                 // Add popup
                 const popup = new maplibregl.Popup({ offset: 25 }).setHTML(
-                  `<strong>${city.name}</strong><br>${city.nights} night${city.nights !== 1 ? "s" : ""}`,
+                  `<strong>${escapeHtml(city.name)}</strong><br>${escapeHtml(city.nights)} night${city.nights !== 1 ? "s" : ""}`,
                 );
 
                 marker.setPopup(popup);
@@ -2485,7 +2504,7 @@
 
                 // Add popup
                 const popup = new maplibregl.Popup({ offset: 25 }).setHTML(
-                  `<strong>${city.name}</strong><br>Stopover`,
+                  `<strong>${escapeHtml(city.name)}</strong><br>Stopover`,
                 );
 
                 marker.setPopup(popup);

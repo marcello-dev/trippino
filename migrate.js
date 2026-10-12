@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 import { fileURLToPath } from "url";
-import { dirname, join } from "path";
-import { readdir } from "fs/promises";
+import { dirname } from "path";
+import { readdir, readFile } from "fs/promises";
 import sqlite3 from "sqlite3";
 import path from "path";
 
@@ -59,8 +59,10 @@ function executeSql(db, sql) {
   });
 }
 
-async function runMigrations() {
-  const db = new sqlite3.Database(DATABASE_URL);
+// Pass an open sqlite3 Database to migrate it in place (it is left open);
+// otherwise a connection to DATABASE_URL is opened and closed here.
+async function runMigrations(existingDb) {
+  const db = existingDb || new sqlite3.Database(DATABASE_URL);
 
   try {
     // Initialize migration tracking
@@ -94,7 +96,6 @@ async function runMigrations() {
       const migrationPath = path.join(MIGRATIONS_DIR, migrationFile);
 
       try {
-        const { readFile } = await import("fs/promises");
         const sql = await readFile(migrationPath, "utf8");
 
         console.log(`Executing migration: ${migrationFile}`);
@@ -108,17 +109,17 @@ async function runMigrations() {
     }
 
     console.log("\nAll migrations completed successfully!");
-  } catch (error) {
-    console.error("Migration failed:", error);
-    process.exit(1);
   } finally {
-    db.close();
+    if (!existingDb) db.close();
   }
 }
 
 // Run migrations if this script is called directly
 if (import.meta.url === `file://${process.argv[1]}`) {
-  runMigrations();
+  runMigrations().catch((error) => {
+    console.error("Migration failed:", error);
+    process.exit(1);
+  });
 }
 
 export { runMigrations };

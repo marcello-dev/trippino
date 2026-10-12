@@ -7,8 +7,8 @@
   "scripts": {
     "start": "bash -c 'set -a; source app/.env; set +a; node app/app.js'",
     "migrate": "node migrate.js",
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest --setupFilesAfterEnv=./test/setup.js",
-    "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch --setupFilesAfterEnv=./test/setup.js"
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

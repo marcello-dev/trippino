@@ -30,9 +30,6 @@ jobs:
         run: npm test
         env:
           NODE_ENV: test
-          SESSION_SECRET: test-secret-key-for-ci
-          SKIP_EMAIL_SENDING: true
-          SKIP_BACKGROUND_JOBS: true
 
   lint:
     runs-on: ubuntu-latest

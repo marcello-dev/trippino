@@ -1,180 +1,141 @@
 /**
- * Test for city coordinates functionality
+ * City coordinates tests against the real app
  */
 
-import { describe, test, expect } from "@jest/globals";
 import request from "supertest";
-import express from "express";
-import cookieParser from "cookie-parser";
 import {
-  createTestDatabase,
-  initTestDatabase,
+  createTestContext,
+  authHeaders,
   createTestUser,
   createTestSession,
   createTestTrip,
-  cleanupDatabase,
 } from "./helpers.js";
 
-// Import the routes
-import registerCityRoutes from "../app/routes/cities.js";
-import registerTripRoutes from "../app/routes/trips.js";
-
-let app;
-let db;
-let run, get, all;
-
 describe("City Coordinates API", () => {
+  let ctx;
+  let app, run;
+  let sid, trip;
+
   beforeEach(async () => {
-    const testDb = createTestDatabase();
-    db = testDb.db;
-    run = testDb.run;
-    get = testDb.get;
-    all = testDb.all;
-
-    await initTestDatabase(run);
-
-    // Create test app
-    app = express();
-    app.use(express.json());
-    app.use(cookieParser());
-
-    // Mock dependencies
-    const csrfProtection = (req, res, next) => next();
-    const getSession = async (req) => {
-      const sessionId = req.headers.authorization?.replace("Bearer ", "");
-      if (!sessionId) return null;
-      const session = await get("SELECT * FROM sessions WHERE sid = ?", [
-        sessionId,
-      ]);
-      if (!session) return null;
-      const user = await get("SELECT * FROM users WHERE id = ?", [
-        session.user_id,
-      ]);
-      return session ? { user, ...session } : null;
-    };
-
-    // Register routes
-    registerCityRoutes(app, { csrfProtection, getSession, run, get });
-    registerTripRoutes(app, { csrfProtection, getSession, run, get, all });
+    ctx = await createTestContext();
+    ({ app, run } = ctx);
+    const user = await createTestUser(run);
+    sid = await createTestSession(run, user.id);
+    trip = await createTestTrip(run, user.id);
   });
 
   afterEach(async () => {
-    await cleanupDatabase(db);
+    await ctx.close();
   });
 
-  test("should create city with coordinates", async () => {
-    // Create test user and trip
-    const user = await createTestUser(run);
-    const sessionId = await createTestSession(run, user.id);
-    const trip = await createTestTrip(run, user.id);
+  async function createCity(body) {
+    return request(app)
+      .post(`/api/trips/${trip.id}/cities`)
+      .set(await authHeaders(app, sid))
+      .send(body);
+  }
 
-    const cityData = {
+  async function updateCity(cityId, body) {
+    return request(app)
+      .put(`/api/trips/${trip.id}/cities/${cityId}`)
+      .set(await authHeaders(app, sid))
+      .send(body);
+  }
+
+  test("should create city with coordinates", async () => {
+    const response = await createCity({
       name: "Paris, FR",
       nights: 3,
       notes: "Beautiful city",
       latitude: 48.8566,
       longitude: 2.3522,
-    };
-
-    const response = await request(app)
-      .post(`/api/trips/${trip.id}/cities`)
-      .set("Authorization", `Bearer ${sessionId}`)
-      .send(cityData);
+    });
 
     expect(response.status).toBe(201);
     expect(response.body.name).toBe("Paris, FR");
-    expect(response.body.nights).toBe(3);
-    expect(response.body.notes).toBe("Beautiful city");
     expect(response.body.latitude).toBe(48.8566);
     expect(response.body.longitude).toBe(2.3522);
   });
 
   test("should create city without coordinates", async () => {
-    // Create test user and trip
-    const user = await createTestUser(run);
-    const sessionId = await createTestSession(run, user.id);
-    const trip = await createTestTrip(run, user.id);
-
-    const cityData = {
-      name: "Unknown City",
-      nights: 2,
-    };
-
-    const response = await request(app)
-      .post(`/api/trips/${trip.id}/cities`)
-      .set("Authorization", `Bearer ${sessionId}`)
-      .send(cityData);
+    const response = await createCity({ name: "Unknown City", nights: 2 });
 
     expect(response.status).toBe(201);
-    expect(response.body.name).toBe("Unknown City");
-    expect(response.body.nights).toBe(2);
     expect(response.body.latitude).toBeNull();
     expect(response.body.longitude).toBeNull();
   });
 
   test("should update city coordinates", async () => {
-    // Create test user and trip
-    const user = await createTestUser(run);
-    const sessionId = await createTestSession(run, user.id);
-    const trip = await createTestTrip(run, user.id);
+    const created = await createCity({ name: "Test City", nights: 1 });
 
-    // Create city without coordinates
-    const createRes = await request(app)
-      .post(`/api/trips/${trip.id}/cities`)
-      .set("Authorization", `Bearer ${sessionId}`)
-      .send({
-        name: "Test City",
-        nights: 1,
-      });
+    const response = await updateCity(created.body.id, {
+      latitude: 40.7128,
+      longitude: -74.006,
+    });
 
-    const cityId = createRes.body.id;
-
-    // Update with coordinates
-    const updateRes = await request(app)
-      .put(`/api/trips/${trip.id}/cities/${cityId}`)
-      .set("Authorization", `Bearer ${sessionId}`)
-      .send({
-        latitude: 40.7128,
-        longitude: -74.006,
-      });
-
-    expect(updateRes.status).toBe(200);
-    expect(updateRes.body.city.latitude).toBe(40.7128);
-    expect(updateRes.body.city.longitude).toBe(-74.006);
+    expect(response.status).toBe(200);
+    expect(response.body.city.latitude).toBe(40.7128);
+    expect(response.body.city.longitude).toBe(-74.006);
   });
 
-  test("should validate coordinate ranges", async () => {
-    // Create test user and trip
-    const user = await createTestUser(run);
-    const sessionId = await createTestSession(run, user.id);
-    const trip = await createTestTrip(run, user.id);
+  test("should clear city coordinates with null", async () => {
+    const created = await createCity({
+      name: "Paris",
+      latitude: 48.8566,
+      longitude: 2.3522,
+    });
 
-    // Test invalid latitude
-    const invalidLatResponse = await request(app)
-      .post(`/api/trips/${trip.id}/cities`)
-      .set("Authorization", `Bearer ${sessionId}`)
-      .send({
-        name: "Invalid City",
-        nights: 1,
-        latitude: 91, // Invalid: > 90
-        longitude: 0,
-      });
+    const response = await updateCity(created.body.id, {
+      latitude: null,
+      longitude: null,
+    });
 
-    expect(invalidLatResponse.status).toBe(400);
-    expect(invalidLatResponse.body.error).toContain("latitude");
+    expect(response.status).toBe(200);
+    expect(response.body.city.latitude).toBeNull();
+    expect(response.body.city.longitude).toBeNull();
+  });
 
-    // Test invalid longitude
-    const invalidLonResponse = await request(app)
-      .post(`/api/trips/${trip.id}/cities`)
-      .set("Authorization", `Bearer ${sessionId}`)
-      .send({
-        name: "Invalid City",
-        nights: 1,
-        latitude: 0,
-        longitude: 181, // Invalid: > 180
-      });
+  test("should validate coordinate ranges on create", async () => {
+    const badLat = await createCity({
+      name: "Invalid City",
+      latitude: 91,
+      longitude: 0,
+    });
+    expect(badLat.status).toBe(400);
+    expect(badLat.body.error).toBe("latitude must be between -90 and 90");
 
-    expect(invalidLonResponse.status).toBe(400);
-    expect(invalidLonResponse.body.error).toContain("longitude");
+    const badLon = await createCity({
+      name: "Invalid City",
+      latitude: 0,
+      longitude: 181,
+    });
+    expect(badLon.status).toBe(400);
+    expect(badLon.body.error).toBe("longitude must be between -180 and 180");
+  });
+
+  test("should require both coordinates to be numbers on create", async () => {
+    const onlyLat = await createCity({ name: "Half", latitude: 10 });
+    expect(onlyLat.status).toBe(400);
+    expect(onlyLat.body.error).toBe("coordinates must be valid numbers");
+
+    const notNumbers = await createCity({
+      name: "Text",
+      latitude: "north",
+      longitude: "east",
+    });
+    expect(notNumbers.status).toBe(400);
+    expect(notNumbers.body.error).toBe("coordinates must be valid numbers");
+  });
+
+  test("should validate coordinate ranges on update", async () => {
+    const created = await createCity({ name: "Test City" });
+
+    const badLat = await updateCity(created.body.id, { latitude: -91 });
+    expect(badLat.status).toBe(400);
+    expect(badLat.body.error).toBe("latitude must be between -90 and 90");
+
+    const badLon = await updateCity(created.body.id, { longitude: -181 });
+    expect(badLon.status).toBe(400);
+    expect(badLon.body.error).toBe("longitude must be between -180 and 180");
   });
 });

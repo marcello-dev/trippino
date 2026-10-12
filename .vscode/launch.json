@@ -63,8 +63,7 @@
         "--experimental-vm-modules",
         "${workspaceFolder}/node_modules/.bin/jest",
         "${file}",
-        "--runInBand",
-        "--setupFilesAfterEnv=${workspaceFolder}/test/setup.js"
+        "--runInBand"
       ],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
@@ -84,8 +83,7 @@
         "--experimental-vm-modules",
         "${workspaceFolder}/node_modules/.bin/jest",
         "test/auth.test.js",
-        "--runInBand",
-        "--setupFilesAfterEnv=${workspaceFolder}/test/setup.js"
+        "--runInBand"
       ],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
@@ -105,8 +103,7 @@
         "--experimental-vm-modules",
         "${workspaceFolder}/node_modules/.bin/jest",
         "test/trips.test.js",
-        "--runInBand",
-        "--setupFilesAfterEnv=${workspaceFolder}/test/setup.js"
+        "--runInBand"
       ],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
@@ -126,8 +123,7 @@
         "--experimental-vm-modules",
         "${workspaceFolder}/node_modules/.bin/jest",
         "test/cities.test.js",
-        "--runInBand",
-        "--setupFilesAfterEnv=${workspaceFolder}/test/setup.js"
+        "--runInBand"
       ],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
@@ -147,8 +143,7 @@
         "--experimental-vm-modules",
         "${workspaceFolder}/node_modules/.bin/jest",
         "test/sessions.test.js",
-        "--runInBand",
-        "--setupFilesAfterEnv=${workspaceFolder}/test/setup.js"
+        "--runInBand"
       ],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
