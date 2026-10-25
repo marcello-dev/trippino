@@ -11,8 +11,6 @@ echo "ssh-rsa PUBKEY" >> /home/trippino/.ssh/authorized_keys
 mkdir /opt/trippino
 chown -R trippino:trippino /opt/trippino
 
-apt install nodejs
-apt install npm
 npm install -g http-server
 apt install sqlite3
 apt install python3-pip -y
@@ -24,6 +22,10 @@ chown -R trippino:trippino /etc/trippino
 mkdir /var/lib/trippino
 chown -R trippino:trippino /var/lib/trippino
 
+# login as trippino
+# Install NODE and NPM
+# check node home page and install node22 not globally, but in the home of trippino user
+
 
 cat << EOL > /etc/systemd/system/trippino.service
 [Unit]
@@ -32,7 +34,7 @@ After=syslog.target
 
 [Service]
 User=trippino
-ExecStart=node /opt/trippino/app/app.js
+ExecStart=/home/trippino/.nvm/versions/node/v22.23.4/bin/node /opt/trippino/app/app.js
 EnvironmentFile=/etc/trippino/trippino.conf
 Restart=on-failure
 RestartSec=3

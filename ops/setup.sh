@@ -11,7 +11,9 @@ chown -R trippino:trippino /home/trippino/.ssh
 mkdir /opt/trippino
 chown -R trippino:trippino /opt/trippino
 
-dnf install nodejs
+# install node22 in local trippino user
+#dnf install nodejs
+
 npm install -g http-server
 
 mkdir /var/lib/trippino
@@ -28,7 +30,7 @@ After=syslog.target
 
 [Service]
 User=trippino
-ExecStart=node /opt/trippino/app/app.js
+ExecStart=/home/trippino/.nvm/versions/node/v22.23.4/bin/node /opt/trippino/app/app.js
 EnvironmentFile=/etc/trippino/trippino.conf
 Restart=on-failure
 RestartSec=3
