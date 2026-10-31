@@ -3,7 +3,7 @@ import cookieParser from "cookie-parser";
 import { randomUUID } from "node:crypto";
 import bcrypt from "bcryptjs";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
-import csrf from "csurf";
+import csrf from "@dr.pogodin/csurf";
 import helmet from "helmet";
 import path from "path";
 import { fileURLToPath } from "url";
