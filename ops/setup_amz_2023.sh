@@ -1,4 +1,5 @@
 # As root
+dnf install -y gcc-c++ make python3
 adduser trippino
 echo "trippino  ALL=(ALL) NOPASSWD:ALL" | tee /etc/sudoers.d/trippino
 mkdir /home/trippino/.ssh
@@ -43,5 +44,4 @@ systemctl daemon-reload
 systemctl enable trippino
 
 # Now deploy app and start the service
-
 
