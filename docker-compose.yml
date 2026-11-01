@@ -1,0 +1,22 @@
+services:
+  trippino:
+    build: .
+    container_name: trippino
+    restart: unless-stopped
+    ports:
+      - "${TRIPPINO_PORT:-5000}:5000"
+    volumes:
+      - "${TRIPPINO_DATA_DIR:-./data}:/data"
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      DATABASE_URL: /data/trippino.sqlite
+      API_BASE: "${API_BASE:-http://localhost:5000}"
+      TOMTOM_API_KEY: "${TOMTOM_API_KEY:-}"
+      SMTP_HOST: "${SMTP_HOST:-}"
+      SMTP_PORT: "${SMTP_PORT:-587}"
+      SMTP_SECURE: "${SMTP_SECURE:-false}"
+      SMTP_USER: "${SMTP_USER:-}"
+      SMTP_PASSWORD: "${SMTP_PASSWORD:-}"
+      SMTP_FROM: "${SMTP_FROM:-}"
+      SKIP_EMAIL_SENDING: "${SKIP_EMAIL_SENDING:-true}"

@@ -1,0 +1,8 @@
+.git
+.env
+app/.env
+app/data.sqlite
+data/
+node_modules/
+npm-debug.log
+test/

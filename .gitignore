@@ -2,6 +2,8 @@
 node_modules/
 data.sqlite
 app/.env
+.env
+data/
 todo.md
 ops/deploy.sh
 ops/deploy_aws.sh

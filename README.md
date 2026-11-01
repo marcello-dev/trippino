@@ -63,6 +63,20 @@ npm start
 
 5. Open the app in your browser: http://localhost:5000/ (or the port you set in `app/.env`).
 
+## Deploy with Docker Compose (Synology)
+
+In Synology Container Manager, create a Project from this repository and use its `docker-compose.yml`. Alternatively, clone the repository onto the NAS and run:
+
+```bash
+docker compose up -d --build
+```
+
+The Compose file stores SQLite at `/data/trippino.sqlite` inside the container and mounts a host folder there. By default, the data folder is `./data` beside `docker-compose.yml`. To choose a Synology folder, copy `.env.example` to `.env` and set `TRIPPINO_DATA_DIR` to its absolute path, for example `/volume1/docker/trippino/data`. Ensure the folder exists and is writable by the container's `node` user (UID 1000); SQLite needs write access to create its database and journal files. To keep an existing database, copy `app/data.sqlite` to `<TRIPPINO_DATA_DIR>/trippino.sqlite` before first startup. Back up this folder to back up the database.
+
+Set `API_BASE` in `.env` to the URL users use to reach the NAS, such as `http://192.168.1.20:5000` or your HTTPS reverse-proxy URL. If you change `TRIPPINO_PORT`, update the port in `API_BASE` too. Email verification is disabled by default; to enable it, configure the `SMTP_*` settings and set `SKIP_EMAIL_SENDING=false`.
+
+The image builds the app for Node.js 22, runs as a non-root user, applies database migrations on startup, and exposes a health check at `/api/health`.
+
 ## Development tasks
 
 ```bash
