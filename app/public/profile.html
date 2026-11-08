@@ -46,6 +46,39 @@
         color: inherit;
         text-decoration: none;
       }
+      .desktop-nav {
+        display: none;
+        align-items: center;
+        gap: 4px;
+      }
+      .desktop-nav.is-authenticated {
+        display: flex;
+      }
+      .desktop-nav .menu-item {
+        padding: 8px;
+        color: inherit;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      .desktop-nav button.menu-item {
+        border: 0;
+        background: none;
+        font: inherit;
+        font-size: 12px;
+      }
+      @media (max-width: 640px) {
+        .desktop-nav {
+          display: none !important;
+        }
+        #burgerWrapper {
+          display: block;
+        }
+      }
+      @media (min-width: 641px) {
+        #burgerWrapper {
+          display: none;
+        }
+      }
       .card {
         background: var(--card);
         padding: 14px;
@@ -133,6 +166,24 @@
           "
         >
           <div id="authArea"></div>
+          <nav id="desktopNav" class="desktop-nav" aria-label="Main navigation">
+            <a class="small menu-item" data-action="home" href="index.html"
+              >Home</a
+            >
+            <a class="small menu-item" data-action="profile" href="profile.html"
+              >Profile</a
+            >
+            <a class="small menu-item" data-action="about" href="about.html"
+              >About</a
+            >
+            <button
+              class="small menu-item"
+              data-action="logout"
+              type="button"
+            >
+              Logout
+            </button>
+          </nav>
           <div id="burgerWrapper" style="position: relative; margin-left: 8px">
             <button id="burgerBtn" aria-label="Open menu" class="btn ghost">
               ☰
@@ -276,6 +327,9 @@
 
       function setAnonymous() {
         currentUser = null;
+        document
+          .getElementById("desktopNav")
+          .classList.remove("is-authenticated");
         authArea.innerHTML = `<button id="goAuthBtn" class="btn primary">Sign in / Register</button>`;
         document
           .getElementById("goAuthBtn")
@@ -289,14 +343,16 @@
 
       function setAuthenticated(user) {
         currentUser = user;
+        document.getElementById("desktopNav").classList.add("is-authenticated");
         authArea.innerHTML = "";
         const burgerBtn = document.getElementById("burgerBtn");
         if (burgerBtn) burgerBtn.style.display = "";
 
         const menu = document.getElementById("burgerMenu");
         if (menu) {
-          menu.querySelectorAll(".menu-item").forEach((mi) =>
-            mi.addEventListener("click", async () => {
+          document.querySelectorAll(".menu-item").forEach((mi) =>
+            mi.addEventListener("click", async (ev) => {
+              if (mi.tagName === "A") ev.preventDefault();
               const act = mi.dataset.action;
               if (act === "logout") {
                 localStorage.clear();
