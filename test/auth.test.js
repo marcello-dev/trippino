@@ -6,6 +6,7 @@
 
 import request from "supertest";
 import bcrypt from "bcryptjs";
+import { SESSION_MAX_AGE } from "../app/server.js";
 import {
   createTestContext,
   authHeaders,
@@ -202,6 +203,9 @@ describe("Authentication API", () => {
       const setCookie = findSetCookie(response);
       expect(setCookie).toMatch(/HttpOnly/i);
       expect(setCookie).toMatch(/SameSite=Lax/i);
+      expect(setCookie).toMatch(
+        new RegExp(`Max-Age=${SESSION_MAX_AGE / 1000}`, "i"),
+      );
 
       const sid = extractCookie(response).split("=")[1];
       const session = await get(`SELECT * FROM sessions WHERE sid = ?`, [sid]);

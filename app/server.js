@@ -24,7 +24,7 @@ export const COOKIE_NAME = "trippino_sid";
 const MIN_REGISTER_PASSWORD_LENGTH = 8;
 
 // Session configuration
-export const SESSION_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+export const SESSION_MAX_AGE = 90 * 24 * 60 * 60 * 1000; // 90 days in milliseconds
 
 // Delete sessions older than SESSION_MAX_AGE, returns the number deleted
 export async function deleteExpiredSessions(run, now = Date.now()) {
@@ -276,7 +276,7 @@ export function createApp({
         httpOnly: true,
         sameSite: "lax",
         secure: isProduction,
-        maxAge: 7 * 24 * 60 * 60 * 1000,
+        maxAge: SESSION_MAX_AGE,
       });
       return res.json({ ok: true, email: user.email });
     } catch (e) {
