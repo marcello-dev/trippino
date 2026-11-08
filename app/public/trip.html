@@ -964,6 +964,14 @@
         targetTrip.cities.sort((a, b) => a.sort_order - b.sort_order);
       }
 
+      function isStopoverCity(city, index) {
+        return (
+          Number(city.nights) === 0 &&
+          index > 0 &&
+          index < trip.cities.length - 1
+        );
+      }
+
       function reindexCitySortOrders(cities = trip?.cities) {
         if (!Array.isArray(cities)) return;
         cities.forEach((city, index) => {
@@ -1135,7 +1143,7 @@
 
             const nights = Number(city.nights) || 0;
             let dateLabel = "No start date";
-            if (trip.start_date && nights === 0) {
+            if (trip.start_date && isStopoverCity(city, index)) {
               dateLabel = "Stepover";
             } else if (trip.start_date) {
               const cityStart = addDays(
@@ -1941,7 +1949,7 @@
           if (!trip.start_date) {
             dateHtml =
               '<div class="small no-start" style="color:var(--muted)">No start date</div>';
-          } else if (Number(c.nights) === 0) {
+          } else if (isStopoverCity(c, i)) {
             dateHtml =
               '<div class="small stepover" style="font-weight:600;color:var(--muted)">Stepover</div>';
           } else {
@@ -2773,7 +2781,7 @@
               const citiesWithCoords = [];
               const stepoverCities = []; // Cities with 0 nights
 
-              for (const city of trip.cities) {
+              for (const [index, city] of trip.cities.entries()) {
                 if (!city.name || city.name.trim() === "") continue;
 
                 // Check if city already has coordinates
@@ -2782,6 +2790,7 @@
                     id: city.id,
                     name: city.name,
                     nights: Number(city.nights),
+                    isStopover: isStopoverCity(city, index),
                     latitude: Number(city.latitude),
                     longitude: Number(city.longitude),
                   };
@@ -2934,7 +2943,7 @@
 
                 // Add popup
                 const popup = new maplibregl.Popup({ offset: 25 }).setHTML(
-                  `<strong>${escapeHtml(city.name)}</strong><br>Stopover`,
+                  `<strong>${escapeHtml(city.name)}</strong>${city.isStopover ? "<br>Stopover" : ""}`,
                 );
 
                 marker.setPopup(popup);
