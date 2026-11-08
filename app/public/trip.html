@@ -1053,7 +1053,9 @@
         const titleHeight = titleLines.length * titleLineHeight;
         const headerHeight = padding + titleHeight + 54;
         measuringContext.font = cityNameFont;
-        const cityTextWidth = width - margin * 2 - padding * 2 - 68;
+        const textXOffset = 20;
+        const nightsX = width - margin - padding - 16;
+        const cityTextWidth = nightsX - (margin + padding + textXOffset) - 20;
         const cityLayouts = trip.cities.map((city) => {
           const nameLines = wrapCanvasText(
             measuringContext,
@@ -1062,15 +1064,12 @@
           );
           return {
             nameLines,
-            rowHeight: Math.max(
-              108,
-              nameLines.length * cityNameLineHeight + 82,
-            ),
+            rowHeight: nameLines.length * cityNameLineHeight + 44,
           };
         });
         const cityRowsHeight = cityLayouts.length
           ? cityLayouts.reduce((height, city) => height + city.rowHeight, 0)
-          : 108;
+          : 72;
         const cardHeight = headerHeight + cityRowsHeight + 96 + padding;
         const canvas = document.createElement("canvas");
         canvas.width = width;
@@ -1112,8 +1111,8 @@
         if (trip.cities.length === 0) {
           context.fillStyle = "#8a5a32";
           context.font = "18px Inter, system-ui, sans-serif";
-          context.fillText("No cities added yet", contentX, y + 54);
-          y += 108;
+          context.fillText("No cities added yet", contentX + 20, y + 42);
+          y += 72;
         } else {
           let dayCursor = 1;
           for (const [index, city] of trip.cities.entries()) {
@@ -1134,15 +1133,6 @@
             context.stroke();
             context.setLineDash([]);
 
-            context.strokeStyle = "#999999";
-            context.lineWidth = 3;
-            context.beginPath();
-            const arrowY = y + rowHeight / 2;
-            context.moveTo(contentX + 22, arrowY - 9);
-            context.lineTo(contentX + 31, arrowY);
-            context.lineTo(contentX + 22, arrowY + 9);
-            context.stroke();
-
             const nights = Number(city.nights) || 0;
             let dateLabel = "No start date";
             if (trip.start_date && nights === 0) {
@@ -1157,10 +1147,10 @@
             }
             dayCursor += nights;
 
-            const textX = contentX + 48;
+            const textX = contentX + textXOffset;
             context.fillStyle = "#111111";
             context.font = cityNameFont;
-            let nameY = y + 29;
+            let nameY = y + 25;
             for (const line of nameLines) {
               context.fillText(line, textX, nameY, cityTextWidth);
               nameY += cityNameLineHeight;
@@ -1168,14 +1158,16 @@
 
             context.fillStyle = "#111111";
             context.font = "600 17px Inter, system-ui, sans-serif";
+            context.textAlign = "right";
             context.fillText(
               `${nights} ${nights === 1 ? "night" : "nights"}`,
-              textX,
-              nameY + 1,
+              nightsX,
+              y + rowHeight / 2 + 6,
             );
+            context.textAlign = "left";
             context.fillStyle = "#8a5a32";
             context.font = "14px Inter, system-ui, sans-serif";
-            context.fillText(dateLabel, textX, nameY + 24, cityTextWidth);
+            context.fillText(dateLabel, textX, nameY + 1, cityTextWidth);
             y += rowHeight;
           }
         }
