@@ -62,6 +62,26 @@ describe("Session Management", () => {
   });
 
   describe("Session expiration", () => {
+    it("should extend the session and cookie after authenticated activity", async () => {
+      const user = await createTestUser(run);
+      const lastActivity = Date.now() - 30 * 24 * 60 * 60 * 1000;
+      const sid = await createTestSession(run, user.id, lastActivity);
+
+      const response = await request(app)
+        .get("/api/me")
+        .set(sessionCookie(sid));
+
+      expect(response.status).toBe(200);
+      expect(
+        Number(response.headers["set-cookie"][0].match(/Max-Age=(\d+)/i)[1]),
+      ).toBe(SESSION_MAX_AGE / 1000);
+      const session = await get(
+        `SELECT createdAt FROM sessions WHERE sid = ?`,
+        [sid],
+      );
+      expect(session.createdAt).toBeGreaterThan(lastActivity);
+    });
+
     it("should accept a session just under the max age", async () => {
       const user = await createTestUser(run);
       const sid = await createTestSession(

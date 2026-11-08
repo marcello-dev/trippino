@@ -20,7 +20,7 @@ function registerTransportationRoutes(app, deps) {
     csrfProtection,
     async (req, res) => {
       try {
-        const s = await getSession(req);
+        const s = await getSession(req, res);
         if (!s) return res.status(401).json({ error: "not authenticated" });
 
         const tripId = parseInt(req.params.tripId, 10);
@@ -111,7 +111,7 @@ function registerTransportationRoutes(app, deps) {
     csrfProtection,
     async (req, res) => {
       try {
-        const s = await getSession(req);
+        const s = await getSession(req, res);
         if (!s) return res.status(401).json({ error: "not authenticated" });
 
         const tripId = parseInt(req.params.tripId, 10);

@@ -9,7 +9,7 @@ function registerCityRoutes(app, deps) {
   // Create a city in a trip (appended at the end)
   app.post("/api/trips/:id/cities", csrfProtection, async (req, res) => {
     try {
-      const s = await getSession(req);
+      const s = await getSession(req, res);
       if (!s) return res.status(401).json({ error: "not authenticated" });
 
       const tripId = parseInt(req.params.id, 10);
@@ -103,7 +103,7 @@ function registerCityRoutes(app, deps) {
     csrfProtection,
     async (req, res) => {
       try {
-        const s = await getSession(req);
+        const s = await getSession(req, res);
         if (!s) return res.status(401).json({ error: "not authenticated" });
 
         const tripId = parseInt(req.params.tripId, 10);
@@ -225,7 +225,7 @@ function registerCityRoutes(app, deps) {
   // Update cities order in a trip. The sortOrder is provided in the body as an array of objects with city ID and sortOrder.
   app.put("/api/trips/:tripId/cities", csrfProtection, async (req, res) => {
     try {
-      const s = await getSession(req);
+      const s = await getSession(req, res);
       if (!s) return res.status(401).json({ error: "not authenticated" });
 
       const tripId = parseInt(req.params.tripId, 10);
@@ -286,7 +286,7 @@ function registerCityRoutes(app, deps) {
     csrfProtection,
     async (req, res) => {
       try {
-        const s = await getSession(req);
+        const s = await getSession(req, res);
         if (!s) return res.status(401).json({ error: "not authenticated" });
 
         const tripId = parseInt(req.params.id, 10);

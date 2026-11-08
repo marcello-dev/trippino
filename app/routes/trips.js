@@ -7,7 +7,7 @@ function registerTripRoutes(app, deps) {
   // Create a new trip
   app.post("/api/trips", csrfProtection, async (req, res) => {
     try {
-      const s = await getSession(req);
+      const s = await getSession(req, res);
       if (!s) return res.status(401).json({ error: "not authenticated" });
 
       const { name, start_date } = req.body || {};
@@ -36,7 +36,7 @@ function registerTripRoutes(app, deps) {
   // Update a trip's name and/or start_date
   app.put("/api/trips/:id", csrfProtection, async (req, res) => {
     try {
-      const s = await getSession(req);
+      const s = await getSession(req, res);
       if (!s) return res.status(401).json({ error: "not authenticated" });
 
       const tripId = parseInt(req.params.id, 10);
@@ -103,7 +103,7 @@ function registerTripRoutes(app, deps) {
   // Delete a trip (CASCADE will automatically delete all cities)
   app.delete("/api/trips/:id", csrfProtection, async (req, res) => {
     try {
-      const s = await getSession(req);
+      const s = await getSession(req, res);
       if (!s) return res.status(401).json({ error: "not authenticated" });
 
       const tripId = parseInt(req.params.id, 10);

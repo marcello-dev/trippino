@@ -19,7 +19,7 @@ As we don't always have internet connection when travelling, Trippino tries to w
 
 The table below summarizes how the state (trips, cities, etc.) is managed.
 
-Login sessions are kept for up to 90 days. After that, sign in again; trips saved to your account remain available.
+Login sessions expire after 90 days of inactivity. Authenticated activity refreshes the session; after 90 inactive days, sign in again. Trips saved to your account remain available.
 
 |                               | Online                                                           | Offline                                                          |
 | ----------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------- |

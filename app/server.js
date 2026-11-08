@@ -232,7 +232,7 @@ export function createApp({
     return sid;
   }
 
-  async function getSession(req) {
+  async function getSession(req, res) {
     const sid = req.cookies[COOKIE_NAME];
     if (!sid) return null;
     const row = await get(
@@ -249,9 +249,21 @@ export function createApp({
       return null;
     }
 
+    const lastActivity = Date.now();
+    await run(`UPDATE sessions SET createdAt = ? WHERE sid = ?`, [
+      lastActivity,
+      sid,
+    ]);
+    res.cookie(COOKIE_NAME, sid, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: isProduction,
+      maxAge: SESSION_MAX_AGE,
+    });
+
     return {
       sid: row.sid,
-      createdAt: row.createdAt,
+      createdAt: lastActivity,
       user: { id: row.user_id, email: row.email },
     };
   }
@@ -349,7 +361,7 @@ export function createApp({
   // get current user
   app.get("/api/me", async (req, res) => {
     try {
-      const s = await getSession(req);
+      const s = await getSession(req, res);
       if (!s) return res.status(401).json({ error: "not authenticated" });
       return res.json({ user: s.user });
     } catch (e) {
@@ -365,7 +377,7 @@ export function createApp({
     passwordChangeLimiter,
     async (req, res) => {
       try {
-        const s = await getSession(req);
+        const s = await getSession(req, res);
         if (!s) return res.status(401).json({ error: "not authenticated" });
 
         const { currentPassword, newPassword } = req.body || {};
@@ -439,7 +451,7 @@ export function createApp({
 
   app.delete("/api/me", csrfProtection, async (req, res) => {
     try {
-      const s = await getSession(req);
+      const s = await getSession(req, res);
       if (!s) return res.status(401).json({ error: "not authenticated" });
 
       const userId = s.user.id;
@@ -523,7 +535,7 @@ export function createApp({
   // return it as stored, with database ids
   app.post("/api/state/firstlogin", csrfProtection, async (req, res) => {
     try {
-      const s = await getSession(req);
+      const s = await getSession(req, res);
       if (!s) return res.status(401).json({ error: "not authenticated" });
       const userId = s.user.id;
       const state = req.body && req.body.state;
@@ -605,7 +617,7 @@ export function createApp({
   // Build the user's state from the trips, cities and transportation tables
   app.get("/api/state", async (req, res) => {
     try {
-      const s = await getSession(req);
+      const s = await getSession(req, res);
       if (!s) return res.status(401).json({ error: "not authenticated" });
       const state = await loadState(s.user.id);
       return res.json({ state });
