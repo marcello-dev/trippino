@@ -456,6 +456,18 @@
         align-items: center;
       }
 
+      .trip-header-content {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        width: 100%;
+      }
+
+      .trip-start-row {
+        margin-left: 0 !important;
+      }
+
       .btn {
         padding: 8px 10px;
         border-radius: 8px;
@@ -493,6 +505,26 @@
         .topline input[type="date"] {
           width: 100%;
           box-sizing: border-box;
+        }
+
+        .topline .trip-start-row {
+          display: flex;
+          flex-wrap: nowrap;
+          align-items: center;
+          width: 100%;
+          margin-left: 0 !important;
+        }
+
+        .topline .trip-start-label {
+          flex: 0 0 auto;
+          white-space: nowrap;
+        }
+
+        .topline input.trip-start {
+          flex: 0 1 130px;
+          min-width: 0;
+          width: 130px;
+          max-width: calc(100% - 80px);
         }
 
         .city {
@@ -1371,10 +1403,10 @@
         const topline = document.createElement("div");
         topline.className = "topline";
         topline.innerHTML = `
-                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                <div class="trip-header-content">
                     <h2 style="margin:0;font-size:18px">${escapeHtml(trip.name || "Unnamed trip")}</h2>
-                    <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
-                        <div class="small" style="color:var(--muted)">Start date</div>
+                    <div class="trip-start-row" style="display:flex;gap:8px;align-items:center">
+                        <div class="small trip-start-label" style="color:var(--muted)">Start date</div>
                         <input class="trip-start" type="date" value="${escapeHtml(trip.start_date || "")}" />
                     </div>
                 </div>
