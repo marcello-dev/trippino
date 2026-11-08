@@ -1064,19 +1064,33 @@
         const textXOffset = 20;
         const nightsX = width - margin - padding - 16;
         const cityTextWidth = nightsX - (margin + padding + textXOffset) - 20;
-        const cityLayouts = trip.cities.map((city) => {
+        const cityLayouts = trip.cities.map((city, index) => {
           const nameLines = wrapCanvasText(
             measuringContext,
             city.name || "Unnamed city",
             cityTextWidth,
           );
+          const nextCity = trip.cities[index + 1];
+          const legTransport = nextCity
+            ? findTransportationForLeg(city.id, nextCity.id)
+            : null;
+          const modeDef = legTransport
+            ? TRANSPORT_MODES.find((mode) => mode.value === legTransport.mode)
+            : null;
           return {
             nameLines,
             rowHeight: nameLines.length * cityNameLineHeight + 44,
+            transportLabel: legTransport
+              ? `${modeDef ? modeDef.icon : ""} ${modeDef ? modeDef.label : legTransport.mode}`.trim()
+              : "",
           };
         });
         const cityRowsHeight = cityLayouts.length
-          ? cityLayouts.reduce((height, city) => height + city.rowHeight, 0)
+          ? cityLayouts.reduce(
+              (height, city) =>
+                height + city.rowHeight + (city.transportLabel ? 32 : 0),
+              0,
+            )
           : 72;
         const cardHeight = headerHeight + cityRowsHeight + 96 + padding;
         const canvas = document.createElement("canvas");
@@ -1124,7 +1138,7 @@
         } else {
           let dayCursor = 1;
           for (const [index, city] of trip.cities.entries()) {
-            const { nameLines, rowHeight } = cityLayouts[index];
+            const { nameLines, rowHeight, transportLabel } = cityLayouts[index];
             context.fillStyle = "#ffffff";
             context.strokeStyle = "#eeeeee";
             context.lineWidth = 2;
@@ -1177,6 +1191,13 @@
             context.font = "14px Inter, system-ui, sans-serif";
             context.fillText(dateLabel, textX, nameY + 1, cityTextWidth);
             y += rowHeight;
+
+            if (transportLabel) {
+              context.fillStyle = "#555555";
+              context.font = "16px Inter, system-ui, sans-serif";
+              context.fillText(`↓ ${transportLabel}`, textX, y + 20);
+              y += 32;
+            }
           }
         }
 
