@@ -1032,12 +1032,13 @@
       }
 
       function drawTripImage() {
-        const width = 1200;
-        const margin = 36;
-        const padding = 34;
-        const rowHeight = 82;
+        const width = 720;
+        const margin = 28;
+        const padding = 28;
         const title = trip.name || "Unnamed trip";
-        const titleFont = "700 30px Inter, system-ui, sans-serif";
+        const titleFont = "700 28px Inter, system-ui, sans-serif";
+        const cityNameFont = "600 20px Inter, system-ui, sans-serif";
+        const cityNameLineHeight = 25;
         const measuringCanvas = document.createElement("canvas");
         const measuringContext = measuringCanvas.getContext("2d");
         if (!measuringContext) throw new Error("Canvas is unavailable.");
@@ -1051,7 +1052,25 @@
         const titleLineHeight = 38;
         const titleHeight = titleLines.length * titleLineHeight;
         const headerHeight = padding + titleHeight + 54;
-        const cityRowsHeight = Math.max(trip.cities.length, 1) * rowHeight;
+        measuringContext.font = cityNameFont;
+        const cityTextWidth = width - margin * 2 - padding * 2 - 68;
+        const cityLayouts = trip.cities.map((city) => {
+          const nameLines = wrapCanvasText(
+            measuringContext,
+            city.name || "Unnamed city",
+            cityTextWidth,
+          );
+          return {
+            nameLines,
+            rowHeight: Math.max(
+              108,
+              nameLines.length * cityNameLineHeight + 82,
+            ),
+          };
+        });
+        const cityRowsHeight = cityLayouts.length
+          ? cityLayouts.reduce((height, city) => height + city.rowHeight, 0)
+          : 108;
         const cardHeight = headerHeight + cityRowsHeight + 96 + padding;
         const canvas = document.createElement("canvas");
         canvas.width = width;
@@ -1093,11 +1112,12 @@
         if (trip.cities.length === 0) {
           context.fillStyle = "#8a5a32";
           context.font = "18px Inter, system-ui, sans-serif";
-          context.fillText("No cities added yet", contentX, y + 42);
-          y += rowHeight;
+          context.fillText("No cities added yet", contentX, y + 54);
+          y += 108;
         } else {
           let dayCursor = 1;
-          for (const city of trip.cities) {
+          for (const [index, city] of trip.cities.entries()) {
+            const { nameLines, rowHeight } = cityLayouts[index];
             context.fillStyle = "#ffffff";
             context.strokeStyle = "#eeeeee";
             context.lineWidth = 2;
@@ -1117,9 +1137,10 @@
             context.strokeStyle = "#999999";
             context.lineWidth = 3;
             context.beginPath();
-            context.moveTo(contentX + 22, y + 29);
-            context.lineTo(contentX + 31, y + 38);
-            context.lineTo(contentX + 22, y + 47);
+            const arrowY = y + rowHeight / 2;
+            context.moveTo(contentX + 22, arrowY - 9);
+            context.lineTo(contentX + 31, arrowY);
+            context.lineTo(contentX + 22, arrowY + 9);
             context.stroke();
 
             const nights = Number(city.nights) || 0;
@@ -1137,28 +1158,24 @@
             dayCursor += nights;
 
             const textX = contentX + 48;
-            const nightsX = width - margin - padding - 16;
             context.fillStyle = "#111111";
-            context.font = "600 21px Inter, system-ui, sans-serif";
-            context.fillText(
-              city.name || "Unnamed city",
-              textX,
-              y + 31,
-              nightsX - textX - 115,
-            );
-            context.fillStyle = "#8a5a32";
-            context.font = "16px Inter, system-ui, sans-serif";
-            context.fillText(dateLabel, textX, y + 57, nightsX - textX - 115);
+            context.font = cityNameFont;
+            let nameY = y + 29;
+            for (const line of nameLines) {
+              context.fillText(line, textX, nameY, cityTextWidth);
+              nameY += cityNameLineHeight;
+            }
 
             context.fillStyle = "#111111";
-            context.font = "600 18px Inter, system-ui, sans-serif";
-            context.textAlign = "right";
+            context.font = "600 17px Inter, system-ui, sans-serif";
             context.fillText(
               `${nights} ${nights === 1 ? "night" : "nights"}`,
-              nightsX,
-              y + 44,
+              textX,
+              nameY + 1,
             );
-            context.textAlign = "left";
+            context.fillStyle = "#8a5a32";
+            context.font = "14px Inter, system-ui, sans-serif";
+            context.fillText(dateLabel, textX, nameY + 24, cityTextWidth);
             y += rowHeight;
           }
         }
@@ -1172,9 +1189,13 @@
         context.fillText(`Total nights: ${totalNights}`, contentX, y + 38);
 
         context.fillStyle = "#f97316";
-        context.font = "16px Inter, system-ui, sans-serif";
+        context.font = "14px Inter, system-ui, sans-serif";
         context.textAlign = "center";
-        context.fillText("Plan your trip on https://trippino.apivenue.com", width / 2, y + 78);
+        context.fillText(
+          "Plan your trip on https://trippino.apivenue.com",
+          width / 2,
+          y + 78,
+        );
         context.textAlign = "left";
 
         return new Promise((resolve, reject) => {
